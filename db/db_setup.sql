@@ -3,14 +3,14 @@ CREATE EXTENSION isn; -- EAN13/UPC native support
 
 -- folksonomy main table, with public/private partitionning
 CREATE TABLE folksonomy (
-    product     EAN13   NOT NULL,
-    k           varchar NOT NULL,
-    v           varchar NOT NULL,
-    owner       varchar NOT NULL,
-    version     integer NOT NULL,
-    editor      varchar NOT NULL,
+    product     varchar(13)   NOT NULL,
+    k           varchar       NOT NULL,
+    v           varchar       NOT NULL,
+    owner       varchar       NOT NULL,
+    version     integer       NOT NULL,
+    editor      varchar       NOT NULL,
     last_edit   timestamp,
-    comment     varchar
+    comment     varchar(200)
 ) PARTITION BY LIST (owner);
 
 -- public partition
@@ -22,14 +22,14 @@ CREATE TABLE folksonomy_private PARTITION OF folksonomy
     DEFAULT;
 
 -- automatic timestamp + version check
-CREATE FUNCTION folksonomy_timestamp() RETURNS trigger AS $folksonomy_timestamp$
+CREATE OR REPLACE FUNCTION folksonomy_timestamp() RETURNS trigger AS $folksonomy_timestamp$
     BEGIN
         -- check version number validity
         IF (TG_OP = 'INSERT') AND (NEW.version != 1) THEN
-            RAISE EXCEPTION 'first version must be equal to 1, was %', NEW.version;
+            RAISE EXCEPTION '@@ first version must be equal to 1, was % @@', NEW.version;
         END IF;
         IF (TG_OP = 'UPDATE') AND (NEW.version != OLD.version+1) THEN
-            RAISE EXCEPTION 'next version must be equal to %, was %', OLD.version+1, NEW.version;
+            RAISE EXCEPTION '@@ next version must be equal to %, was % @@', OLD.version+1, NEW.version;
         END IF;
         -- set last_edit timestamp ourself
         NEW.last_edit := current_timestamp;
@@ -46,21 +46,21 @@ CREATE UNIQUE INDEX ON folksonomy (product,owner,k);
 
 -- folksonomy versionned table
 CREATE TABLE folksonomy_versions (
-    product     EAN13   NOT NULL,
-    k           varchar NOT NULL,
-    v           varchar NOT NULL,
-    owner       varchar NOT NULL,
-    version     integer NOT NULL,
-    editor      varchar NOT NULL,
-    last_edit   timestamp NOT NULL,
-    comment     varchar
+    product     varchar(13)   NOT NULL,
+    k           varchar       NOT NULL,
+    v           varchar       NOT NULL,
+    owner       varchar       NOT NULL,
+    version     integer       NOT NULL,
+    editor      varchar       NOT NULL,
+    last_edit   timestamp,
+    comment     varchar(200)
 );
 
 -- index for unicity + search by product[owner[key[version]]]
 CREATE UNIQUE INDEX ON folksonomy_versions (product,owner,k,version);
 
 -- trigger based versionning
-CREATE FUNCTION folksonomy_archive() RETURNS trigger AS $folksonomy_archive$
+CREATE OR REPLACE FUNCTION folksonomy_archive() RETURNS trigger AS $folksonomy_archive$
     BEGIN
         INSERT INTO folksonomy_versions SELECT NEW.*;
         RETURN NULL;
@@ -69,3 +69,7 @@ $folksonomy_archive$ LANGUAGE plpgsql;
 CREATE TRIGGER folksonomy_versionning AFTER INSERT OR UPDATE on folksonomy
     FOR EACH ROW EXECUTE FUNCTION folksonomy_archive();
 
+
+-- authentication table
+CREATE TABLE auth (token varchar, user_id varchar, last_use timestamp);
+CREATE INDEX ON auth (token);
