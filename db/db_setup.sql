@@ -1,6 +1,4 @@
 
-CREATE EXTENSION isn; -- EAN13/UPC native support
-
 -- folksonomy main table, with public/private partitionning
 CREATE TABLE folksonomy (
     product     varchar(13)   NOT NULL,
@@ -32,7 +30,7 @@ CREATE OR REPLACE FUNCTION folksonomy_timestamp() RETURNS trigger AS $folksonomy
             RAISE EXCEPTION '@@ next version must be equal to %, was % @@', OLD.version+1, NEW.version;
         END IF;
         -- set last_edit timestamp ourself
-        NEW.last_edit := current_timestamp;
+        NEW.last_edit := current_timestamp AT TIME ZONE 'GMT';
         RETURN NEW;
     END;
 $folksonomy_timestamp$ LANGUAGE plpgsql;
