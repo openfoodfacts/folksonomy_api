@@ -22,7 +22,6 @@ from pydantic import BaseModel, ValidationError, validator
 # folksonomy imports...
 from folksonomy.models import ProductTag, ProductStats, User
 
-
 app = FastAPI(title="Open Food Facts folksonomy REST API")
 app.add_middleware(
     CORSMiddleware,
@@ -32,6 +31,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.on_event("startup")
+async def startup():
+    print('start')
+    global db, cur
+    db = psycopg2.connect("dbname=folksonomy")
+    cur = db.cursor()
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    await db.close()
+
+
+@app.get("/", status_code=status.HTTP_200_OK)
+async def hello():
+    return {"message": "Hello folksonomy World"}
+
+
+
 # define route for authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth")
 
@@ -39,13 +58,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth")
 async def check_current_user(token: str = Depends(oauth2_scheme)):
     """ Get current user and check for required authentication credentials """
     if '__U' in token:
-        (db, cur) = await db_connect()
-        query = cur.mogrify("UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,))
+        query = cur.mogrify(
+            "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,))
         cur.execute(query)
         if cur.rowcount == 1:
             db.commit()
             user = token.split('__U')[0]
-        db.close()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -53,21 +71,20 @@ async def check_current_user(token: str = Depends(oauth2_scheme)):
             headers={"WWW-Authenticate": "Bearer"},
         )
     else:
-        return { "user_id": user }
+        return {"user_id": user}
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     """ Get current user if present (nor required) """
     if '__U' in token:
-        (db, cur) = await db_connect()
         query = cur.mogrify(
             "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,))
         cur.execute(query)
         if cur.rowcount == 1:
             db.commit()
             user = token.split('__U')[0]
-        db.close()
     return user
+
 
 @app.post("/auth")
 async def authentication(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -77,7 +94,6 @@ async def authentication(form_data: OAuth2PasswordRequestForm = Depends()):
     r = requests.post("https://world.openfoodfacts.org/cgi/auth.pl",
                       data={'user_id': user_id, 'password': password})
     if r.status_code == 200:
-        (db, cur) = await db_connect()
         query = cur.mogrify("""
 DELETE FROM auth WHERE user_id = '%s';
 INSERT INTO auth (user_id, token, last_use) VALUES ('%s','%s',current_timestamp AT TIME ZONE 'GMT');
@@ -86,7 +102,6 @@ INSERT INTO auth (user_id, token, last_use) VALUES ('%s','%s',current_timestamp 
         if cur.rowcount == 1:
             db.commit()
             return {"access_token": token, "token_type": "bearer"}
-        db.close()
     elif r.status_code == 403:
         time.sleep(5)
         raise HTTPException(
@@ -99,25 +114,6 @@ INSERT INTO auth (user_id, token, last_use) VALUES ('%s','%s',current_timestamp 
 
 
 
-
-async def db_connect():
-    db = psycopg2.connect("dbname=folksonomy")
-    return (db, db.cursor())
-
-@app.on_event("startup")
-async def startup():
-    await db_connect()
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    await db.close()
-
-@app.get("/", status_code=status.HTTP_200_OK)
-async def hello():
-    return {"message": "Hello folksonomy World"}
-
-
 @app.get("/products/", response_model=List[ProductStats])
     # product list by owner + number of keys,, editors and last_edit
 async def product_list(response: Response, owner='', user: User = Depends(get_current_user)):
@@ -125,7 +121,6 @@ async def product_list(response: Response, owner='', user: User = Depends(get_cu
         if owner != user:
             return JSONResponse(status_code=422, content={"detail": {"msg": "owner should be '%s' or '' for public, was '%s'" % (user, owner)}})
     t = time.time()
-    (db, cur) = await db_connect()
     query = cur.mogrify("""
 SELECT json_agg(j.j)::json FROM(
     SELECT json_build_object(
@@ -140,7 +135,6 @@ SELECT json_agg(j.j)::json FROM(
 """, (owner,))
     cur.execute(query)
     out = cur.fetchone()
-    db.close()
     response.headers['x-pg-timing'] = str(round(time.time()-t,4)*1000)+"ms"
     return out[0]
 
@@ -153,7 +147,6 @@ async def product_detail(response: Response, product: str, owner='', user: User 
             return JSONResponse(status_code=422, content={"detail": {"msg": "owner should be '%s' or '' for public, was '%s'" % (user, owner)}})
 
     t = time.time()
-    (db, cur) = await db_connect()
     query = cur.mogrify("""
 SELECT json_agg(j)::json FROM(
     SELECT *
@@ -164,7 +157,6 @@ SELECT json_agg(j)::json FROM(
 """, (product, owner))
     cur.execute(query)
     out = cur.fetchone()
-    db.close()
     response.headers['x-pg-timing'] = str(round(time.time()-t, 4)*1000)+"ms"
     return out[0]
 
@@ -176,7 +168,6 @@ async def product_tag_list_versions(response: Response, product: str, k: str, ow
             return JSONResponse(status_code=422, content={"detail": {"msg": "owner should be '%s' or '' for public, was '%s'" % (user, owner)}})
 
     t = time.time()
-    (db, cur) = await db_connect()
     query = cur.mogrify("""
 SELECT row_to_json(j) FROM(
     SELECT *
@@ -186,7 +177,6 @@ SELECT row_to_json(j) FROM(
 """, (product, owner, k))
     cur.execute(query)
     out = cur.fetchone()
-    db.close()
     response.headers['x-pg-timing'] = str(round(time.time()-t, 4)*1000)+"ms"
     return out[0]
 
@@ -199,7 +189,6 @@ async def product_tag_list_versions(response: Response, product: str, k: str, ow
             return JSONResponse(status_code=422, content={"detail": {"msg": "owner should be '%s' or '' for public, was '%s'" % (user, owner)}})
 
     t = time.time()
-    (db, cur) = await db_connect()
     query = cur.mogrify("""
 SELECT json_agg(j)::json FROM(
     SELECT *
@@ -210,7 +199,6 @@ SELECT json_agg(j)::json FROM(
 """, (product, owner, k))
     cur.execute(query)
     out = cur.fetchone()
-    db.close()
     response.headers['x-pg-timing'] = str(round(time.time()-t, 4)*1000)+"ms"
     return out[0]
 
@@ -222,7 +210,6 @@ async def product_tag_version(response: Response, product: str, k: str, version:
             return JSONResponse(status_code=422, content={"detail": {"msg": "owner should be '%s' or '' for public, was '%s'" % (user, owner)}})
 
     t = time.time()
-    (db, cur) = await db_connect()
     query = cur.mogrify("""
 SELECT row_to_json(j) FROM(
     SELECT *
@@ -232,7 +219,6 @@ SELECT row_to_json(j) FROM(
 """, (product, owner, k, version))
     cur.execute(query)
     out = cur.fetchone()
-    db.close()
     response.headers['x-pg-timing'] = str(round(time.time()-t, 4)*1000)+"ms"
     return out[0]
 
@@ -246,7 +232,6 @@ async def product_tag_add(  response: Response,
         return JSONResponse(status_code=422, content={"detail": {"msg": "owner should be '%s' or '' for public, was '%s'" % (user["user_id"], product_tag.owner)}})
 
     t = time.time()
-    (db, cur) = await db_connect()
     query = cur.mogrify("""
 INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
     VALUES ('%s','%s','%s','%s', %s,'%s','%s')
@@ -266,7 +251,6 @@ INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
     db.commit()
     if cur.rowcount == 1:
         return "ok"
-    db.close()
     response.headers['x-pg-timing'] = str(round(time.time()-t, 4)*1000)+"ms"
     return
 
@@ -280,7 +264,6 @@ async def product_tag_update(   response: Response,
         return JSONResponse(status_code=422, content={"detail": {"msg": "owner should be '%s' or '' for public, was '%s'" % (user["user_id"], product_tag.owner)}})
 
     t = time.time()
-    (db, cur) = await db_connect()
     query = cur.mogrify("""
 UPDATE folksonomy SET 
     v = '%s',
@@ -297,7 +280,6 @@ UPDATE folksonomy SET
     db.commit()
     if cur.rowcount == 1:
         return "ok"
-    db.close()
     response.headers['x-pg-timing'] = str(round(time.time()-t, 4)*1000)+"ms"
     return
 
@@ -314,13 +296,11 @@ async def product_tag_delete(   response: Response,
         return JSONResponse(status_code=422, content={"detail": {"msg": "owner should be '%s' or '' for public, was '%s'" % (user["user_id"], product_tag.owner)}})
 
     t = time.time()
-    (db, cur) = await db_connect()
     query = cur.mogrify("""
 DELETE FROM folksonomy WHERE product = '%s' AND owner = '%s' AND k = '%s' AND version = %s
     """ % (product, owner, k, version))
     cur.execute(query)
     if cur.rowcount == 1:
         return "ok"
-    db.close()
     response.headers['x-pg-timing'] = str(round(time.time()-t, 4)*1000)+"ms"
     return
