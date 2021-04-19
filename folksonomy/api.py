@@ -80,8 +80,9 @@ async def check_current_user(token: str = Depends(oauth2_scheme)):
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
-    """ Get current user if present (nor required) """
+    """ Get current user if present (not required) """
     if '__U' in token:
+        # UPDATE returns rowcount=1 when token is known, avoids 1 SELECT+UPDATE
         query = cur.mogrify(
             "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,))
         cur.execute(query)
