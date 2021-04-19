@@ -19,6 +19,9 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 # pydantic: define data schema
 from pydantic import BaseModel, ValidationError, validator
 
+# folksonomy imports...
+from folksonomy.models import ProductTag, ProductStats, User
+
 
 app = FastAPI(title="Open Food Facts folksonomy REST API")
 app.add_middleware(
@@ -28,11 +31,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# define route for authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth")
-
-
-class User(BaseModel):
-    user_id: str
 
 
 async def check_current_user(token: str = Depends(oauth2_scheme)):
@@ -97,45 +98,6 @@ INSERT INTO auth (user_id, token, last_use) VALUES ('%s','%s',current_timestamp 
         status_code=500, detail="Server error")
 
 
-class ProductTag(BaseModel):
-    product:    str
-    k:          str
-    v:          str
-    owner:      str = ""
-    version:    int = 1
-    editor:     str
-    last_edit:  Optional[datetime]
-    comment:    Optional[str] = ""
-
-    @validator('product')
-    def product_length(cls, v):
-        if len(v)>15:
-            raise ValueError('ID is limited to 13 digits')
-        return v.title()
-
-
-class ProductTagEdit(BaseModel):
-    product:    str
-    k:          str
-    v:          str
-    owner:      str = ""
-    version:    int = 1
-    editor:     Optional[str]
-    last_edit:  Optional[datetime]
-    comment:    Optional[str] = ""
-
-    @validator('product')
-    def product_length(cls, v):
-        if len(v) > 15:
-            raise ValueError('ID is limited to 13 digits')
-        return v.title()
-
-
-class ProductStats(BaseModel):
-    product:    str
-    keys:       int
-    editors:    int
-    last_edit:  datetime
 
 
 async def db_connect():
@@ -277,7 +239,7 @@ SELECT row_to_json(j) FROM(
 
 @app.post("/product")
 async def product_tag_add(  response: Response,
-                            product_tag: ProductTagEdit,
+                            product_tag: ProductTag,
                             user: User = Depends(check_current_user)):
 
     if product_tag.owner not in ('', user["user_id"]):
@@ -311,7 +273,7 @@ INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
 
 @app.put("/product")
 async def product_tag_update(   response: Response,
-                                product_tag: ProductTagEdit,
+                                product_tag: ProductTag,
                                 user: User = Depends(check_current_user)):
 
     if product_tag.owner not in ('', user["user_id"]):
