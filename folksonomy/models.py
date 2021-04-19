@@ -24,7 +24,7 @@ class ProductTag(BaseModel):
 
     @validator('product')
     def product_check(cls, v):
-        if not re.fullmatch(barcode, v):
+        if not re.fullmatch(re_barcode, v):
             raise ValueError('product is limited to 13 digits')
         return v.title()
 
