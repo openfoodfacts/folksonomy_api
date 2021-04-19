@@ -34,7 +34,6 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    print('start')
     global db, cur
     db = psycopg2.connect("dbname=folksonomy")
     cur = db.cursor()
@@ -94,16 +93,15 @@ async def authentication(form_data: OAuth2PasswordRequestForm = Depends()):
     r = requests.post("https://world.openfoodfacts.org/cgi/auth.pl",
                       data={'user_id': user_id, 'password': password})
     if r.status_code == 200:
-        query = cur.mogrify("""
+        await db_exec(response, cur.mogrify("""
 DELETE FROM auth WHERE user_id = '%s';
 INSERT INTO auth (user_id, token, last_use) VALUES ('%s','%s',current_timestamp AT TIME ZONE 'GMT');
-        """ % (user_id, user_id, token))
-        cur.execute(query)
+        """ % (user_id, user_id, token)))
         if cur.rowcount == 1:
             db.commit()
             return {"access_token": token, "token_type": "bearer"}
     elif r.status_code == 403:
-        time.sleep(5)
+        time.sleep(5)   # prevents brute-force
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
