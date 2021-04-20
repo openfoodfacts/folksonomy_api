@@ -54,20 +54,14 @@ async def db_exec(response, query, params):
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
-    """ Get current user and check for required authentication credentials """
-    if '__U' in token:
+    """ Get current user and check token validity if present """
+    if token and '__U' in token:
         query = cur.mogrify(
             "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,))
         cur.execute(query)
         if cur.rowcount == 1:
             db.commit()
             return token.split('__U')[0]
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
 
 
 def check_owner_user(user, owner, allow_anonymous = False):
