@@ -279,16 +279,43 @@ UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
     return
 
 
-@app.delete("/product")
+@app.delete("/product/{product}/{k}")
 async def product_tag_delete(response: Response,
             product: str, k: str, version: int, owner = '',
             user: User = Depends(get_current_user)):
+    """
+    Delete a product tag
+    """
 
-    check_owner_user(user, product_tag.owner, allow_anonymous=False)
+    check_owner_user(user, owner, allow_anonymous=False)
     await db_exec(response, """
 DELETE FROM folksonomy WHERE product = %s AND owner = %s AND k = %s AND version = %s
     """, (product, owner, k, version))
     db.commit()
     if cur.rowcount == 1:
         return "ok"
-    return
+    else:
+        await db_exec(response, """
+SELECT version FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
+    """, (product, owner, k))
+        if cur.rowcount == 1:
+            out = cur.fetchone()
+            raise HTTPException(
+                status_code=422,
+                detail="version mismatch, last version for this product/k is %s" % out[0],
+            )
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail="Uknown product/k for this owner",
+            )
+
+
+@app.get("/ping")
+async def pong(response: Response):
+    """
+    Check server health
+    """
+    await db_exec(response, "SELECT current_timestamp AT TIME ZONE 'GMT'",())
+    pong = cur.fetchone()
+    return {"ping": "pong @ %s" % pong[0]}
