@@ -1,0 +1,21 @@
+import json
+import time
+import re
+import uuid
+from datetime import datetime
+from typing import List, Optional
+import psycopg2     # interface with postgresql
+import requests     # requests to call OFF for login/password check
+
+# FastAPI
+from fastapi import FastAPI, status, Response, Depends, Header, HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+# pydantic: define data schema
+from pydantic import BaseModel, ValidationError, validator
+
+# folksonomy imports
+from .models import ProductTag, ProductStats, User
+

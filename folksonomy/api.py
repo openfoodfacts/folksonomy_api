@@ -1,31 +1,8 @@
 #! /usr/bin/python3
  
-import json, time, re, uuid
-from datetime import datetime
-from typing import List, Optional
-import psycopg2     # interface with postgresql
-import requests     # requests to call OFF for login/password check
-
-# FastAPI
-from fastapi import FastAPI, status, Response, Depends, Header, HTTPException
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-
-# pydantic: define data schema
-from pydantic import BaseModel, ValidationError, validator
-
-# folksonomy imports...
-from folksonomy.models import ProductTag, ProductStats, User
+from .dependencies import *
 
 app = FastAPI(title="Open Food Facts folksonomy REST API")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 # define route for authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth", auto_error=False)
 
