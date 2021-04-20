@@ -10,7 +10,6 @@ import requests     # requests to call OFF for login/password check
 # FastAPI
 from fastapi import FastAPI, status, Response, Depends, Header, HTTPException
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 # pydantic: define data schema
