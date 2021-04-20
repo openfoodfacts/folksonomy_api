@@ -143,10 +143,7 @@ async def product_tags_list(response: Response,
     check_owner_user(user, owner, allow_anonymous=True)
     await db_exec(response, """
 SELECT json_agg(j)::json FROM(
-    SELECT *
-    FROM folksonomy 
-    WHERE product = %s AND owner = %s
-    ORDER BY k
+    SELECT * FROM folksonomy WHERE product = %s AND owner = %s ORDER BY k
     ) as j;
 """, (product, owner))
     out = cur.fetchone()
