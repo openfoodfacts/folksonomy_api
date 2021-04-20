@@ -228,7 +228,7 @@ async def product_tag_add(response: Response,
             product_tag: ProductTag,
             user: User = Depends(get_current_user)):
 
-    check_owner_user(user, owner, allow_anonymous=False)
+    check_owner_user(user, product_tag.owner, allow_anonymous=False)
     try:
         await db_exec(response, """
 INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
@@ -251,7 +251,7 @@ async def product_tag_update(response: Response,
             product_tag: ProductTag,
             user: User = Depends(get_current_user)):
 
-    check_owner_user(user, owner, allow_anonymous=False)
+    check_owner_user(user, product_tag.owner, allow_anonymous=False)
     try:
         await db_exec(response, """
 UPDATE folksonomy SET v = '%s', version = %s, editor = '%s', comment = '%s'
@@ -275,7 +275,7 @@ async def product_tag_delete(response: Response,
             product: str, k: str, version: int, owner = '',
             user: User = Depends(get_current_user)):
 
-    check_owner_user(user, owner, allow_anonymous=False)
+    check_owner_user(user, product_tag.owner, allow_anonymous=False)
     await db_exec(response, """
 DELETE FROM folksonomy WHERE product = '%s' AND owner = '%s' AND k = '%s' AND version = %s
     """ % (product, owner, k, version))
