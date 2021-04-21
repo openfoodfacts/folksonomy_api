@@ -109,13 +109,20 @@ INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT T
 
 @app.get("/products", response_model=List[ProductStats])
 async def product_list(response: Response,
-            owner='',
+            owner='', k='', v = '',
             user: User = Depends(get_current_user)):
     """
     Get the list of products with tags statistics
+
+    The products list can be limited to some tags (k or k=v)
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
+    where = cur.mogrify(' owner=%s ', (owner,))
+    if k != '':
+        where = where + cur.mogrify(' AND k=%s ', (k,))
+        if v != '':
+            where = where + cur.mogrify(' AND v=%s ', (v,))
     await db_exec(response, """
 SELECT json_agg(j.j)::json FROM(
     SELECT json_build_object(

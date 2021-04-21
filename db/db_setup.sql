@@ -38,7 +38,10 @@ CREATE TRIGGER folksonomy_autotimestamp BEFORE INSERT OR UPDATE on folksonomy
     FOR EACH ROW EXECUTE FUNCTION folksonomy_timestamp();
 
 -- index for unicity + search by product[owner[key]]
-CREATE UNIQUE INDEX ON folksonomy (product,owner,k);
+CREATE UNIQUE INDEX ON folksonomy  (product,owner,k);
+-- index to search by owner[key[value]]
+CREATE INDEX ON folksonomy_public  (k,v);
+CREATE INDEX ON folksonomy_private (owner,k,v);
 
 
 
