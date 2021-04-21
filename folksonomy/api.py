@@ -132,11 +132,11 @@ SELECT json_agg(j.j)::json FROM(
         'editors',count(distinct(editor))
         ) as j
     FROM folksonomy 
-    WHERE owner=%s
+    WHERE %s
     GROUP BY product) as j;
-""", (owner,))
+""" % where.decode(), None)
     out = cur.fetchone()
-    return out[0]
+    return JSONResponse(status_code=200, content=out[0])
 
 
 @app.get("/product/{product}", response_model=List[ProductTag])
@@ -155,7 +155,7 @@ SELECT json_agg(j)::json FROM(
 """, (product, owner))
     out = cur.fetchone()
     if out:
-        return out[0]
+        return JSONResponse(status_code=200, content=out[0])
     else:
         return
 
@@ -178,7 +178,7 @@ SELECT row_to_json(j) FROM(
 """, (product, owner, k))
     out = cur.fetchone()
     if out:
-        return out[0]
+        return JSONResponse(status_code=200, content=out[0])
     else:
         return
 
@@ -202,7 +202,7 @@ SELECT json_agg(j)::json FROM(
 """, (product, owner, k))
     out = cur.fetchone()
     if out:
-        return out[0]
+        return JSONResponse(status_code=200, content=out[0])
     else:
         return
 
@@ -224,7 +224,7 @@ SELECT row_to_json(j) FROM (
     ) as j;
 """, (product, owner, k, version))
     out = cur.fetchone()
-    return out[0]
+    return JSONResponse(status_code=200, content=out[0])
 
 
 @app.post("/product")
