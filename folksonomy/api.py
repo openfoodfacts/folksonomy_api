@@ -11,6 +11,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth", auto_error=False)
 async def startup():
     global db, cur
     db = psycopg2.connect("dbname=folksonomy")
+    db.set_session(autocommit=True)
     cur = db.cursor()
 
 
@@ -42,7 +43,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
             "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,))
         cur.execute(query)
         if cur.rowcount == 1:
-            db.commit()
             return token.split('__U')[0]
 
 
@@ -94,7 +94,6 @@ DELETE FROM auth WHERE user_id = %s;
 INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
         """, (user_id, user_id, token))
         if cur.rowcount == 1:
-            db.commit()
             return {"access_token": token, "token_type": "bearer"}
     elif r.status_code == 403:
         time.sleep(5)   # prevents brute-force
@@ -247,7 +246,6 @@ INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
         error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
         return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
 
-    db.commit()
     if cur.rowcount == 1:
         return "ok"
     return
@@ -280,7 +278,6 @@ UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
         )
 
-    db.commit()
     if cur.rowcount == 1:
         return "ok"
     return
@@ -298,7 +295,6 @@ async def product_tag_delete(response: Response,
     await db_exec(response, """
 DELETE FROM folksonomy WHERE product = %s AND owner = %s AND k = %s AND version = %s
     """, (product, owner, k, version))
-    db.commit()
     if cur.rowcount == 1:
         return "ok"
     else:
