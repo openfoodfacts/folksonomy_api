@@ -15,7 +15,7 @@ Postgresql is used as the backend database.
 
 # How to install Folksonomy Engine on your local machine
 
-1. Install Python
-2. Install PIP
-3. pip install-r requirements.txt
+1. Install Python 3.8+
+2. Install pip
+3. pip install -r requirements.txt
 4. XXX
