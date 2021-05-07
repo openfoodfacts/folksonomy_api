@@ -314,6 +314,33 @@ SELECT version FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
             )
 
 
+@app.get("/keys")
+async def keys_list(response: Response,
+            owner='',
+            user: User = Depends(get_current_user)):
+    """
+    Get the list of keys with statistics
+
+    The keys list can be restricted to private tags from some owner
+    """
+
+    check_owner_user(user, owner, allow_anonymous=True)
+    await db_exec(response, """
+SELECT json_agg(j.j)::json FROM(
+    SELECT json_build_object(
+        'k',k,
+        'count',count(*),
+        'values',count(distinct(v))
+        ) as j
+    FROM folksonomy 
+    WHERE owner=%s
+    GROUP BY k
+    ORDER BY count(*) DESC) as j;
+""", (owner,))
+    out = cur.fetchone()
+    return JSONResponse(status_code=200, content=out[0])
+
+
 @app.get("/ping")
 async def pong(response: Response):
     """
