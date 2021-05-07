@@ -330,8 +330,8 @@ async def keys_list(response: Response,
 SELECT json_agg(j.j)::json FROM(
     SELECT json_build_object(
         'k',k,
-        'products',count(distinct(product)),
-        'unique_values',count(distinct(v))
+        'count',count(*),
+        'values',count(distinct(v))
         ) as j
     FROM folksonomy 
     WHERE %s
