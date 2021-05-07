@@ -12,3 +12,10 @@ API Documentation with interactive "try-out": https://api.folksonomy.openfoodfac
 The code is written in python 3.x and uses FastAPI.
 
 Postgresql is used as the backend database.
+
+# How to install Folksonomy Engine on your local machine
+
+1. Install Python
+2. Install PIP
+3. pip install-r requirements.txt
+4. XXX
