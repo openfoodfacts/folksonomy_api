@@ -325,7 +325,6 @@ async def keys_list(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    where = cur.mogrify(' owner=%s ', (owner,))
     await db_exec(response, """
 SELECT json_agg(j.j)::json FROM(
     SELECT json_build_object(
@@ -334,9 +333,9 @@ SELECT json_agg(j.j)::json FROM(
         'values',count(distinct(v))
         ) as j
     FROM folksonomy 
-    WHERE %s
+    WHERE owner=%s
     GROUP BY k) as j;
-""" % where.decode(), None)
+""", (owner,))
     out = cur.fetchone()
     return JSONResponse(status_code=200, content=out[0])
 
