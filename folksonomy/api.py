@@ -334,7 +334,8 @@ SELECT json_agg(j.j)::json FROM(
         ) as j
     FROM folksonomy 
     WHERE owner=%s
-    GROUP BY k) as j;
+    GROUP BY k
+    ORDER BY count(*) DESC) as j;
 """, (owner,))
     out = cur.fetchone()
     return JSONResponse(status_code=200, content=out[0])
