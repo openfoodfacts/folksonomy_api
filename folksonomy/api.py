@@ -25,13 +25,13 @@ async def hello():
     return {"message": "Hello folksonomy World"}
 
 
-async def db_exec(response, query, params):
+async def db_exec(query, params):
     """
     Execute postgresql query and collect timing
     """
     t = time.time()
     cur.execute(cur.mogrify(query, params))
-    response.headers['x-pg-timing'] = str(round(time.time()-t, 4)*1000)+"ms"
+    return str(round(time.time()-t, 4)*1000)+"ms"
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -89,7 +89,7 @@ async def authentication(response: Response, form_data: OAuth2PasswordRequestFor
     r = requests.post("https://world.openfoodfacts.org/cgi/auth.pl",
                       data={'user_id': user_id, 'password': password})
     if r.status_code == 200:
-        await db_exec(response, """
+        timing = await db_exec("""
 DELETE FROM auth WHERE user_id = %s;
 INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
         """, (user_id, user_id, token))
@@ -122,7 +122,7 @@ async def product_list(response: Response,
         where = where + cur.mogrify(' AND k=%s ', (k,))
         if v != '':
             where = where + cur.mogrify(' AND v=%s ', (v,))
-    await db_exec(response, """
+    timing = await db_exec("""
 SELECT json_agg(j.j)::json FROM(
     SELECT json_build_object(
         'product',product,
@@ -147,7 +147,7 @@ async def product_tags_list(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    await db_exec(response, """
+    timing = await db_exec("""
 SELECT json_agg(j)::json FROM(
     SELECT * FROM folksonomy WHERE product = %s AND owner = %s ORDER BY k
     ) as j;
@@ -168,7 +168,7 @@ async def product_tag(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    await db_exec(response, """
+    timing = await db_exec("""
 SELECT row_to_json(j) FROM(
     SELECT *
     FROM folksonomy
@@ -191,7 +191,7 @@ async def product_tag_list_versions(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    await db_exec(response, """
+    timing = await db_exec("""
 SELECT json_agg(j)::json FROM(
     SELECT *
     FROM folksonomy_versions
@@ -215,7 +215,7 @@ async def product_tag_version(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    await db_exec(response, """
+    timing = await db_exec("""
 SELECT row_to_json(j) FROM (
     SELECT *
     FROM folksonomy_versions
@@ -236,7 +236,7 @@ async def product_tag_add(response: Response,
 
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
     try:
-        await db_exec(response, """
+        timing = await db_exec("""
 INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
     VALUES (%s,%s,%s,%s, %s,%s,%s)
     """, ( product_tag.product, product_tag.k, product_tag.v, product_tag.owner,
@@ -267,7 +267,7 @@ async def product_tag_update(response: Response,
 
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
     try:
-        await db_exec(response, """
+        timing = await db_exec("""
 UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
     WHERE product = %s AND owner = %s AND k = %s
     """, ( product_tag.v, product_tag.version, user["user_id"], product_tag.comment,
@@ -292,13 +292,13 @@ async def product_tag_delete(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=False)
-    await db_exec(response, """
+    timing = await db_exec("""
 DELETE FROM folksonomy WHERE product = %s AND owner = %s AND k = %s AND version = %s
     """, (product, owner, k, version))
     if cur.rowcount == 1:
         return "ok"
     else:
-        await db_exec(response, """
+        timing = await db_exec("""
 SELECT version FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
     """, (product, owner, k))
         if cur.rowcount == 1:
@@ -325,7 +325,7 @@ async def keys_list(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    await db_exec(response, """
+    timing = await db_exec("""
 SELECT json_agg(j.j)::json FROM(
     SELECT json_build_object(
         'k',k,
@@ -346,6 +346,6 @@ async def pong(response: Response):
     """
     Check server health
     """
-    await db_exec(response, "SELECT current_timestamp AT TIME ZONE 'GMT'",())
+    await db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'",())
     pong = cur.fetchone()
     return {"ping": "pong @ %s" % pong[0]}
