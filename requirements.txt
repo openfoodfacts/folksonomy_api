@@ -1,5 +1,8 @@
-psycopg2-binary
-requests
-fastapi
-uvicorn
-python-multipart
+psycopg2-binary==2.8.6
+requests==2.25.1
+fastapi==0.63.0
+uvicorn==0.13.4
+python-multipart==0.0.5
+
+# dev
+pytest==6.2.4
