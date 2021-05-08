@@ -17,7 +17,7 @@ async def startup():
 
 @app.on_event("shutdown")
 async def shutdown():
-    await db.close()
+    db.close()
 
 
 @app.get("/", status_code=status.HTTP_200_OK)
