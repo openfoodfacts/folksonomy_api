@@ -292,13 +292,13 @@ async def product_tag_delete(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=False)
-    await db_exec("""
+    timing = await db_exec("""
 DELETE FROM folksonomy WHERE product = %s AND owner = %s AND k = %s AND version = %s
     """, (product, owner, k, version))
     if cur.rowcount == 1:
         return "ok"
     else:
-        await db_exec("""
+        timing = await db_exec("""
 SELECT version FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
     """, (product, owner, k))
         if cur.rowcount == 1:
@@ -346,6 +346,6 @@ async def pong(response: Response):
     """
     Check server health
     """
-    await db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'", ())
+    await db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'",())
     pong = cur.fetchone()
     return {"ping": "pong @ %s" % pong[0]}
