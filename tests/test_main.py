@@ -50,3 +50,10 @@ def test_products_list_key():
         response = client.get(
             "/products/?k="+product[0]['k'])
         assert response.status_code == 200
+
+
+def test_keys_list():
+    with TestClient(app) as client:
+        response = client.get("/keys")
+        assert response.status_code == 200
+        return response.json()
