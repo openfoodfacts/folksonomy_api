@@ -18,4 +18,6 @@ Postgresql is used as the backend database.
 1. Install Python 3.8+
 2. Install pip
 3. pip install -r requirements.txt
-4. XXX
+4. Install postgre
+5. Create a user
+6. XXX
