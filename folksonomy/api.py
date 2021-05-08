@@ -153,10 +153,7 @@ SELECT json_agg(j)::json FROM(
     ) as j;
 """, (product, owner))
     out = cur.fetchone()
-    if out:
-        return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
-    else:
-        return
+    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
 @app.get("/product/{product}/{k}", response_model=ProductTag)
@@ -200,10 +197,7 @@ SELECT json_agg(j)::json FROM(
     ) as j;
 """, (product, owner, k))
     out = cur.fetchone()
-    if out:
-        return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
-    else:
-        return
+    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
 @app.get("/product/{product}/{k}/version/{version}", response_model=ProductTag)
