@@ -233,7 +233,7 @@ async def product_tag_add(response: Response,
         timing = await db_exec("""
 INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
     VALUES (%s,%s,%s,%s, %s,%s,%s)
-    """, (product_tag.product, product_tag.k, product_tag.v, product_tag.owner,
+    """, (product_tag.product, product_tag.k.lower(), product_tag.v, product_tag.owner,
             product_tag.version, user, product_tag.comment
           ))
     except psycopg2.Error as e:
@@ -265,7 +265,7 @@ async def product_tag_update(response: Response,
 UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
     WHERE product = %s AND owner = %s AND k = %s
     """, (product_tag.v, product_tag.version, user["user_id"], product_tag.comment,
-            product_tag.product, product_tag.owner, product_tag.k))
+            product_tag.product, product_tag.owner, product_tag.k.lower()))
     except psycopg2.Error as e:
         raise HTTPException(
             status_code=422,
@@ -288,7 +288,7 @@ async def product_tag_delete(response: Response,
     check_owner_user(user, owner, allow_anonymous=False)
     timing = await db_exec("""
 DELETE FROM folksonomy WHERE product = %s AND owner = %s AND k = %s AND version = %s
-    """, (product, owner, k, version))
+    """, (product, owner, k.lower(), version))
     if cur.rowcount == 1:
         return "ok"
     else:
