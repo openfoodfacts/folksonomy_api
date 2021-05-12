@@ -22,6 +22,17 @@ jobs:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
 
+    # install Python
+    Install Python 3.8+
+    #Install pip
+    pip install -r requirements.txt
+    #Install postgre
+    #Create a user
+    # run PIP
+    # Run generation
+    ./generate_openapi_json.py
+    # print json path
+
     # Runs a single command using the runners shell
     - name: swagger-cli
       uses: vaibhav-jain/spectral-action/@v2.6
