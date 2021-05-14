@@ -29,9 +29,9 @@ jobs:
     - uses: harmon758/postgresql-action@v1
       with:
         postgresql version: '11'  # See https://hub.docker.com/_/postgres for available versions
-        postgresql user: user
-        postgresql password: password
-        postgresql db: 'folksonomy_test'
+        postgresql user: postgres
+        postgresql password: postgres
+        postgresql db: 'postgres'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -49,9 +49,8 @@ jobs:
       uses: vaibhav-jain/spectral-action/@v2.6
       with:
         file_path: ./openapi.json #examples/swagger.yaml
-    - name: Test Postgre
-      run: |
-        ./psql –h localhost folksonomy_test
     - name: Test with pytest
+      env:
+        DATABASE_URL: 'postgres://postgres:postgres@localhost:${{ job.services.postgres.ports[5432] }}/postgres'
       run: |
         pytest
