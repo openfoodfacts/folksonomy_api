@@ -64,6 +64,6 @@ jobs:
         file_path: ./openapi.json #examples/swagger.yaml
     - name: Test with pytest
       env:
-        DATABASE_URL: 'postgres://postgres:postgres@localhost:${{ job.services.postgres.ports[5432] }}/folksonomy'
+        DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/folksonomy'
       run: |
         pytest
