@@ -48,7 +48,7 @@ jobs:
          PGPASSWORD=postgres psql -U postgres -h 127.0.0.1 -d folksonomy -f ./db/db_setup.sql
     - name: Install PostgreSQL client
       run: |
-        apt-get install --yes postgresql-client
+        sudo apt-get install --yes postgresql-client
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
