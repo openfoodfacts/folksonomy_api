@@ -31,7 +31,7 @@ jobs:
         postgresql version: '11'  # See https://hub.docker.com/_/postgres for available versions
         postgresql user: postgres
         postgresql password: postgres
-        postgresql db: 'postgres'
+        postgresql db: 'folksonomy'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -51,6 +51,6 @@ jobs:
         file_path: ./openapi.json #examples/swagger.yaml
     - name: Test with pytest
       env:
-        DATABASE_URL: 'postgres://postgres:postgres@localhost:${{ job.services.postgres.ports[5432] }}/postgres'
+        DATABASE_URL: 'postgres://postgres:postgres@localhost:${{ job.services.postgres.ports[5432] }}/folksonomy'
       run: |
         pytest
