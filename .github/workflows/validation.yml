@@ -57,6 +57,8 @@ jobs:
       uses: vaibhav-jain/spectral-action/@v2.6
       with:
         file_path: ./openapi.json #examples/swagger.yaml
+    - name: psycopg2 prerequisites
+      run: sudo apt-get install libpq-dev
     - name: Test with pytest
       env:
         DATABASE_URL: 'postgres://postgres:postgres@localhost:${{ job.services.postgres.ports[5432] }}/folksonomy'
