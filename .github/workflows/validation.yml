@@ -69,10 +69,10 @@ jobs:
     - name: Test with pytest
       env:
         DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/folksonomy'
-        PGUSER: POSTGRES_USER
-        PGPASSWORD: POSTGRES_PASSWORD
-        PGDB: POSTGRES_DB
-        PGPORT: POSTGRES_PORT
-        PGURL: localhost
+        PGUSER: "postgres"
+        PGPASSWORD: "postgres"
+        PGDB: "folksonomy"
+        PGPORT: 5432
+        PGURL: "localhost"
       run: |
         pytest
