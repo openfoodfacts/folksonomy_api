@@ -46,6 +46,12 @@ jobs:
       uses: vaibhav-jain/spectral-action/@v2.6
       with:
         file_path: ./openapi.json #examples/swagger.yaml
+    - name: Test Postgre
+      run: |
+        cd /usr/local/pgsql/bin 
+        su – postgres
+        ./createdb folksonomy-engine
+        ./psql –h localhost folksonomy-engine
     - name: Test with pytest
       run: |
         pytest
