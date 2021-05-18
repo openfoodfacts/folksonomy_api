@@ -161,17 +161,31 @@ async def product_tag(response: Response,
                       product: str, k: str, owner='',
                       user: User = Depends(get_current_user)):
     """
-    Get a specific tag on a product
+    Get a specific tag or tag hierarchy on a product
+
+    - /product/xxx/key returns only the requested key
+    - /product/xxx/key* returns the key and subkeys (key:subkey)
     """
 
+    key = re.sub(r'[^a-z0-9_\:]', '', k)
     check_owner_user(user, owner, allow_anonymous=True)
-    timing = await db_exec("""
+    if k[-1:] == '*':
+        timing = await db_exec("""
+SELECT json_agg(j)::json FROM(
+    SELECT *
+    FROM folksonomy
+    WHERE product = %s AND owner = %s AND k ~ %s
+    ORDER BY k) as j;
+""", (product, owner, '^%s(:.|$)' % key))
+    else:
+        timing = await db_exec("""
 SELECT row_to_json(j) FROM(
     SELECT *
     FROM folksonomy
     WHERE product = %s AND owner = %s AND k = %s
     ) as j;
-""", (product, owner, k))
+""", (product, owner, key))
+
     out = cur.fetchone()
     if out:
         return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
