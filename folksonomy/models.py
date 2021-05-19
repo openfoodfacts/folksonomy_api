@@ -26,7 +26,7 @@ class ProductTag(BaseModel):
     def product_check(cls, v):
         if not re.fullmatch(re_barcode, v):
             raise ValueError('product is limited to 13 digits')
-        return v.title()
+        return v
 
     @validator('k')
     def key_check(cls, v):
@@ -34,13 +34,13 @@ class ProductTag(BaseModel):
             raise ValueError('k cannot be empty')
         if not re.fullmatch(re_key, v):
             raise ValueError('k must be alpha-numeric [a-z0-9_:]')
-        return v.title()
+        return v
 
     @validator('v')
     def value_check(cls, v):
         if v == '':
             raise ValueError('v cannot be empty')
-        return v.title()
+        return v
 
 
 class ProductStats(BaseModel):
