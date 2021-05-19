@@ -246,7 +246,7 @@ async def product_tag_add(response: Response,
     try:
         timing = await db_exec("""
 INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
-    VALUES (%s,%s,%s,%s, %s,%s,%s)
+    VALUES (%s,%s,%s,%s,%s,%s,%s)
     """, (product_tag.product, product_tag.k.lower(), product_tag.v, product_tag.owner,
             product_tag.version, user, product_tag.comment
           ))
@@ -278,7 +278,7 @@ async def product_tag_update(response: Response,
         timing = await db_exec("""
 UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
     WHERE product = %s AND owner = %s AND k = %s
-    """, (product_tag.v, product_tag.version, user["user_id"], product_tag.comment,
+    """, (product_tag.v, product_tag.version, user, product_tag.comment,
             product_tag.product, product_tag.owner, product_tag.k.lower()))
     except psycopg2.Error as e:
         raise HTTPException(
