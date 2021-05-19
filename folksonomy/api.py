@@ -25,7 +25,7 @@ async def hello():
     return {"message": "Hello folksonomy World"}
 
 
-async def db_exec(query, params):
+async def db_exec(query, params = ()):
     """
     Execute postgresql query and collect timing
     """
