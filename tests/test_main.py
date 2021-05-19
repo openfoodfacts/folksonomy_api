@@ -94,22 +94,6 @@ def test_product_key_versions():
         return response.json()
 
 
-def test_product_key_last_version():
-    product = test_product_key_versions()
-    with TestClient(app) as client:
-        response = client.get(
-            "/product/%s/%s/version/1" % (product[0]['product'], product[0]['k']))
-        assert response.status_code == 200
-
-
-def test_product_key_first_version():
-    product = test_product_key_versions()
-    with TestClient(app) as client:
-        response = client.get(
-            "/product/%s/%s/version/%s" % (product[0]['product'], product[0]['k'], product[0]['version']))
-        assert response.status_code == 200
-
-
 def test_product_key_versions_missing():
     product = test_product()
     with TestClient(app) as client:
@@ -278,6 +262,9 @@ def test_delete():
             "/product/"+p['product']+"/test_"+str(date)+"?version=2", headers=get_auth_token(),)
         assert response.status_code == 200, f'valid version should return 200, got {response.status_code} {response.text}'
 
+        response = client.post("/product", headers=get_auth_token(), json={
+            "product": p['product'], "version": 1, "k": "test_"+str(date), "v": "test"})
+        assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
 
 
 def test_auth_by_cookie():
@@ -290,3 +277,5 @@ def test_auth_by_cookie():
 
         response = client.post("/auth_by_cookie", headers={'Cookie': 'session=titi&toto'})
         assert response.status_code == 401, f'missing cookie should return 401, got {response.status_code} {response.text}'
+
+
