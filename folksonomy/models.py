@@ -42,6 +42,12 @@ class ProductTag(BaseModel):
             raise ValueError('v cannot be empty')
         return v
 
+    @validator('version')
+    def version_check(cls, version):
+        if version < 1:
+            raise ValueError('version must greater or equal to 1')
+        return version
+
 
 class ProductStats(BaseModel):
     product:    str
