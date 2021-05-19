@@ -255,26 +255,6 @@ SELECT json_agg(j)::json FROM(
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
-@app.get("/product/{product}/{k}/version/{version}", response_model=ProductTag)
-async def product_tag_version(response: Response,
-                              product: str, k: str, version: int, owner='',
-                              user: User = Depends(get_current_user)):
-    """
-    Get a specific version of a tag for a product
-    """
-
-    check_owner_user(user, owner, allow_anonymous=True)
-    timing = await db_exec("""
-SELECT row_to_json(j) FROM (
-    SELECT *
-    FROM folksonomy_versions
-    WHERE product = %s AND owner = %s AND k = %s and version = %s
-    ) as j;
-""", (product, owner, k, version))
-    out = cur.fetchone()
-    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
-
-
 @app.post("/product")
 async def product_tag_add(response: Response,
                           product_tag: ProductTag,
