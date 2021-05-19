@@ -321,13 +321,33 @@ async def product_tag_delete(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=False)
-    timing = await db_exec("""
-DELETE FROM folksonomy WHERE product = %s AND owner = %s AND k = %s AND version = %s
-    """, (product, owner, k.lower(), version))
+
+    try:
+        await db_exec("""
+BEGIN;
+UPDATE folksonomy SET version = 0, editor = %s, comment = 'DELETE'
+    WHERE product = %s AND owner = %s AND k = %s AND version = %s;
+    """, (user, product, owner, k, version))
+    except psycopg2.Error as e:
+        await db_exec("ROLLBACK")
+        raise HTTPException(
+            status_code=422,
+            detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
+        )
+    if cur.rowcount != 1:
+        raise HTTPException(
+            status_code=422,
+            detail="Unknown product/k/version for this owner",
+        )
+
+    await db_exec("""
+DELETE FROM folksonomy WHERE product = %s AND owner = %s AND k = %s AND version = 0;
+    """, (product, owner, k.lower()))
     if cur.rowcount == 1:
+        await db_exec("COMMIT")
         return "ok"
     else:
-        timing = await db_exec("""
+        await db_exec("""
 SELECT version FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
     """, (product, owner, k))
         if cur.rowcount == 1:
@@ -339,7 +359,7 @@ SELECT version FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
         else:
             raise HTTPException(
                 status_code=404,
-                detail="Uknown product/k for this owner",
+                detail="Unknown product/k for this owner",
             )
 
 
