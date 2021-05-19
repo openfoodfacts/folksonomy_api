@@ -67,7 +67,12 @@ def test_product_missing():
 def test_product_key():
     product = test_product()
     with TestClient(app) as client:
-        response = client.get("/product/"+product[0]['product']+"/"+product[0]['k'])
+        response = client.get(
+            "/product/"+product[0]['product']+"/"+product[0]['k']+'*')
+        assert response.status_code == 200
+
+        response = client.get(
+            "/product/"+product[0]['product']+"/"+product[0]['k'])
         assert response.status_code == 200
         return response.json()
 
