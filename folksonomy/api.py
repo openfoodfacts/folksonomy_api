@@ -77,7 +77,7 @@ async def authentication(response: Response, form_data: OAuth2PasswordRequestFor
     """
     Authentication: provide user/password and get a bearer token in return
 
-    - **username** : OpenFoodFacts user_id (not email)
+    - **username** : Open Food Facts user_id (not email)
     - **password** : user password (clear text, but HTTPS encrypted)
 
     token is returned, to be used in later requests with usual "Authorization: bearer token" headers
