@@ -1,5 +1,6 @@
 import json
 import pytest
+import time
 
 from fastapi.testclient import TestClient
 
@@ -19,7 +20,7 @@ from folksonomy.models import ProductStats
 
 client = TestClient(app)
 access_token = None
-
+date = int(time.time())
 
 def test_hello():
     response = client.get("/")
@@ -189,40 +190,58 @@ def test_auth_ok():
 
 @pytest.mark.skipif(skip_auth, reason="skip auth tests")
 def test_post():
+    p = test_product()[0]
+    print(p)
     with TestClient(app) as client:
-        response = client.post("/product", headers=get_auth_token(),
-            data={"product": "", "version": "1", "k": "test", "v": "test"})
+        response = client.post("/product", headers=get_auth_token(), json=
+            {"product": "", "version": 1, "k": "test", "v": "test"})
         assert response.status_code == 422, f'product = "" should return 422, got {response.status_code}'
 
-        response = client.post("/product", headers=get_auth_token(),
-            data={"product": "", "version": "0", "k": "test", "v": "test"})
+        response = client.post("/product", headers=get_auth_token(), json=
+            {"product": "", "version": 0, "k": "test", "v": "test"})
         assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
 
-        response = client.post(
-            "/product", headers=get_auth_token(),
-            data={"product": "", "version": "-1", "k": "test", "v": "test"})
+        response = client.post("/product", headers=get_auth_token(), json=
+            {"product": "", "version": -1, "k": "test", "v": "test"})
         assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
 
-        response = client.post("/product", headers=get_auth_token(),
-            data={"product": "", "version": "9999", "k": "test", "v": "test"})
+        response = client.post("/product", headers=get_auth_token(), json=
+            {"product": "", "version": 9999, "k": "test", "v": "test"})
         assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
 
-        response = client.post("/product", headers = get_auth_token(),
-            data={"product": "aa", "version": "1", "k":"test", "v":"test"})
+        response = client.post("/product", headers = get_auth_token(), json=
+                                {"product": "aa", "version": 1, "k": "test", "v": "test"})
         assert response.status_code == 422, f'non alphanum product should return 422, got {response.status_code}'
 
-        response = client.post("/product", headers=get_auth_token(),
-            data={"product": "0000000000000", "version": "1", "k": "", "v": "test"})
+        response = client.post("/product", headers=get_auth_token(), json=
+            {"product": "0000000000000", "version": 1, "k": "", "v": "test"})
         assert response.status_code == 422, f'k="" should return 422, got {response.status_code}'
 
-        response = client.post("/product", headers=get_auth_token(),
-            data={"product": "0000000000000", "version": "1", "k": "ABCD", "v": "test"})
+        response = client.post("/product", headers=get_auth_token(), json=
+            {"product": "0000000000000", "version": 1, "k": "ABCD", "v": "test"})
         assert response.status_code == 422, f'non lowercase k should return 422, got {response.status_code}'
 
-        response = client.post("/product", headers=get_auth_token(),
-            data={"product": "0000000000000", "version": "1", "k": "$$", "v": "test"})
+        response = client.post("/product", headers=get_auth_token(), json=
+            {"product": "0000000000000", "version": 1, "k": "$$", "v": "test"})
         assert response.status_code == 422, f'invalid k should return 422, got {response.status_code}'
 
-        response = client.post("/product", headers=get_auth_token(),
-            data={"product": "0000000000000", "version": "1", "k": "aa", "v": "test", "owner": "someone_else"})
+        response = client.post("/product", headers=get_auth_token(), json=
+            {"product": "0000000000000", "version": 1, "k": "aa", "v": "test", "owner": "someone_else"})
         assert response.status_code == 422, f'invalid owner should return 422, got {response.status_code}'
+
+        response = client.post("/product", headers=get_auth_token(), json=
+            {"product": p['product'], "version": 1, "k": "test_"+str(date), "v": "test"})
+        assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
+
+
+@pytest.mark.skipif(skip_auth, reason="skip auth tests")
+def test_put():
+    p = test_product()[0]
+    with TestClient(app) as client:
+        response = client.put("/product", headers=get_auth_token(), json=
+            {"product": p['product'], "k": "test_"+str(date), "v": "test", "version": 2})
+        assert response.status_code == 200, f'valid new version should return 200, got {response.status_code} {response.text}'
+
+        response = client.put("/product", headers=get_auth_token(), json=
+            {"product": p['product'], "k": "test_"+str(date), "v": "test", "version": 2})
+        assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
