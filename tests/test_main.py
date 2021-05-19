@@ -256,6 +256,30 @@ def test_put():
         assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
 
 
+@pytest.mark.skipif(skip_auth, reason="skip auth tests")
+def test_delete():
+    p = test_product()[0]
+    with TestClient(app) as client:
+        response = client.delete("/product/"+p['product']+"/test_"+str(date))
+        assert response.status_code == 422, f'invalid auth should return 422, got {response.status_code} {response.text}'
+
+        response = client.delete("/product/"+p['product']+"/test_"+str(date), headers=get_auth_token())
+        assert response.status_code == 422, f'missing version should return 422, got {response.status_code} {response.text}'
+
+        response = client.delete(
+            "/product/"+p['product']+"/test_"+str(date)+"?version=1", headers=get_auth_token(),)
+        assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
+
+        response = client.delete(
+            "/product/"+p['product']+"/test_"+str(date)+"?version=3", headers=get_auth_token(),)
+        assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
+
+        response = client.delete(
+            "/product/"+p['product']+"/test_"+str(date)+"?version=2", headers=get_auth_token(),)
+        assert response.status_code == 200, f'valid version should return 200, got {response.status_code} {response.text}'
+
+
+
 def test_auth_by_cookie():
     with TestClient(app) as client:
         response = client.post("/auth_by_cookie")
