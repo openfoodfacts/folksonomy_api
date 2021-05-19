@@ -96,7 +96,48 @@ INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT T
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
     elif r.status_code == 403:
-        time.sleep(5)   # prevents brute-force
+        time.sleep(2)   # prevents brute-force
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    raise HTTPException(
+        status_code=500, detail="Server error")
+
+
+@app.post("/auth_by_cookie")
+async def authentication(response: Response, session: Optional[str] = Cookie(None)):
+    """
+    Authentication: provide Open Food Facts session cookie and get a bearer token in return
+
+    - **session cookie** : Open Food Facts session cookie
+
+    token is returned, to be used in later requests with usual "Authorization: bearer token" headers
+    """
+
+    if not session or session =='':
+        raise HTTPException(
+            status_code=422, detail="Mission 'session' cookie")
+
+    try:
+        user_id = session.split('&')[-1]
+        token = user_id+'__U'+str(uuid.uuid4())
+    except:
+        raise HTTPException(
+            status_code=422, detail="Malformed 'session' cookie")
+
+    r = requests.post("https://world.openfoodfacts.org/cgi/auth.pl",
+                      cookies={'session': session})
+    if r.status_code == 200:
+        timing = await db_exec("""
+DELETE FROM auth WHERE user_id = %s;
+INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
+        """, (user_id, user_id, token))
+        if cur.rowcount == 1:
+            return {"access_token": token, "token_type": "bearer"}
+    elif r.status_code == 403:
+        time.sleep(2)   # prevents brute-force
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",

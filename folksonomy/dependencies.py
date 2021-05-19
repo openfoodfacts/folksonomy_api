@@ -8,7 +8,7 @@ import psycopg2     # interface with postgresql
 import requests     # requests to call OFF for login/password check
 
 # FastAPI
-from fastapi import FastAPI, status, Response, Depends, Header, HTTPException
+from fastapi import FastAPI, status, Response, Depends, Header, HTTPException, Cookie
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 

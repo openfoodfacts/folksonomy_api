@@ -245,3 +245,15 @@ def test_put():
         response = client.put("/product", headers=get_auth_token(), json=
             {"product": p['product'], "k": "test_"+str(date), "v": "test", "version": 2})
         assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
+
+
+def test_auth_by_cookie():
+    with TestClient(app) as client:
+        response = client.post("/auth_by_cookie")
+        assert response.status_code == 422, f'missing cookie should return 422, got {response.status_code} {response.text}'
+
+        response = client.post("/auth_by_cookie", headers={'Cookie': 'session=toto'})
+        assert response.status_code == 401, f'missing cookie should return 401, got {response.status_code} {response.text}'
+
+        response = client.post("/auth_by_cookie", headers={'Cookie': 'session=titi&toto'})
+        assert response.status_code == 401, f'missing cookie should return 401, got {response.status_code} {response.text}'
