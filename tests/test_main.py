@@ -243,12 +243,16 @@ def test_post():
 def test_put():
     p = test_product()[0]
     with TestClient(app) as client:
-        response = client.put("/product", headers=get_auth_token(), json=
-            {"product": p['product'], "k": "test_"+str(date), "v": "test", "version": 2})
+        response = client.put("/product", headers=get_auth_token(), json={
+                              "product": p['product'], "k": "test_"+str(date), "v": "test", "version": 1})
+        assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
+
+        response = client.put("/product", headers=get_auth_token(), json={
+                              "product": p['product'], "k": "test_"+str(date), "v": "test", "version": 2})
         assert response.status_code == 200, f'valid new version should return 200, got {response.status_code} {response.text}'
 
-        response = client.put("/product", headers=get_auth_token(), json=
-            {"product": p['product'], "k": "test_"+str(date), "v": "test", "version": 2})
+        response = client.put("/product", headers=get_auth_token(), json={
+                              "product": p['product'], "k": "test_"+str(date), "v": "test", "version": 2})
         assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
 
 
