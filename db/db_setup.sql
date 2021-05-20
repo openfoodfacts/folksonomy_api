@@ -61,8 +61,7 @@ CREATE TABLE folksonomy_versions (
     comment     varchar(200)
 );
 
--- index for unicity + search by product[owner[key[version]]]
-CREATE UNIQUE INDEX ON folksonomy_versions (product,owner,k,version);
+CREATE INDEX ON folksonomy_versions (product,owner,k);
 
 -- trigger based versionning
 CREATE OR REPLACE FUNCTION folksonomy_archive() RETURNS trigger AS $folksonomy_archive$
