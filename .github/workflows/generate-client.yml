@@ -4,7 +4,7 @@ name: Generate Client
 on:
   push:
     branches:
-      - master
+      - '*'
 
 jobs:
   client:
@@ -19,8 +19,8 @@ jobs:
     - name: Generate OpenAPI file
       uses: column-street/fastapi-openapi-specs-action@v1.0.0
       with:
-        moduleDir: fast
-        fileName: main.py
+        moduleDir: /
+        fileName: generate_openapi_json.py
         appName: app
 
     # Uses an external tool, openapitools-generator-action, to generate the client code.
