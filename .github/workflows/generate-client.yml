@@ -19,7 +19,7 @@ jobs:
     - name: Generate OpenAPI file
       uses: column-street/fastapi-openapi-specs-action@v1.0.0
       with:
-        moduleDir: /
+        moduleDir: .
         fileName: generate_openapi_json.py
         appName: app
 
