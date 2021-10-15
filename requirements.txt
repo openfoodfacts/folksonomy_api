@@ -1,5 +1,5 @@
 psycopg2-binary==2.8.6
-requests==2.25.1
+requests==2.26.0
 fastapi==0.70.0
 uvicorn==0.13.4
 python-multipart==0.0.5
