@@ -24,12 +24,11 @@ workon folksonomy
 pip install -r requirements.txt
 
 # create dbuser if needed
-sudo su - postgres -c "createuser $USER"
+sudo -u postgres createuser $USER
 
 # create Postgresql database
-sudo su - postgres -c "createdb folksonomy -O $USER"
-sudo su - postgres -c 'psql -c "grant all privileges on database folksonomy to $USER;"'
-sudo su postgres -c "psql folksonomy < db/db_setup.sql"
+sudo -u postgres createdb folksonomy -O $USER
+psql folksonomy < db/db_setup.sql
 
 ```
 
