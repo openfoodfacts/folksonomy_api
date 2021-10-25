@@ -390,6 +390,26 @@ SELECT json_agg(j.j)::json FROM(
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
+@app.get("/key/{k}")
+async def product_list_with_key(response: Response,
+                    k: str, owner='',
+                    user: User = Depends(get_current_user)):
+    """
+    Get the list of products with a given key (including values)
+
+    The product list can be restricted to private tags from some owner
+    """
+
+    check_owner_user(user, owner, allow_anonymous=True)
+    timing = await db_exec("""
+SELECT json_agg(j)::json FROM(
+    SELECT * FROM folksonomy WHERE k = %s AND owner = %s ORDER BY k
+    ) as j;
+""", (k,owner))
+    out = cur.fetchone()
+    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
+
+
 @app.get("/ping")
 async def pong(response: Response):
     """
