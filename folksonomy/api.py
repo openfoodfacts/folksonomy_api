@@ -147,8 +147,8 @@ INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT T
         status_code=500, detail="Server error")
 
 
-@app.get("/products", response_model=List[ProductStats])
-async def product_list(response: Response,
+@app.get("/products/stats", response_model=List[ProductStats])
+async def product_stats(response: Response,
                        owner='', k='', v='',
                        user: User = Depends(get_current_user)):
     """
@@ -174,6 +174,35 @@ SELECT json_agg(j.j)::json FROM(
     FROM folksonomy 
     WHERE %s
     GROUP BY product) as j;
+""" % where.decode(), None)
+    out = cur.fetchone()
+    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing":timing})
+
+
+@app.get("/products", response_model=List[ProductStats])
+async def product_list(response: Response,
+                       owner='', k='', v='',
+                       user: User = Depends(get_current_user)):
+    """
+    Get the list of products matching k or k=v
+    """
+
+    check_owner_user(user, owner, allow_anonymous=True)
+    where = cur.mogrify(' owner=%s ', (owner,))
+    if k != '':
+        where = where + cur.mogrify(' AND k=%s ', (k,))
+        if v != '':
+            where = where + cur.mogrify(' AND v=%s ', (v,))
+    timing = await db_exec("""
+SELECT json_agg(j.j)::json FROM(
+    SELECT json_build_object(
+        'product',product,
+        'keys',k,
+        'value',v
+        ) as j
+    FROM folksonomy 
+    WHERE %s
+    ) as j;
 """ % where.decode(), None)
     out = cur.fetchone()
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing":timing})
