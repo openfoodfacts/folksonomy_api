@@ -179,7 +179,7 @@ SELECT json_agg(j.j)::json FROM(
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing":timing})
 
 
-@app.get("/products", response_model=List[ProductStats])
+@app.get("/products", response_model=List[ProductList])
 async def product_list(response: Response,
                        owner='', k='', v='',
                        user: User = Depends(get_current_user)):
@@ -193,12 +193,15 @@ async def product_list(response: Response,
         where = where + cur.mogrify(' AND k=%s ', (k,))
         if v != '':
             where = where + cur.mogrify(' AND v=%s ', (v,))
+    else:
+        return JSONResponse(status_code=422, content={"detail": {"msg": "missing value for k"}})
+
     timing = await db_exec("""
 SELECT json_agg(j.j)::json FROM(
     SELECT json_build_object(
         'product',product,
-        'keys',k,
-        'value',v
+        'k',k,
+        'v',v
         ) as j
     FROM folksonomy 
     WHERE %s
