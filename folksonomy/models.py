@@ -54,3 +54,9 @@ class ProductStats(BaseModel):
     keys:       int
     editors:    int
     last_edit:  datetime
+
+
+class ProductList(BaseModel):
+    product:    str
+    k:          str
+    v:          str
