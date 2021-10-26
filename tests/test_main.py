@@ -15,7 +15,7 @@ except:
 
 # use to test model conformance
 from typing import List, Optional
-from folksonomy.models import ProductStats
+from folksonomy.models import ProductStats,ProductList
 
 
 client = TestClient(app)
@@ -44,8 +44,11 @@ def test_products_stats():
 def test_products_list():
     with TestClient(app) as client:
         response = client.get("/products")
+        assert response.status_code == 422
+        response = client.get("/products?k=xxx")
         assert response.status_code == 200
-        return response.json()
+        response = client.get("/products?k=xxx&v=yyy")
+        assert response.status_code == 200
 
 
 def test_products_list_private_anonymous():
