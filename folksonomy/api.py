@@ -148,7 +148,7 @@ INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT T
 
 
 @app.get("/products/stats", response_model=List[ProductStats])
-async def product_stat(response: Response,
+async def product_stats(response: Response,
                        owner='', k='', v='',
                        user: User = Depends(get_current_user)):
     """
