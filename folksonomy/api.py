@@ -197,7 +197,7 @@ async def product_list(response: Response,
         return JSONResponse(status_code=422, content={"detail": {"msg": "missing value for k"}})
 
     timing = await db_exec("""
-SELECT json_agg(j.j)::json FROM(
+SELECT coalesce(json_agg(j.j)::json, '[]'::json) FROM(
     SELECT json_build_object(
         'product',product,
         'k',k,
