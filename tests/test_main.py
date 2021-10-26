@@ -34,6 +34,13 @@ def test_ping():
         assert response.status_code == 200
 
 
+def test_products_stats():
+    with TestClient(app) as client:
+        response = client.get("/products/stats")
+        assert response.status_code == 200
+        return response.json()
+
+
 def test_products_list():
     with TestClient(app) as client:
         response = client.get("/products")
@@ -111,6 +118,22 @@ def test_product_missing():
         assert response.status_code == 200
         assert response.json() == None
         return response.json()
+
+
+def test_products_stats_key():
+    product = test_product()
+    with TestClient(app) as client:
+        response = client.get(
+            "/products/stats?k=%s" % (product[0]['k']))
+        assert response.status_code == 200
+
+
+def test_products_stats_key_value():
+    product = test_product()
+    with TestClient(app) as client:
+        response = client.get(
+            "/products/stats?k=%s&v=%s" % (product[0]['k'], product[0]['v']))
+        assert response.status_code == 200
 
 
 def test_products_list_key():
