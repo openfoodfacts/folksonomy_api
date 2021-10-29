@@ -121,7 +121,8 @@ async def authentication(response: Response, session: Optional[str] = Cookie(Non
             status_code=422, detail="Mission 'session' cookie")
 
     try:
-        user_id = session.split('&')[-1]
+        session_data = session.split('&')
+        user_id = session_data[session_data.index('user_id')+1]
         token = user_id+'__U'+str(uuid.uuid4())
     except:
         raise HTTPException(
