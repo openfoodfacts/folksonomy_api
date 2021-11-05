@@ -291,9 +291,11 @@ def test_auth_by_cookie():
         assert response.status_code == 422, f'missing cookie should return 422, got {response.status_code} {response.text}'
 
         response = client.post("/auth_by_cookie", headers={'Cookie': 'session=toto'})
-        assert response.status_code == 401, f'missing cookie should return 401, got {response.status_code} {response.text}'
+        assert response.status_code == 422, f'Malformed session cookie should return 422, got {response.status_code} {response.text}'
 
         response = client.post("/auth_by_cookie", headers={'Cookie': 'session=titi&toto'})
-        assert response.status_code == 401, f'missing cookie should return 401, got {response.status_code} {response.text}'
+        assert response.status_code == 422, f'Malformed session cookie should return 422, got {response.status_code} {response.text}'
 
+        response = client.post("/auth_by_cookie", headers={'Cookie': 'session=user_session&2lRIus5uMqwfAjlMe8P2rETG9kUZPYwzCYfVJRfROozyQZYDH24yrWK567VNeYta&user_id&bibifricotin'})
+        assert response.status_code == 401, f'Well formed cookie but invalid authentication credentials should return 401, got {response.status_code} {response.text}'
 
