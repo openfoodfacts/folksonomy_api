@@ -1,8 +1,17 @@
 #! /usr/bin/python3
 
 from .dependencies import *
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Open Food Facts folksonomy REST API")
+# Allow anyone to call the API from their own apps
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # define route for authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth", auto_error=False)
 
@@ -118,7 +127,7 @@ async def authentication(response: Response, session: Optional[str] = Cookie(Non
 
     if not session or session =='':
         raise HTTPException(
-            status_code=422, detail="Mission 'session' cookie")
+            status_code=422, detail="Missing 'session' cookie")
 
     try:
         session_data = session.split('&')
