@@ -41,3 +41,10 @@ or use `--host` if you want to make it available on your local network, eg.:
 ```
 uvicorn folksonomy.api:app --reload --host 192.168.0.100
 ```
+
+## Run with a local instance of Product Opener
+
+```
+uvicorn folksonomy.api:app --reload --host api.folksonomy.openfoodfacts.localhost
+```
+You also have to modify `auth_server` variable in `/folksonomy/api.py`.
