@@ -3,6 +3,12 @@
 from .dependencies import *
 from fastapi.middleware.cors import CORSMiddleware
 
+# If you're in dev, you can specify another auth_server; eg. 
+#   AUTH_URL="http://localhost.openfoodfacts" uvicorn folksonomy.api:app --host
+# Otherwise it defaults to https://world.openfoodfacts.org
+import os
+auth_server = os.environ.get("AUTH_URL", "https://world.openfoodfacts.org")
+
 app = FastAPI(title="Open Food Facts folksonomy REST API")
 # Allow anyone to call the API from their own apps
 app.add_middleware(
@@ -20,9 +26,6 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
-
-#auth_server = "http://fr.openfoodfacts.localhost"
-auth_server = "http://world.openfoodfacts.org"
 
 # define route for authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth", auto_error=False)
