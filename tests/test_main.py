@@ -237,6 +237,10 @@ def test_post():
         assert response.status_code == 422, f'invalid owner should return 422, got {response.status_code}'
 
         response = client.post("/product", headers=get_auth_token(), json=
+            {"product": "12345678901234", "version": 1, "k": "aa", "v": "test", "owner": "someone_else"})
+        assert response.status_code == 422, f'product is limited to 13 digits should return 422, got {response.status_code}'
+
+        response = client.post("/product", headers=get_auth_token(), json=
             {"product": p['product'], "version": 1, "k": "test_"+str(date), "v": "test"})
         assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
 
