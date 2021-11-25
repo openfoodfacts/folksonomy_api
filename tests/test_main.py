@@ -25,7 +25,7 @@ date = int(time.time())
 def test_hello():
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "Hello folksonomy World"}
+    assert response.json() == {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
 
 
 def test_ping():
@@ -237,6 +237,10 @@ def test_post():
         assert response.status_code == 422, f'invalid owner should return 422, got {response.status_code}'
 
         response = client.post("/product", headers=get_auth_token(), json=
+            {"product": "12345678901234", "version": 1, "k": "aa", "v": "test", "owner": "someone_else"})
+        assert response.status_code == 422, f'product is limited to 13 digits should return 422, got {response.status_code}'
+
+        response = client.post("/product", headers=get_auth_token(), json=
             {"product": p['product'], "version": 1, "k": "test_"+str(date), "v": "test"})
         assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
 
@@ -276,14 +280,13 @@ def test_delete():
             "/product/"+p['product']+"/test_"+str(date)+"?version=3", headers=get_auth_token(),)
         assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
 
-        # TODO: fix these tests
-        # response = client.delete(
-        #     "/product/"+p['product']+"/test_"+str(date)+"?version=2", headers=get_auth_token(),)
-        # assert response.status_code == 200, f'valid version should return 200, got {response.status_code} {response.text}'
+        response = client.delete(
+            "/product/"+p['product']+"/test_"+str(date)+"?version=2", headers=get_auth_token(),)
+        assert response.status_code == 200, f'valid version should return 200, got {response.status_code} {response.text}'
 
-        # response = client.post("/product", headers=get_auth_token(), json={
-        #     "product": p['product'], "version": 1, "k": "test_"+str(date), "v": "test"})
-        # assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
+        response = client.post("/product", headers=get_auth_token(), json={
+            "product": p['product'], "version": 1, "k": "test_"+str(date), "v": "test"})
+        assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
 
 
 def test_auth_by_cookie():

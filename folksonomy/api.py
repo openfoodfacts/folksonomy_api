@@ -1,17 +1,32 @@
 #! /usr/bin/python3
 
+import os
 from .dependencies import *
 from fastapi.middleware.cors import CORSMiddleware
+
+# If you're in dev, you can specify another auth_server; eg. 
+#   AUTH_URL="http://localhost.openfoodfacts" uvicorn folksonomy.api:app --host
+# Otherwise it defaults to https://world.openfoodfacts.org
+auth_server = os.environ.get("AUTH_URL", "https://world.openfoodfacts.org")
 
 app = FastAPI(title="Open Food Facts folksonomy REST API")
 # Allow anyone to call the API from their own apps
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # FastAPI doc related to allow_origin (to avoid CORS issues):
+    # "It's also possible to declare the list as "*" (a "wildcard") to say that all are allowed.
+    # But that will only allow certain types of communication, excluding everything that involves 
+    # credentials: Cookies, Authorization headers like those used with Bearer Tokens, etc.
+    # So, for everything to work correctly, it's better to specify explicitly the allowed origins."
+    # => Workarround: use allow_origin_regex
+    # Source: https://github.com/tiangolo/fastapi/issues/133#issuecomment-646985050
+    allow_origin_regex='https?://.*',
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
 # define route for authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth", auto_error=False)
 
@@ -31,7 +46,7 @@ async def shutdown():
 
 @app.get("/", status_code=status.HTTP_200_OK)
 async def hello():
-    return {"message": "Hello folksonomy World"}
+    return {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
 
 
 async def db_exec(query, params = ()):
@@ -95,7 +110,7 @@ async def authentication(response: Response, form_data: OAuth2PasswordRequestFor
     user_id = form_data.username
     password = form_data.password
     token = user_id+'__U'+str(uuid.uuid4())
-    r = requests.post("https://world.openfoodfacts.org/cgi/auth.pl",
+    r = requests.post(auth_server + "/cgi/auth.pl",
                       data={'user_id': user_id, 'password': password})
     if r.status_code == 200:
         timing = await db_exec("""
@@ -137,7 +152,7 @@ async def authentication(response: Response, session: Optional[str] = Cookie(Non
         raise HTTPException(
             status_code=422, detail="Malformed 'session' cookie")
 
-    r = requests.post("https://world.openfoodfacts.org/cgi/auth.pl",
+    r = requests.post(auth_server + "/cgi/auth.pl",
                       cookies={'session': session})
     if r.status_code == 200:
         timing = await db_exec("""
