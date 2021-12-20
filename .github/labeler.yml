@@ -1,0 +1,17 @@
+github:
+- .github/**/*
+
+tests:
+- tests/**/*
+
+database:
+- db/**/*
+
+api:
+- folksonomy/api.py
+
+models:
+- folksonomy/models.py
+
+dependancies:
+- folksonomy/dependencies.py
