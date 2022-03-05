@@ -23,10 +23,14 @@ CREATE TABLE folksonomy_private PARTITION OF folksonomy
 CREATE OR REPLACE FUNCTION folksonomy_timestamp() RETURNS trigger AS $folksonomy_timestamp$
     BEGIN
         -- check version number validity
-        IF (TG_OP = 'INSERT') AND (NEW.version != 1) THEN
+        IF (TG_OP = 'INSERT') AND (NEW.version != 1)
+        THEN
             RAISE EXCEPTION '@@ first version must be equal to 1, was % @@', NEW.version;
         END IF;
-        IF (TG_OP = 'UPDATE') AND (NEW.version != OLD.version+1) THEN
+        IF (TG_OP = 'UPDATE')
+            AND (NEW.version != OLD.version+1)
+            AND (NEW.version != 0)
+        THEN
             RAISE EXCEPTION '@@ next version must be equal to %, was % @@', OLD.version+1, NEW.version;
         END IF;
         -- set last_edit timestamp ourself
@@ -57,8 +61,7 @@ CREATE TABLE folksonomy_versions (
     comment     varchar(200)
 );
 
--- index for unicity + search by product[owner[key[version]]]
-CREATE UNIQUE INDEX ON folksonomy_versions (product,owner,k,version);
+CREATE INDEX ON folksonomy_versions (product,owner,k);
 
 -- trigger based versionning
 CREATE OR REPLACE FUNCTION folksonomy_archive() RETURNS trigger AS $folksonomy_archive$
