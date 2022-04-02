@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import FastAPI, status, Response, Depends, Header
 from pydantic import BaseModel, ValidationError, validator
 
-re_barcode = re.compile(r'[0-9]{1,13}')
+re_barcode = re.compile(r'^[0-9]*$')
 re_key = re.compile(r'[a-z0-9_]+(\:[a-z0-9_]+)*')
 
 class User(BaseModel):
@@ -25,7 +25,7 @@ class ProductTag(BaseModel):
     @validator('product')
     def product_check(cls, v):
         if not re.fullmatch(re_barcode, v):
-            raise ValueError('product is limited to 13 digits')
+            raise ValueError('barcode must be a number')
         return v
 
     @validator('k')

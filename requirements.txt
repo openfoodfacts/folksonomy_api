@@ -3,6 +3,7 @@ requests==2.26.0
 fastapi==0.70.0
 uvicorn==0.15.0
 python-multipart==0.0.5
+yoyo-migrations==7.3.2
 
 # dev
 pytest==6.2.5
