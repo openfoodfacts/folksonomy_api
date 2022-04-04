@@ -23,8 +23,11 @@ workon folksonomy
 # install 
 pip install -r requirements.txt
 
+# create dbuser if needed
+sudo -u postgres createuser $USER
+
 # create Postgresql database
-createdb folksonomy -O $USER
+sudo -u postgres createdb folksonomy -O $USER
 psql folksonomy < db/db_setup.sql
 
 ```
@@ -34,3 +37,23 @@ psql folksonomy < db/db_setup.sql
 ```
 uvicorn folksonomy.api:app --reload
 ```
+or use `--host` if you want to make it available on your local network, eg.:
+```
+uvicorn folksonomy.api:app --reload --host 192.168.0.100
+```
+
+## Run with a local instance of Product Opener
+
+To deal with CORS and/or `401 Unauthorized` issues when running in a dev environment you have to deal with two things:
+* both Folksonomy Engine server and Product Opener server have to run on the same domain (openfoodfacts.localhost by default for Product Opener)
+* to allow authentication with the Product Opener cookie, you must tell Folksonomy Engine to use the local Product Opener instance as the authent server
+
+To do so you can:
+* add an environment variable, `AUTH_URL` to specify the auth server
+* use a the same host name as Product Opener when launching Folksonomy Engine server
+
+This should work:
+```
+AUTH_URL="http://fr.openfoodfacts.localhost" uvicorn folksonomy.api:app --host 'api.fr.openfoodfacts.localhost' --reload
+```
+

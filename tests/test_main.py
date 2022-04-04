@@ -15,7 +15,7 @@ except:
 
 # use to test model conformance
 from typing import List, Optional
-from folksonomy.models import ProductStats
+from folksonomy.models import ProductStats,ProductList
 
 
 client = TestClient(app)
@@ -25,7 +25,7 @@ date = int(time.time())
 def test_hello():
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "Hello folksonomy World"}
+    assert response.json() == {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
 
 
 def test_ping():
@@ -34,11 +34,21 @@ def test_ping():
         assert response.status_code == 200
 
 
+def test_products_stats():
+    with TestClient(app) as client:
+        response = client.get("/products/stats")
+        assert response.status_code == 200
+        return response.json()
+
+
 def test_products_list():
     with TestClient(app) as client:
         response = client.get("/products")
+        assert response.status_code == 422
+        response = client.get("/products?k=xxx")
         assert response.status_code == 200
-        return response.json()
+        response = client.get("/products?k=xxx&v=yyy")
+        assert response.status_code == 200
 
 
 def test_products_list_private_anonymous():
@@ -48,7 +58,7 @@ def test_products_list_private_anonymous():
 
 
 def test_product():
-    products = test_products_list()
+    products = test_products_stats()
     with TestClient(app) as client:
         response = client.get("/product/"+products[0]['product'])
         assert response.status_code == 200
@@ -113,11 +123,27 @@ def test_product_missing():
         return response.json()
 
 
+def test_products_stats_key():
+    product = test_product()
+    with TestClient(app) as client:
+        response = client.get(
+            "/products/stats?k=%s" % product[0]['k'])
+        assert response.status_code == 200
+
+
+def test_products_stats_key_value():
+    product = test_product()
+    with TestClient(app) as client:
+        response = client.get(
+            "/products/stats?k=%s&v=%s" % (product[0]['k'], product[0]['v']))
+        assert response.status_code == 200
+
+
 def test_products_list_key():
     product = test_product()
     with TestClient(app) as client:
         response = client.get(
-            "/products?k="+product[0]['k'])
+            "/products?k=%s" % product[0]['k'])
         assert response.status_code == 200
 
 
@@ -126,14 +152,6 @@ def test_products_list_key_value():
     with TestClient(app) as client:
         response = client.get(
             "/products?k=%s&v=%s" % (product[0]['k'], product[0]['v']))
-        assert response.status_code == 200
-
-
-def test_products_list_key():
-    product = test_product()
-    with TestClient(app) as client:
-        response = client.get(
-            "/products/?k="+product[0]['k'])
         assert response.status_code == 200
 
 
@@ -219,6 +237,10 @@ def test_post():
         assert response.status_code == 422, f'invalid owner should return 422, got {response.status_code}'
 
         response = client.post("/product", headers=get_auth_token(), json=
+            {"product": "12345678901234", "version": 1, "k": "aa", "v": "test", "owner": "someone_else"})
+        assert response.status_code == 422, f'product is limited to 13 digits should return 422, got {response.status_code}'
+
+        response = client.post("/product", headers=get_auth_token(), json=
             {"product": p['product'], "version": 1, "k": "test_"+str(date), "v": "test"})
         assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
 
@@ -273,9 +295,11 @@ def test_auth_by_cookie():
         assert response.status_code == 422, f'missing cookie should return 422, got {response.status_code} {response.text}'
 
         response = client.post("/auth_by_cookie", headers={'Cookie': 'session=toto'})
-        assert response.status_code == 401, f'missing cookie should return 401, got {response.status_code} {response.text}'
+        assert response.status_code == 422, f'Malformed session cookie should return 422, got {response.status_code} {response.text}'
 
         response = client.post("/auth_by_cookie", headers={'Cookie': 'session=titi&toto'})
-        assert response.status_code == 401, f'missing cookie should return 401, got {response.status_code} {response.text}'
+        assert response.status_code == 422, f'Malformed session cookie should return 422, got {response.status_code} {response.text}'
 
+        response = client.post("/auth_by_cookie", headers={'Cookie': 'session=user_session&2lRIus5uMqwfAjlMe8P2rETG9kUZPYwzCYfVJRfROozyQZYDH24yrWK567VNeYta&user_id&bibifricotin'})
+        assert response.status_code == 401, f'Well formed cookie but invalid authentication credentials should return 401, got {response.status_code} {response.text}'
 
