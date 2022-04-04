@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 import os
+from signal import raise_signal
 from .dependencies import *
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -321,20 +322,26 @@ async def product_tag_add(response: Response,
     """
 
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
-    try:
-        timing = await db_exec("""
-INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
-    VALUES (%s,%s,%s,%s,%s,%s,%s)
-    """, (product_tag.product, product_tag.k.lower(), product_tag.v, product_tag.owner,
-            product_tag.version, user, product_tag.comment
-          ))
-    except psycopg2.Error as e:
-        error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
-        return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
+    if product_tag.version != 1:
+        raise HTTPException(
+            status_code=422,
+            detail="version mismatch for new product",
+        )
+    else:
+        try:
+            timing = await db_exec("""
+    INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
+        VALUES (%s,%s,%s,%s,%s,%s,%s)
+        """, (product_tag.product, product_tag.k.lower(), product_tag.v, product_tag.owner,
+                product_tag.version, user, product_tag.comment
+            ))
+        except psycopg2.Error as e:
+            error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
+            return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
 
-    if cur.rowcount == 1:
-        return "ok"
-    return
+        if cur.rowcount == 1:
+            return "ok"
+        return
 
 
 @app.put("/product")
@@ -352,22 +359,44 @@ async def product_tag_update(response: Response,
     """
 
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
+
     try:
-        timing = await db_exec("""
-UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
-    WHERE product = %s AND owner = %s AND k = %s
-    """, (product_tag.v, product_tag.version, user, product_tag.comment,
-            product_tag.product, product_tag.owner, product_tag.k.lower()))
+        await db_exec("""
+    SELECT version FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
+        """, (product_tag.product, product_tag.owner, product_tag.k))
+        if cur.rowcount == 1:
+            out = cur.fetchone()
+            if ((out[0] + 1) != product_tag.version):
+                raise HTTPException(
+                    status_code=422,
+                    detail="version mismatch, last version for this product/k is %s" % out[0],
+                )
+            else:
+                try:
+                    timing = await db_exec("""
+                UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
+                WHERE product = %s AND owner = %s AND k = %s
+                """, (product_tag.v, product_tag.version, user, product_tag.comment,
+                        product_tag.product, product_tag.owner, product_tag.k.lower()))
+                except psycopg2.Error as e:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
+                    )
+
+                if cur.rowcount == 1:
+                    return "ok"
+                return
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail="Unknown product/k for this owner",
+            )
     except psycopg2.Error as e:
         raise HTTPException(
             status_code=422,
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
         )
-
-    if cur.rowcount == 1:
-        return "ok"
-    return
-
 
 @app.delete("/product/{product}/{k}")
 async def product_tag_delete(response: Response,

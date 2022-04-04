@@ -205,15 +205,15 @@ def test_post():
         assert response.status_code == 422, f'product = "" should return 422, got {response.status_code}'
 
         response = client.post("/product", headers=get_auth_token(), json=
-            {"product": "", "version": 0, "k": "test", "v": "test"})
+            {"product": "0000000000000", "version": 0, "k": "test", "v": "test"})
         assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
 
         response = client.post("/product", headers=get_auth_token(), json=
-            {"product": "", "version": -1, "k": "test", "v": "test"})
+            {"product": "0000000000000", "version": -1, "k": "test", "v": "test"})
         assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
 
         response = client.post("/product", headers=get_auth_token(), json=
-            {"product": "", "version": 9999, "k": "test", "v": "test"})
+            {"product": "0000000000000", "version": 9999, "k": "test", "v": "test"})
         assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
 
         response = client.post("/product", headers = get_auth_token(), json=
