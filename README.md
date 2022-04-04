@@ -1,13 +1,11 @@
 # folksonomy_api
 A light REST API designed for Open Food Facts folksonomy engine.
 
-Design documents: https://wiki.openfoodfacts.org/Folksonomy_Engine
-
-API endpoint: https://api.folksonomy.openfoodfacts.org/
-
-API Documentation with interactive "try-out": https://api.folksonomy.openfoodfacts.org/docs
-
-Browser extension to try it live: https://github.com/openfoodfacts/folksonomy_frontend
+* Design documents: https://wiki.openfoodfacts.org/Folksonomy_Engine
+* API endpoint: https://api.folksonomy.openfoodfacts.org/
+* API Documentation with interactive "try-out": https://api.folksonomy.openfoodfacts.org/docs
+* Browser extension to try it live: https://github.com/openfoodfacts/folksonomy_frontend
+* Moderators can access it on Open Food Facts without any extension. The UI has not yet been deployed on Open Products Facts, Open Pet Food Facts or Open Beauty Facts, but has been proven to work, thanks to the extension
 
 # Dependencies
 
