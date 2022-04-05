@@ -1,7 +1,6 @@
 #! /usr/bin/python3
 
 import os
-from signal import raise_signal
 from .dependencies import *
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -101,10 +100,8 @@ def check_owner_user(user, owner, allow_anonymous=False):
 async def authentication(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Authentication: provide user/password and get a bearer token in return
-
     - **username** : Open Food Facts user_id (not email)
     - **password** : user password (clear text, but HTTPS encrypted)
-
     token is returned, to be used in later requests with usual "Authorization: bearer token" headers
     """
 
@@ -135,9 +132,7 @@ INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT T
 async def authentication(response: Response, session: Optional[str] = Cookie(None)):
     """
     Authentication: provide Open Food Facts session cookie and get a bearer token in return
-
     - **session cookie** : Open Food Facts session cookie
-
     token is returned, to be used in later requests with usual "Authorization: bearer token" headers
     """
 
@@ -179,7 +174,6 @@ async def product_stats(response: Response,
                        user: User = Depends(get_current_user)):
     """
     Get the list of products with tags statistics
-
     The products list can be limited to some tags (k or k=v)
     """
 
@@ -261,7 +255,6 @@ async def product_tag(response: Response,
                       user: User = Depends(get_current_user)):
     """
     Get a specific tag or tag hierarchy on a product
-
     - /product/xxx/key returns only the requested key
     - /product/xxx/key* returns the key and subkeys (key:subkey)
     """
@@ -322,26 +315,20 @@ async def product_tag_add(response: Response,
     """
 
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
-    if product_tag.version != 1:
-        raise HTTPException(
-            status_code=422,
-            detail="version mismatch for new product",
-        )
-    else:
-        try:
-            timing = await db_exec("""
-    INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
-        VALUES (%s,%s,%s,%s,%s,%s,%s)
-        """, (product_tag.product, product_tag.k.lower(), product_tag.v, product_tag.owner,
-                product_tag.version, user, product_tag.comment
-            ))
-        except psycopg2.Error as e:
-            error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
-            return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
+    try:
+        timing = await db_exec("""
+INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
+    VALUES (%s,%s,%s,%s,%s,%s,%s)
+    """, (product_tag.product, product_tag.k.lower(), product_tag.v, product_tag.owner,
+            product_tag.version, user, product_tag.comment
+          ))
+    except psycopg2.Error as e:
+        error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
+        return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
 
-        if cur.rowcount == 1:
-            return "ok"
-        return
+    if cur.rowcount == 1:
+        return "ok"
+    return
 
 
 @app.put("/product")
@@ -350,7 +337,6 @@ async def product_tag_update(response: Response,
                              user: User = Depends(get_current_user)):
     """
     Update a product tag
-
     - **product** : which product
     - **k** : which key for the tag
     - **v** : which value to set for the tag
@@ -359,44 +345,22 @@ async def product_tag_update(response: Response,
     """
 
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
-
     try:
-        await db_exec("""
-    SELECT version FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
-        """, (product_tag.product, product_tag.owner, product_tag.k))
-        if cur.rowcount == 1:
-            out = cur.fetchone()
-            if ((out[0] + 1) != product_tag.version):
-                raise HTTPException(
-                    status_code=422,
-                    detail="version mismatch, last version for this product/k is %s" % out[0],
-                )
-            else:
-                try:
-                    timing = await db_exec("""
-                UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
-                WHERE product = %s AND owner = %s AND k = %s
-                """, (product_tag.v, product_tag.version, user, product_tag.comment,
-                        product_tag.product, product_tag.owner, product_tag.k.lower()))
-                except psycopg2.Error as e:
-                    raise HTTPException(
-                        status_code=422,
-                        detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
-                    )
-
-                if cur.rowcount == 1:
-                    return "ok"
-                return
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail="Unknown product/k for this owner",
-            )
+        timing = await db_exec("""
+UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
+    WHERE product = %s AND owner = %s AND k = %s
+    """, (product_tag.v, product_tag.version, user, product_tag.comment,
+            product_tag.product, product_tag.owner, product_tag.k.lower()))
     except psycopg2.Error as e:
         raise HTTPException(
             status_code=422,
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
         )
+
+    if cur.rowcount == 1:
+        return "ok"
+    return
+
 
 @app.delete("/product/{product}/{k}")
 async def product_tag_delete(response: Response,
@@ -455,7 +419,6 @@ async def keys_list(response: Response,
                     user: User = Depends(get_current_user)):
     """
     Get the list of keys with statistics
-
     The keys list can be restricted to private tags from some owner
     """
 

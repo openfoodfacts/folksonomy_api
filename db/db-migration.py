@@ -1,10 +1,7 @@
 from yoyo import read_migrations, get_backend
+from db_settings import postgresUser, postgresHost
 
-# Change user and host as per requirement
-user = "aadarsh"
-host = "localhost"
-
-url = "postgres://{}@{}/folksonomy".format(user, host)
+url = "postgres://{}@{}/folksonomy".format(postgresUser, postgresHost)
 backend = get_backend(url)
 migrations = read_migrations('./migrations')
 
