@@ -24,7 +24,7 @@ class ProductTag(BaseModel):
 
     @validator('product')
     def product_check(cls, v):
-        if v == '':
+        if not v:
             raise ValueError('barcode cannot be empty')
         if not re.fullmatch(re_barcode, v):
             raise ValueError('barcode must be a number')
@@ -32,7 +32,7 @@ class ProductTag(BaseModel):
 
     @validator('k')
     def key_check(cls, v):
-        if v == '':
+        if not v:
             raise ValueError('k cannot be empty')
         if not re.fullmatch(re_key, v):
             raise ValueError('k must be alpha-numeric [a-z0-9_:]')
@@ -40,7 +40,7 @@ class ProductTag(BaseModel):
 
     @validator('v')
     def value_check(cls, v):
-        if v == '':
+        if not v:
             raise ValueError('v cannot be empty')
         return v
 
