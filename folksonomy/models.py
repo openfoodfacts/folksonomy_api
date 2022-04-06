@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import FastAPI, status, Response, Depends, Header
 from pydantic import BaseModel, ValidationError, validator
 
-re_barcode = re.compile(r'^[0-9]*$')
+re_barcode = re.compile(r'^[0-9]+$')
 re_key = re.compile(r'[a-z0-9_]+(\:[a-z0-9_]+)*')
 
 class User(BaseModel):
@@ -24,10 +24,8 @@ class ProductTag(BaseModel):
 
     @validator('product')
     def product_check(cls, v):
-        if not v:
-            raise ValueError('barcode cannot be empty')
         if not re.fullmatch(re_barcode, v):
-            raise ValueError('barcode must be a number')
+            raise ValueError('barcode must be a number and not empty')
         return v
 
     @validator('k')
