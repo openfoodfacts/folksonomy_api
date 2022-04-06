@@ -24,8 +24,10 @@ class ProductTag(BaseModel):
 
     @validator('product')
     def product_check(cls, v):
+        if not v:
+            raise ValueError('barcode cannot be empty')
         if not re.fullmatch(re_barcode, v):
-            raise ValueError('barcode must be a number and not empty')
+            raise ValueError('barcode must be a number')
         return v
 
     @validator('k')
