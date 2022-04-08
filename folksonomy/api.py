@@ -9,7 +9,22 @@ from fastapi.middleware.cors import CORSMiddleware
 # Otherwise it defaults to https://world.openfoodfacts.org
 auth_server = os.environ.get("AUTH_URL", "https://world.openfoodfacts.org")
 
-app = FastAPI(title="Open Food Facts folksonomy REST API")
+description = """
+Folksonomy Engine API allows you to add free property/value pairs to Open Food Facts products.
+
+The API use the main following variables:
+* **product**: the product number
+* **k**: "key", meaning the property or tag
+* **v**: "value", the value for a related key
+
+## See also
+
+* [Project page](https://wiki.openfoodfacts.org/Folksonomy_Engine)
+* [Folksonomy Engine github repository](https://github.com/openfoodfacts/folksonomy_engine)
+* [Documented properties](https://wiki.openfoodfacts.org/Folksonomy/Property)
+"""
+app = FastAPI(title="Open Food Facts folksonomy REST API",
+    description=description)
 # Allow anyone to call the API from their own apps
 app.add_middleware(
     CORSMiddleware,
@@ -101,8 +116,8 @@ async def authentication(response: Response, form_data: OAuth2PasswordRequestFor
     """
     Authentication: provide user/password and get a bearer token in return
 
-    - **username** : Open Food Facts user_id (not email)
-    - **password** : user password (clear text, but HTTPS encrypted)
+    - **username**: Open Food Facts user_id (not email)
+    - **password**: user password (clear text, but HTTPS encrypted)
 
     token is returned, to be used in later requests with usual "Authorization: bearer token" headers
     """
@@ -135,7 +150,7 @@ async def authentication(response: Response, session: Optional[str] = Cookie(Non
     """
     Authentication: provide Open Food Facts session cookie and get a bearer token in return
 
-    - **session cookie** : Open Food Facts session cookie
+    - **session cookie**: Open Food Facts session cookie
 
     token is returned, to be used in later requests with usual "Authorization: bearer token" headers
     """
@@ -318,6 +333,16 @@ async def product_tag_add(response: Response,
                           user: User = Depends(get_current_user)):
     """
     Create a new product tag (version=1)
+
+    - **product**: which product
+    - **k**: which key for the tag
+    - **v**: which value to set for the tag
+    - **version**: none or empty or 1
+    - **owner**: none or empty for public tags, or your own user_id
+
+    Be aware it's not possible to create the same tag twice. Though, you can update 
+    a tag and add multiple values the way you want (don't forget to document how); comma
+    separated list is a good option.
     """
 
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
@@ -344,11 +369,11 @@ async def product_tag_update(response: Response,
     """
     Update a product tag
 
-    - **product** : which product
-    - **k** : which key for the tag
-    - **v** : which value to set for the tag
-    - **version** : must be equal to previous version + 1
-    - **owner** : None or empty for public tags, or your own user_id
+    - **product**: which product
+    - **k**: which key for the tag
+    - **v**: which value to set for the tag
+    - **version**: must be equal to previous version + 1
+    - **owner**: None or empty for public tags, or your own user_id
     """
 
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
