@@ -1,5 +1,5 @@
-# folksonomy_api
-A light REST API designed for Open Food Facts folksonomy engine.
+# Folksonomy API
+A light REST API designed for the Open Food Facts Folksonomy Engine.
 
 * Design documents: https://wiki.openfoodfacts.org/Folksonomy_Engine
 * API endpoint: https://api.folksonomy.openfoodfacts.org/

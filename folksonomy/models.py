@@ -27,7 +27,7 @@ class ProductTag(BaseModel):
         if not v:
             raise ValueError('barcode cannot be empty')
         if not re.fullmatch(re_barcode, v):
-            raise ValueError('barcode must be a number')
+            raise ValueError('barcode should contain only digits from 0-9')
         return v
 
     @validator('k')
@@ -47,7 +47,7 @@ class ProductTag(BaseModel):
     @validator('version')
     def version_check(cls, version):
         if version < 1:
-            raise ValueError('version must greater or equal to 1')
+            raise ValueError('version must be greater or equal to 1')
         return version
 
 
