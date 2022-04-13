@@ -54,7 +54,5 @@ To do so you can:
 
 This should work:
 ```
-AUTH_URL="http://fr.openfoodfacts.localhost" 
-uvicorn folksonomy.api:app --host 'api.fr.openfoodfacts.localhost' --reload
+AUTH_URL="http://fr.openfoodfacts.localhost" uvicorn folksonomy.api:app --host 'api.fr.openfoodfacts.localhost' --reload
 ```
-
