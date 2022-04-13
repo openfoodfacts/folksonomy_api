@@ -1,7 +1,8 @@
 # OpenFoodFacts username and password for authentication
 USER = 'myusername'
 PASSWORD = 'mypassword'
-# Change Postgres user, password and host as per requirement
-POSTGRES_USER = 'myPostgresUsername'
+
+# Postgres
+POSTGRES_USER = '' # Leave empty if no user exists for database
 POSTGRES_PASSWORD = '' # Leave empty if no password exists for user
-POSTGRES_HOST = 'myPostgresHost' # Usually "localhost"
+POSTGRES_HOST = 'localhost' # Change if necessary
