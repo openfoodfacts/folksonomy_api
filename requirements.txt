@@ -1,6 +1,6 @@
 psycopg2-binary==2.9.1
 requests==2.26.0
-fastapi==0.70.0
+fastapi==0.75.1
 uvicorn==0.15.0
 python-multipart==0.0.5
 yoyo-migrations==7.3.2
