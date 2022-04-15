@@ -6,5 +6,5 @@ python-multipart==0.0.5
 yoyo-migrations==7.3.2
 
 # dev
-pytest==6.2.5
+pytest==7.1.1
 pytest-cov==3.0.0
