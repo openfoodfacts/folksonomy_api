@@ -1,7 +1,7 @@
 
 -- folksonomy main table, with public/private partitionning
 CREATE TABLE folksonomy (
-    product     varchar(13)   NOT NULL,
+    product     varchar(24)   NOT NULL,
     k           varchar       NOT NULL,
     v           varchar       NOT NULL,
     owner       varchar       NOT NULL,
@@ -51,7 +51,7 @@ CREATE INDEX ON folksonomy_private (owner,k,v);
 
 -- folksonomy versionned table
 CREATE TABLE folksonomy_versions (
-    product     varchar(13)   NOT NULL,
+    product     varchar(24)   NOT NULL,
     k           varchar       NOT NULL,
     v           varchar       NOT NULL,
     owner       varchar       NOT NULL,

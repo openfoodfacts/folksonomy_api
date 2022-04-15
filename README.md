@@ -1,5 +1,5 @@
-# folksonomy_api
-A light REST API designed for Open Food Facts folksonomy engine.
+# Folksonomy API
+A light REST API designed for the Open Food Facts Folksonomy Engine.
 
 * Design documents: https://wiki.openfoodfacts.org/Folksonomy_Engine
 * API endpoint: https://api.folksonomy.openfoodfacts.org/
@@ -9,13 +9,14 @@ A light REST API designed for Open Food Facts folksonomy engine.
 
 # Dependencies
 
-The code is written in python 3.x and uses [FastAPI](https://fastapi.tiangolo.com/) framework.
+The code is written in Python 3.x and uses [FastAPI](https://fastapi.tiangolo.com/) framework.
 
-Postgresql is used as the backend database.
+PostgreSQL is used as the backend database.
 
 # Dev
 
-You should create unit tests for each new feature or API change (see `./tests/test_main.py`). To run tests just launch:
+You should create unit tests for each new feature or API change (see [test_main.py](https://github.com/openfoodfacts/folksonomy_api/blob/main/tests/test_main.py)). 
+To run tests just launch:
 ```bash
 pytest
 ```
@@ -33,7 +34,8 @@ FastAPI is based on [OpenAPI](https://github.com/OAI/OpenAPI-Specification) (pre
 
 1. Install Python 3.8+
 2. Install pip
-3. pip install -r requirements.txt
-4. Install postgre
-5. Create a user
-6. XXX
+3. Install PostgreSQL 13+
+4. Follow the steps in [INSTALL.md](https://github.com/openfoodfacts/folksonomy_api/blob/main/INSTALL.md) to install requirements and for creating a db user
+5. Make a copy of [local_settings_example.py](https://github.com/openfoodfacts/folksonomy_api/blob/main/local_settings_example.py) and remame it to *local_settings.py*
+6. Change parameters accordingly in *local_settings.py*
+7. That's all!

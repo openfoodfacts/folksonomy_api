@@ -205,15 +205,15 @@ def test_post():
         assert response.status_code == 422, f'product = "" should return 422, got {response.status_code}'
 
         response = client.post("/product", headers=get_auth_token(), json=
-            {"product": "", "version": 0, "k": "test", "v": "test"})
+            {"product": "0000000000000", "version": 0, "k": "test", "v": "test"})
         assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
 
         response = client.post("/product", headers=get_auth_token(), json=
-            {"product": "", "version": -1, "k": "test", "v": "test"})
+            {"product": "0000000000000", "version": -1, "k": "test", "v": "test"})
         assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
 
         response = client.post("/product", headers=get_auth_token(), json=
-            {"product": "", "version": 9999, "k": "test", "v": "test"})
+            {"product": "0000000000000", "version": 9999, "k": "test", "v": "test"})
         assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
 
         response = client.post("/product", headers = get_auth_token(), json=
@@ -237,8 +237,8 @@ def test_post():
         assert response.status_code == 422, f'invalid owner should return 422, got {response.status_code}'
 
         response = client.post("/product", headers=get_auth_token(), json=
-            {"product": "12345678901234", "version": 1, "k": "aa", "v": "test", "owner": "someone_else"})
-        assert response.status_code == 422, f'product is limited to 13 digits should return 422, got {response.status_code}'
+            {"product": "1234567890123456789012345", "version": 1, "k": "aa", "v": "test"})
+        assert response.status_code == 422, f'invalid barcode with 25 digits should return 422, got {response.status_code}'
 
         response = client.post("/product", headers=get_auth_token(), json=
             {"product": p['product'], "version": 1, "k": "test_"+str(date), "v": "test"})

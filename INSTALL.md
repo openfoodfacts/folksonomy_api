@@ -10,7 +10,7 @@
 
 ```
 # clone repo
-git clone https://github.com/cquest/folksonomy_api.git
+git clone https://github.com/openfoodfacts/folksonomy_api.git
 cd folksonomy_api
 
 # required packages to setup a virtualenv (optional, but recommended)
@@ -56,4 +56,3 @@ This should work:
 ```
 AUTH_URL="http://fr.openfoodfacts.localhost" uvicorn folksonomy.api:app --host 'api.fr.openfoodfacts.localhost' --reload
 ```
-
