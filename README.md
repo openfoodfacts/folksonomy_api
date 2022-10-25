@@ -36,6 +36,6 @@ FastAPI is based on [OpenAPI](https://github.com/OAI/OpenAPI-Specification) (pre
 2. Install pip
 3. Install PostgreSQL 13+
 4. Follow the steps in [INSTALL.md](https://github.com/openfoodfacts/folksonomy_api/blob/main/INSTALL.md) to install requirements and for creating a db user
-5. Make a copy of [local_settings_example.py](https://github.com/openfoodfacts/folksonomy_api/blob/main/local_settings_example.py) and remame it to *local_settings.py*
+5. Make a copy of [local_settings_example.py](https://github.com/openfoodfacts/folksonomy_api/blob/main/local_settings_example.py) and rename it to *local_settings.py*
 6. Change parameters accordingly in *local_settings.py*
 7. That's all!
