@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 import os
+import logging
 from .dependencies import *
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -53,6 +54,12 @@ async def startup():
     db.set_session(autocommit=True)
     cur = db.cursor()
 
+@app.on_event("startup")
+async def startup_event():
+    logger = logging.getLogger("uvicorn.access")
+    handler = logging.handlers.RotatingFileHandler("api.log",mode="a",maxBytes = 100*1024, backupCount = 3)
+    handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+    logger.addHandler(handler)
 
 @app.on_event("shutdown")
 async def shutdown():
