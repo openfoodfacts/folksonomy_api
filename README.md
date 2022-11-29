@@ -43,4 +43,4 @@ FastAPI is based on [OpenAPI](https://github.com/OAI/OpenAPI-Specification) (pre
 
 ## Deployment
 
-[Deployment at open food facts](https://openfoodfacts.github.io/openfoodfacts-infrastructure/folksonomy/)
+[Deployment at Open Food Facts - Folksonomy Section](https://openfoodfacts.github.io/openfoodfacts-infrastructure/folksonomy/)
