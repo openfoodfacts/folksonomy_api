@@ -7,6 +7,7 @@ A light REST API designed for the Open Food Facts Folksonomy Engine.
 * Browser extension to try it live: https://github.com/openfoodfacts/folksonomy_frontend
 * Moderators can access it on Open Food Facts without any extension. The UI has not yet been deployed on Open Products Facts, Open Pet Food Facts or Open Beauty Facts, but has been proven to work, thanks to the extension
 
+
 # Dependencies
 
 The code is written in Python 3.x and uses [FastAPI](https://fastapi.tiangolo.com/) framework.
@@ -39,3 +40,7 @@ FastAPI is based on [OpenAPI](https://github.com/OAI/OpenAPI-Specification) (pre
 5. Make a copy of [local_settings_example.py](https://github.com/openfoodfacts/folksonomy_api/blob/main/local_settings_example.py) and rename it to *local_settings.py*
 6. Change parameters accordingly in *local_settings.py*
 7. That's all!
+
+## Deployment
+
+[Deployment at open food facts](https://openfoodfacts.github.io/openfoodfacts-infrastructure/folksonomy/)
