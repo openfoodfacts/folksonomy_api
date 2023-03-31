@@ -6,7 +6,7 @@ from fastapi import FastAPI, status, Response, Depends, Header
 from pydantic import BaseModel, ValidationError, validator
 
 re_barcode = re.compile(r'[0-9]{1,24}')
-re_key = re.compile(r'[a-z0-9_]+(\:[a-z0-9_]+)*')
+re_key = re.compile(r'[a-z0-9_-]+(\:[a-z0-9_-]+)*')
 
 class User(BaseModel):
     user_id: str
@@ -35,7 +35,7 @@ class ProductTag(BaseModel):
         if not v:
             raise ValueError('k cannot be empty')
         if not re.fullmatch(re_key, v):
-            raise ValueError('k must be alpha-numeric [a-z0-9_:]')
+            raise ValueError('k must be alpha-numeric [a-z0-9_-:]')
         return v
 
     @validator('v')
