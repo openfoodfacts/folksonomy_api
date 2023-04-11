@@ -244,6 +244,10 @@ def test_post():
             {"product": p['product'], "version": 1, "k": "test_"+str(date), "v": "test"})
         assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
 
+        response = client.post("/product", headers=get_auth_token(), json=
+            {"product": p['product'], "version": 1, "k": "a-1:b_2:c-3:d_4", "v": "test"})
+        assert response.status_code == 200, f'lowercase k with hyphen, underscore and number should return 200, got {response.status_code}'
+
 
 @pytest.mark.skipif(skip_auth, reason="skip auth tests")
 def test_put():
@@ -287,6 +291,17 @@ def test_delete():
         response = client.post("/product", headers=get_auth_token(), json={
             "product": p['product'], "version": 1, "k": "test_"+str(date), "v": "test"})
         assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
+
+
+@pytest.mark.skipif(skip_auth, reason="skip auth tests")
+def test_ended_clean():
+    p = test_product()[0]
+    with TestClient(app) as client:
+        response = client.delete("/product/"+p['product']+"/test_"+str(date)+"?version=1", headers=get_auth_token(),)
+        assert response.status_code == 200, f'delete created entries for tests should return 200, got {response.status_code} {response.text}'
+
+        response = client.delete("/product/"+p['product']+"/a-1:b_2:c-3:d_4"+"?version=1", headers=get_auth_token(),)
+        assert response.status_code == 200, f'delete created entries for tests should return 200, got {response.status_code} {response.text}'
 
 
 def test_auth_by_cookie():

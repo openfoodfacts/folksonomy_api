@@ -17,6 +17,9 @@ cd folksonomy_api
 apt install python3-virtualenv virtualenv virtualenvwrapper
 
 # create and switch to virtualenv
+# if mkvirtualenv command is not found, search for virtualenvwrapper.sh 
+# (/usr/share/virtualenvwrapper/virtualenvwrapper.sh, or /usr/bin/virtualenvwrapper.sh, for example)
+# add the path in your bash profile
 mkvirtualenv folksonomy -p /usr/bin/python3
 workon folksonomy
 
@@ -26,7 +29,7 @@ pip install -r requirements.txt
 # create dbuser if needed
 sudo -u postgres createuser $USER
 
-# create Postgresql database
+# create Postgresql database if needed
 sudo -u postgres createdb folksonomy -O $USER
 psql folksonomy < db/db_setup.sql
 

@@ -2,6 +2,7 @@
 
 import os
 import logging
+from logging.handlers import RotatingFileHandler
 from .dependencies import *
 from fastapi.middleware.cors import CORSMiddleware
 
