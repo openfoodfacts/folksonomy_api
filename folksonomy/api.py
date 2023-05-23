@@ -51,7 +51,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth", auto_error=False)
 @app.on_event("startup")
 async def startup():
     global db, cur
-    db = psycopg2.connect("dbname=folksonomy")
+    db = psycopg2.connect(database="folksonomy", user="postgres" , password="postgres" , host="127.0.0.1")
     db.set_session(autocommit=True)
     cur = db.cursor()
 
