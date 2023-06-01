@@ -7,4 +7,4 @@ yoyo-migrations==7.3.2
 
 # dev
 pytest==7.1.2
-pytest-cov==3.0.0
+pytest-cov==4.1.0
