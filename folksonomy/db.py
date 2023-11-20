@@ -1,5 +1,13 @@
-import local_settings as settings
-import psycopg2     # interface with postgresql
+import contextlib
+import contextvars
+import logging
+
+
+import aiopg # interface with postgresql
+
+# import psycopg2     # interface with postgresql
+
+from . import settings
 
 
 log = logging.getLogger(__name__)
@@ -14,18 +22,24 @@ cur = contextvars.ContextVar("cur")
 cur.set(None)
 
 
-async def connect(**kwargs):
+def connect(**kwargs):
     """Connect database for current local context"""
-    await _conn = psycopg2.connect(**kwargs)
-    _conn.set_session(autocommit=False)
-    _conn.set(_conn)
+    global conn
+    _conn = psycopg2.connect(**kwargs)
+    conn.set(_conn)
 
 
 async def get_conn():
     """Get current database connection, creating it if needed"""
     global conn
     if conn.get() is None:
-        await connect(dbname="folksonomy", async=True)
+        connect(
+            dbname=settings.POSTGRES_DATABASE,
+            user=settings.POSTGRES_USER,
+            password=settings.POSTGRES_PASSWORD,
+            host=settings.POSTGRES_HOST,
+            async_=True
+        )
     return conn.get()
 
 
@@ -47,14 +61,28 @@ async def close():
 
 
 @contextlib.asynccontextmanager
-def transaction():
+async def transaction_ctx(cur):
+    """A function handling transaction init / rollback or commit"""
+    try:
+        yield cur
+    except Exception as e:
+        await cur.rollback()
+        #await conn.execute("ROLLBACK;")
+    else:
+        await cur.commit()
+        #await cur.execute("COMMIT;")
+
+
+@contextlib.asynccontextmanager
+async def transaction():
     """Context manager creating cursor in a transaction"""
     global cur
     try:
-        _conn = get_conn()
-        # connection is a context manager handling the transaction
-        async with _conn:
-            async with _conn.cursor() as _cur:
+        import pdb;pdb.set_trace()
+        _conn = await get_conn()
+        async with _conn.cursor() as _cur:
+            # connection is a context manager handling the transaction
+            async with transaction_ctx(_cur):
                 cur.set(_cur)
                 yield _cur
     finally:

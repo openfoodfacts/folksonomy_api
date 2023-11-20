@@ -7,7 +7,7 @@ from .dependencies import *
 from . import db
 from fastapi.middleware.cors import CORSMiddleware
 
-# If you're in dev, you can specify another auth_server; eg. 
+# If you're in dev, you can specify another auth_server; eg.
 #   AUTH_URL="http://localhost.openfoodfacts" uvicorn folksonomy.api:app --host
 # Otherwise it defaults to https://world.openfoodfacts.org
 auth_server = os.environ.get("AUTH_URL", "https://world.openfoodfacts.org")
@@ -33,7 +33,7 @@ app.add_middleware(
     CORSMiddleware,
     # FastAPI doc related to allow_origin (to avoid CORS issues):
     # "It's also possible to declare the list as "*" (a "wildcard") to say that all are allowed.
-    # But that will only allow certain types of communication, excluding everything that involves 
+    # But that will only allow certain types of communication, excluding everything that involves
     # credentials: Cookies, Authorization headers like those used with Bearer Tokens, etc.
     # So, for everything to work correctly, it's better to specify explicitly the allowed origins."
     # => Workarround: use allow_origin_regex
@@ -239,7 +239,7 @@ async def product_stats(response: Response,
                 'last_edit',max(last_edit),
                 'editors',count(distinct(editor))
                 ) as j
-            FROM folksonomy 
+            FROM folksonomy
             WHERE %s
             GROUP BY product) as j;
         """ % where,
@@ -376,7 +376,7 @@ async def product_tag_add(response: Response,
     - **version**: none or empty or 1
     - **owner**: none or empty for public tags, or your own user_id
 
-    Be aware it's not possible to create the same tag twice. Though, you can update 
+    Be aware it's not possible to create the same tag twice. Though, you can update
     a tag and add multiple values the way you want (don't forget to document how); comma
     separated list is a good option.
     """
