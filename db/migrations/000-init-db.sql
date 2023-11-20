@@ -1,4 +1,5 @@
-
+-- database initilization
+-- depends:
 -- folksonomy main table, with public/private partitionning
 CREATE TABLE folksonomy (
     product     varchar(24)   NOT NULL,

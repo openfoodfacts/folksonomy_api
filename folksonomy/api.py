@@ -80,7 +80,7 @@ async def db_exec(query, params = ()):
     """
     t = time.monotonic()
     cur = await db.cursor()
-    cur.execute(query, params)
+    await cur.execute(query, params)
     return cur, str(round(time.monotonic()-t, 4)*1000)+"ms"
 
 
@@ -90,7 +90,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     """
     if token and '__U' in token:
         cur = db.cursor()
-        cur.execute(
+        await cur.execute(
             "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,)
         )
         if cur.rowcount == 1:
@@ -245,7 +245,7 @@ async def product_stats(response: Response,
         """ % where,
         params
     )
-    out = cur.fetchone()
+    out = await cur.fetchone()
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing":timing})
 
 
@@ -273,7 +273,7 @@ async def product_list(response: Response,
         """ % where,
         params
     )
-    out = cur.fetchone()
+    out = await cur.fetchone()
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing":timing})
 
 
@@ -293,7 +293,7 @@ async def product_tags_list(response: Response,
         """,
         (product, owner),
     )
-    out = cur.fetchone()
+    out = await cur.fetchone()
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
@@ -332,7 +332,7 @@ async def product_tag(response: Response,
             """,
             (product, owner, key),
         )
-    out = cur.fetchone()
+    out = await cur.fetchone()
     if out:
         return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
     else:
@@ -359,7 +359,7 @@ async def product_tag_list_versions(response: Response,
         """,
         (product, owner, k),
     )
-    out = cur.fetchone()
+    out = await cur.fetchone()
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
@@ -484,7 +484,7 @@ async def product_tag_delete(response: Response,
             (product, owner, k)
         )
         if cur.rowcount == 1:
-            out = cur.fetchone()
+            out = await cur.fetchone()
             raise HTTPException(
                 status_code=422,
                 detail="version mismatch, last version for this product/k is %s" % out[0],
@@ -521,7 +521,7 @@ async def keys_list(response: Response,
         """,
         (owner,)
     )
-    out = cur.fetchone()
+    out = await cur.fetchone()
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
@@ -531,5 +531,5 @@ async def pong(response: Response):
     Check server health
     """
     cur, timing = await db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'",())
-    pong = cur.fetchone()
+    pong = await cur.fetchone()
     return {"ping": "pong @ %s" % pong[0]}

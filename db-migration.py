@@ -1,6 +1,6 @@
 import os
 from yoyo import read_migrations, get_backend
-from local_settings import POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST
+from folksonomy.settings import POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST
 
 AUTH_DATA = ""
 if POSTGRES_USER:

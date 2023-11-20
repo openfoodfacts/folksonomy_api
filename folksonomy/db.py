@@ -22,10 +22,10 @@ cur = contextvars.ContextVar("cur")
 cur.set(None)
 
 
-def connect(**kwargs):
+async def connect(**kwargs):
     """Connect database for current local context"""
     global conn
-    _conn = psycopg2.connect(**kwargs)
+    _conn = await aiopg.create_pool(**kwargs)
     conn.set(_conn)
 
 
@@ -33,7 +33,7 @@ async def get_conn():
     """Get current database connection, creating it if needed"""
     global conn
     if conn.get() is None:
-        connect(
+        await connect(
             dbname=settings.POSTGRES_DATABASE,
             user=settings.POSTGRES_USER,
             password=settings.POSTGRES_PASSWORD,
@@ -77,13 +77,14 @@ async def transaction_ctx(cur):
 async def transaction():
     """Context manager creating cursor in a transaction"""
     global cur
+    global conn
     try:
-        import pdb;pdb.set_trace()
-        _conn = await get_conn()
-        async with _conn.cursor() as _cur:
-            # connection is a context manager handling the transaction
-            async with transaction_ctx(_cur):
-                cur.set(_cur)
-                yield _cur
+        _pool = await get_conn()
+        async with _pool.acquire() as _conn:
+            async with _conn.cursor() as _cur:
+                # begin returns a context manager handling the transaction with rollback on error
+                async with _cur.begin():
+                    cur.set(_cur)
+                    yield _cur
     finally:
         cur.set(None)

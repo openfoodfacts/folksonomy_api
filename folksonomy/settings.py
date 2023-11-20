@@ -2,7 +2,7 @@
 POSTGRES_USER = None # Leave empty if no user exists for database
 POSTGRES_PASSWORD = None # Leave empty if no password exists for user
 POSTGRES_HOST = None # Change if necessary
-POSTGRES_DATABASE = 'folksonomy/'
+POSTGRES_DATABASE = 'folksonomy'
 
 try:
     # override with local_settings
