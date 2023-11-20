@@ -1,3 +1,4 @@
+import asyncio
 import json
 import time
 import re
@@ -5,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 import psycopg2     # interface with postgresql
-import requests     # requests to call OFF for login/password check
+import aiohttp     # async requests to call OFF for login/password check
 
 # FastAPI
 from fastapi import FastAPI, status, Response, Depends, Header, HTTPException, Cookie

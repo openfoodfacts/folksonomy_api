@@ -1,3 +1,4 @@
+"""Integration tests"""
 import json
 import pytest
 import time
@@ -13,6 +14,7 @@ except:
     skip_auth = True
     pass
 
+
 # use to test model conformance
 from typing import List, Optional
 from folksonomy.models import ProductStats,ProductList
@@ -21,6 +23,7 @@ from folksonomy.models import ProductStats,ProductList
 client = TestClient(app)
 access_token = None
 date = int(time.time())
+
 
 def test_hello():
     response = client.get("/")

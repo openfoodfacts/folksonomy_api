@@ -4,6 +4,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 from .dependencies import *
+from . import db
 from fastapi.middleware.cors import CORSMiddleware
 
 # If you're in dev, you can specify another auth_server; eg. 
@@ -47,14 +48,6 @@ app.add_middleware(
 # define route for authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth", auto_error=False)
 
-
-@app.on_event("startup")
-async def startup():
-    global db, cur
-    db = psycopg2.connect("dbname=folksonomy")
-    db.set_session(autocommit=True)
-    cur = db.cursor()
-
 @app.on_event("startup")
 async def startup_event():
     logger = logging.getLogger("uvicorn.access")
@@ -67,6 +60,15 @@ async def shutdown():
     db.close()
 
 
+@app.middleware("http")
+async def initialize_transactions(request: Request, call_next):
+    """middleware that enclose request processing in a transaction"""
+    # eventually log user
+    async with db.transaction():
+        response = await call_next(request)
+        return response
+
+
 @app.get("/", status_code=status.HTTP_200_OK)
 async def hello():
     return {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
@@ -76,9 +78,10 @@ async def db_exec(query, params = ()):
     """
     Execute postgresql query and collect timing
     """
-    t = time.time()
-    cur.execute(cur.mogrify(query, params))
-    return str(round(time.time()-t, 4)*1000)+"ms"
+    t = time.monotonic()
+    cur = await db.cursor()
+    cur.execute(query, params)
+    return cur, str(round(time.monotonic()-t, 4)*1000)+"ms"
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -86,11 +89,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     Get current user and check token validity if present
     """
     if token and '__U' in token:
-        query = cur.mogrify(
-            "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,))
-        cur.execute(query)
+        cur = db.cursor()
+        cur.execute(
+            "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,)
+        )
         if cur.rowcount == 1:
-            return token.split('__U')[0]
+            return token.split('__U', 1)[0]
 
 
 def check_owner_user(user, owner, allow_anonymous=False):
@@ -133,17 +137,20 @@ async def authentication(response: Response, form_data: OAuth2PasswordRequestFor
     user_id = form_data.username
     password = form_data.password
     token = user_id+'__U'+str(uuid.uuid4())
-    r = requests.post(auth_server + "/cgi/auth.pl",
-                      data={'user_id': user_id, 'password': password})
-    if r.status_code == 200:
-        timing = await db_exec("""
-DELETE FROM auth WHERE user_id = %s;
-INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
+    auth_url = auth_server + "/cgi/auth.pl"
+    auth_data={'user_id': user_id, 'password': password}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(auth_url, data=auth_data) as resp:
+            status_code = resp.status_code
+    if status_code == 200:
+        cur, timing = await db_exec("""
+            DELETE FROM auth WHERE user_id = %s;
+            INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
         """, (user_id, user_id, token))
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
-    elif r.status_code == 403:
-        time.sleep(2)   # prevents brute-force
+    elif status_code == 403:
+        asyncio.sleep(2)   # prevents brute-force
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
@@ -175,17 +182,23 @@ async def authentication(response: Response, session: Optional[str] = Cookie(Non
         raise HTTPException(
             status_code=422, detail="Malformed 'session' cookie")
 
-    r = requests.post(auth_server + "/cgi/auth.pl",
-                      cookies={'session': session})
-    if r.status_code == 200:
-        timing = await db_exec("""
-DELETE FROM auth WHERE user_id = %s;
-INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
-        """, (user_id, user_id, token))
+    auth_url = auth_server + "/cgi/auth.pl"
+    async with aiohttp.ClientSession() as session:
+        async with session.post(auth_url, cookies={'session': session}) as resp:
+            status_code = resp.status_code
+
+    if status_code == 200:
+        cur, timing = await db_exec(
+            """
+            DELETE FROM auth WHERE user_id = %s;
+            INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
+            """,
+            (user_id, user_id, token)
+        )
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
-    elif r.status_code == 403:
-        time.sleep(2)   # prevents brute-force
+    elif status_code == 403:
+        asyncio.sleep(2)   # prevents brute-force
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
@@ -193,6 +206,18 @@ INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT T
         )
     raise HTTPException(
         status_code=500, detail="Server error")
+
+def property_where(owner, k, v):
+    conditions = ['owner=%s']
+    params = [owner]
+    if k != '':
+        conditions.append('k=%s')
+        params.append(k)
+        if v != '':
+            conditions.append('v=%s')
+            params.append(v)
+    where = " AND ".join(conditions)
+    return where, params
 
 
 @app.get("/products/stats", response_model=List[ProductStats])
@@ -204,25 +229,22 @@ async def product_stats(response: Response,
 
     The products list can be limited to some tags (k or k=v)
     """
-
     check_owner_user(user, owner, allow_anonymous=True)
-    where = cur.mogrify(' owner=%s ', (owner,))
-    if k != '':
-        where = where + cur.mogrify(' AND k=%s ', (k,))
-        if v != '':
-            where = where + cur.mogrify(' AND v=%s ', (v,))
-    timing = await db_exec("""
-SELECT json_agg(j.j)::json FROM(
-    SELECT json_build_object(
-        'product',product,
-        'keys',count(*),
-        'last_edit',max(last_edit),
-        'editors',count(distinct(editor))
-        ) as j
-    FROM folksonomy 
-    WHERE %s
-    GROUP BY product) as j;
-""" % where.decode(), None)
+    where, params = property_where(owner, k, v)
+    cur, timing = await db_exec("""
+        SELECT json_agg(j.j)::json FROM(
+            SELECT json_build_object(
+                'product',product,
+                'keys',count(*),
+                'last_edit',max(last_edit),
+                'editors',count(distinct(editor))
+                ) as j
+            FROM folksonomy 
+            WHERE %s
+            GROUP BY product) as j;
+        """ % where,
+        params
+    )
     out = cur.fetchone()
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing":timing})
 
@@ -234,27 +256,23 @@ async def product_list(response: Response,
     """
     Get the list of products matching k or k=v
     """
-
-    check_owner_user(user, owner, allow_anonymous=True)
-    where = cur.mogrify(' owner=%s ', (owner,))
-    if k != '':
-        where = where + cur.mogrify(' AND k=%s ', (k,))
-        if v != '':
-            where = where + cur.mogrify(' AND v=%s ', (v,))
-    else:
+    if k == '':
         return JSONResponse(status_code=422, content={"detail": {"msg": "missing value for k"}})
-
-    timing = await db_exec("""
-SELECT coalesce(json_agg(j.j)::json, '[]'::json) FROM(
-    SELECT json_build_object(
-        'product',product,
-        'k',k,
-        'v',v
-        ) as j
-    FROM folksonomy 
-    WHERE %s
-    ) as j;
-""" % where.decode(), None)
+    check_owner_user(user, owner, allow_anonymous=True)
+    where, params = property_where(owner, k, v)
+    cur, timing = await db_exec("""
+        SELECT coalesce(json_agg(j.j)::json, '[]'::json) FROM(
+            SELECT json_build_object(
+                'product',product,
+                'k',k,
+                'v',v
+                ) as j
+            FROM folksonomy
+            WHERE %s
+            ) as j;
+        """ % where,
+        params
+    )
     out = cur.fetchone()
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing":timing})
 
@@ -268,11 +286,13 @@ async def product_tags_list(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    timing = await db_exec("""
-SELECT json_agg(j)::json FROM(
-    SELECT * FROM folksonomy WHERE product = %s AND owner = %s ORDER BY k
-    ) as j;
-""", (product, owner))
+    cur, timing = await db_exec("""
+        SELECT json_agg(j)::json FROM(
+            SELECT * FROM folksonomy WHERE product = %s AND owner = %s ORDER BY k
+            ) as j;
+        """,
+        (product, owner),
+    )
     out = cur.fetchone()
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
@@ -291,22 +311,27 @@ async def product_tag(response: Response,
     key = re.sub(r'[^a-z0-9_\:]', '', k)
     check_owner_user(user, owner, allow_anonymous=True)
     if k[-1:] == '*':
-        timing = await db_exec("""
-SELECT json_agg(j)::json FROM(
-    SELECT *
-    FROM folksonomy
-    WHERE product = %s AND owner = %s AND k ~ %s
-    ORDER BY k) as j;
-""", (product, owner, '^%s(:.|$)' % key))
+        cur, timing = await db_exec(
+            """
+            SELECT json_agg(j)::json FROM(
+                SELECT *
+                FROM folksonomy
+                WHERE product = %s AND owner = %s AND k ~ %s
+                ORDER BY k) as j;
+            """,
+            (product, owner, '^%s(:.|$)' % key),
+        )
     else:
-        timing = await db_exec("""
-SELECT row_to_json(j) FROM(
-    SELECT *
-    FROM folksonomy
-    WHERE product = %s AND owner = %s AND k = %s
-    ) as j;
-""", (product, owner, key))
-
+        cur, timing = await db_exec(
+            """
+            SELECT row_to_json(j) FROM(
+                SELECT *
+                FROM folksonomy
+                WHERE product = %s AND owner = %s AND k = %s
+                ) as j;
+            """,
+            (product, owner, key),
+        )
     out = cur.fetchone()
     if out:
         return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
@@ -323,14 +348,17 @@ async def product_tag_list_versions(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    timing = await db_exec("""
-SELECT json_agg(j)::json FROM(
-    SELECT *
-    FROM folksonomy_versions
-    WHERE product = %s AND owner = %s AND k = %s
-    ORDER BY version DESC
-    ) as j;
-""", (product, owner, k))
+    cur, timing = await db_exec(
+        """
+        SELECT json_agg(j)::json FROM(
+            SELECT *
+            FROM folksonomy_versions
+            WHERE product = %s AND owner = %s AND k = %s
+            ORDER BY version DESC
+            ) as j;
+        """,
+        (product, owner, k),
+    )
     out = cur.fetchone()
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
@@ -355,12 +383,16 @@ async def product_tag_add(response: Response,
 
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
     try:
-        timing = await db_exec("""
-INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
-    VALUES (%s,%s,%s,%s,%s,%s,%s)
-    """, (product_tag.product, product_tag.k.lower(), product_tag.v, product_tag.owner,
-            product_tag.version, user, product_tag.comment
-          ))
+        cur, timing = await db_exec(
+            """
+            INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
+                VALUES (%s,%s,%s,%s,%s,%s,%s)
+            """,
+            (
+                product_tag.product, product_tag.k.lower(), product_tag.v, product_tag.owner,
+                product_tag.version, user, product_tag.comment
+            )
+        )
     except psycopg2.Error as e:
         error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
         return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
@@ -386,11 +418,16 @@ async def product_tag_update(response: Response,
 
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
     try:
-        timing = await db_exec("""
-UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
-    WHERE product = %s AND owner = %s AND k = %s
-    """, (product_tag.v, product_tag.version, user, product_tag.comment,
-            product_tag.product, product_tag.owner, product_tag.k.lower()))
+        cur, timing = await db_exec(
+            """
+            UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
+                WHERE product = %s AND owner = %s AND k = %s
+            """, 
+            (
+                product_tag.v, product_tag.version, user, product_tag.comment,
+                product_tag.product, product_tag.owner, product_tag.k.lower()
+            )
+        )
     except psycopg2.Error as e:
         raise HTTPException(
             status_code=422,
@@ -409,17 +446,18 @@ async def product_tag_delete(response: Response,
     """
     Delete a product tag
     """
-
     check_owner_user(user, owner, allow_anonymous=False)
-
     try:
-        await db_exec("""
-BEGIN;
-UPDATE folksonomy SET version = 0, editor = %s, comment = 'DELETE'
-    WHERE product = %s AND owner = %s AND k = %s AND version = %s;
-    """, (user, product, owner, k, version))
+        # FIXME: why is removing equivalent to setting version to 0
+        cur, timing = await db_exec(
+            """
+            UPDATE folksonomy SET version = 0, editor = %s, comment = 'DELETE'
+                WHERE product = %s AND owner = %s AND k = %s AND version = %s;
+            """,
+            (user, product, owner, k, version),
+        )
     except psycopg2.Error as e:
-        await db_exec("ROLLBACK")
+        # note: transaction will be rolled back by the middleware
         raise HTTPException(
             status_code=422,
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
@@ -429,17 +467,22 @@ UPDATE folksonomy SET version = 0, editor = %s, comment = 'DELETE'
             status_code=422,
             detail="Unknown product/k/version for this owner",
         )
-
-    await db_exec("""
-DELETE FROM folksonomy WHERE product = %s AND owner = %s AND k = %s AND version = 0;
-    """, (product, owner, k.lower()))
+    cur, timing = await db_exec(
+        """
+        DELETE FROM folksonomy WHERE product = %s AND owner = %s AND k = %s AND version = 0;
+        """,
+        (product, owner, k.lower()),
+    )
     if cur.rowcount == 1:
-        await db_exec("COMMIT")
         return "ok"
     else:
-        await db_exec("""
-SELECT version FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
-    """, (product, owner, k))
+        # we have a conflict, return an error explaining conflict
+        cur, timing = await db_exec(
+            """
+            SELECT version FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
+            """,
+            (product, owner, k)
+        )
         if cur.rowcount == 1:
             out = cur.fetchone()
             raise HTTPException(
@@ -462,20 +505,22 @@ async def keys_list(response: Response,
 
     The keys list can be restricted to private tags from some owner
     """
-
     check_owner_user(user, owner, allow_anonymous=True)
-    timing = await db_exec("""
-SELECT json_agg(j.j)::json FROM(
-    SELECT json_build_object(
-        'k',k,
-        'count',count(*),
-        'values',count(distinct(v))
-        ) as j
-    FROM folksonomy 
-    WHERE owner=%s
-    GROUP BY k
-    ORDER BY count(*) DESC) as j;
-""", (owner,))
+    cur, timing = await db_exec(
+        """
+        SELECT json_agg(j.j)::json FROM(
+            SELECT json_build_object(
+                'k',k,
+                'count',count(*),
+                'values',count(distinct(v))
+                ) as j
+            FROM folksonomy
+            WHERE owner=%s
+            GROUP BY k
+            ORDER BY count(*) DESC) as j;
+        """,
+        (owner,)
+    )
     out = cur.fetchone()
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
@@ -485,6 +530,6 @@ async def pong(response: Response):
     """
     Check server health
     """
-    await db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'",())
+    cur, timing = await db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'",())
     pong = cur.fetchone()
     return {"ping": "pong @ %s" % pong[0]}
