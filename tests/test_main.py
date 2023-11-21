@@ -1,11 +1,14 @@
 """Integration tests"""
+import asyncio
 import json
 import pytest
 import time
 
 from fastapi.testclient import TestClient
 
+from folksonomy import db, models
 from folksonomy.api import app
+
 
 try:
     import local_settings
@@ -25,6 +28,52 @@ access_token = None
 date = int(time.time())
 
 
+BARCODE_1 = "3701027900001"
+BARCODE_2 = "3701027900002"
+BARCODE_3 = "3701027900003"
+
+
+SAMPLES = [
+    {"product": BARCODE_1, "k": "color", "v": "red", "owner": "", "version": 1, "editor": "foo", "last_edit": date, "comment": ""},
+    {"product": BARCODE_1, "k": "size", "v": "medium", "owner": "", "version": 1, "editor": "foo", "last_edit": date, "comment": ""},
+    {"product": BARCODE_2, "k": "color", "v": "green", "owner": "", "version": 2, "editor": "foo", "last_edit": date, "comment": ""},
+    {"product": BARCODE_2, "k": "size", "v": "small", "owner": "", "version": 1, "editor": "foo", "last_edit": date, "comment": ""},
+    {"product": BARCODE_3, "k": "color", "v": "blue", "owner": "", "version": 3, "editor": "foo", "last_edit": date, "comment": ""},
+    {"product": BARCODE_1, "k": "private", "v": "private", "owner": "foo", "version": 1, "editor": "foo", "last_edit": date, "comment": ""},
+    {"product": BARCODE_1, "k": "other", "v": "so-private", "owner": "bar", "version": 2, "editor": "bar", "last_edit": date, "comment": ""},
+]
+
+
+@pytest.fixture
+def with_sample():
+    asyncio.run(_with_sample())
+
+
+async def _with_sample():
+    async with db.transaction():
+        # assert we are not in a production database
+        cur, timing = await db.db_exec(
+            """
+            SELECT COUNT(*) as tags_count
+            FROM folksonomy
+            """
+        )
+        result = await cur.fetchone()
+        if result and result[0] > 10:
+            raise Exception("Database has %d items - refusing to run tests" % result[0])
+        cur, timing = await db.db_exec("TRUNCATE folksonomy")
+        for sample in SAMPLES:
+            data = dict(sample)
+            data["version"] = 1 # mandatory for creation
+            product_tag = models.ProductTag(**data)
+            req, params = db.create_product_tag_req(product_tag)
+            await db.db_exec(req, params)
+            for version in range(data["version"] + 1, sample["version"] + 1):
+                product_tag.version = version
+                req, params = db.update_product_tag_req(product_tag)
+                await db.db_exec(req, params)
+
+
 def test_hello():
     response = client.get("/")
     assert response.status_code == 200
@@ -37,14 +86,24 @@ def test_ping():
         assert response.status_code == 200
 
 
-def test_products_stats():
+def get_products_stats():
     with TestClient(app) as client:
         response = client.get("/products/stats")
         assert response.status_code == 200
         return response.json()
 
+def test_products_stats(with_sample):
+    get_products_stats()
 
-def test_products_list():
+def get_product():
+    products = get_products_stats()
+    with TestClient(app) as client:
+        response = client.get("/product/"+products[0]['product'])
+        assert response.status_code == 200
+        return response.json()
+
+
+def test_products_list(with_sample):
     with TestClient(app) as client:
         response = client.get("/products")
         assert response.status_code == 422
@@ -54,21 +113,17 @@ def test_products_list():
         assert response.status_code == 200
 
 
-def test_products_list_private_anonymous():
+def test_products_list_private_anonymous(with_sample):
     with TestClient(app) as client:
         response = client.get("/products?owner=foo")
         assert response.status_code == 401
 
 
-def test_product():
-    products = test_products_stats()
-    with TestClient(app) as client:
-        response = client.get("/product/"+products[0]['product'])
-        assert response.status_code == 200
-        return response.json()
+def test_product(with_sample):
+    get_product()
 
 
-def test_product_missing():
+def test_product_missing(with_sample):
     products = test_products_list()
     with TestClient(app) as client:
         response = client.get("/product/__xxxxx__")
@@ -77,8 +132,8 @@ def test_product_missing():
         return response.json()
 
 
-def test_product_key():
-    product = test_product()
+def test_product_key(with_sample):
+    product = get_product()
     with TestClient(app) as client:
         response = client.get(
             "/product/"+product[0]['product']+"/"+product[0]['k']+'*')
@@ -90,16 +145,16 @@ def test_product_key():
         return response.json()
 
 
-def test_product_key_missing():
-    product = test_product()
+def test_product_key_missing(with_sample):
+    product = get_product()
     with TestClient(app) as client:
         response = client.get("/product/"+product[0]['product']+"/__xxxxx__")
         assert response.status_code == 200
         assert response.json() == None
 
 
-def test_product_key_versions():
-    product = test_product()
+def test_product_key_versions(with_sample):
+    product = get_product()
     with TestClient(app) as client:
         response = client.get(
             "/product/%s/%s/versions" % (product[0]['product'], product[0]['k']))
@@ -107,8 +162,8 @@ def test_product_key_versions():
         return response.json()
 
 
-def test_product_key_versions_missing():
-    product = test_product()
+def test_product_key_versions_missing(with_sample):
+    product = get_product()
     with TestClient(app) as client:
         response = client.get(
             "/product/%s/__xxxx__/versions" % product[0]['product'])
@@ -117,7 +172,7 @@ def test_product_key_versions_missing():
         return response.json()
 
 
-def test_product_missing():
+def test_product_missing(with_sample):
     products = test_products_list()
     with TestClient(app) as client:
         response = client.get("/product/xxxxx")
@@ -126,39 +181,39 @@ def test_product_missing():
         return response.json()
 
 
-def test_products_stats_key():
-    product = test_product()
+def test_products_stats_key(with_sample):
+    product = get_product()
     with TestClient(app) as client:
         response = client.get(
             "/products/stats?k=%s" % product[0]['k'])
         assert response.status_code == 200
 
 
-def test_products_stats_key_value():
-    product = test_product()
+def test_products_stats_key_value(with_sample):
+    product = get_product()
     with TestClient(app) as client:
         response = client.get(
             "/products/stats?k=%s&v=%s" % (product[0]['k'], product[0]['v']))
         assert response.status_code == 200
 
 
-def test_products_list_key():
-    product = test_product()
+def test_products_list_key(with_sample):
+    product = get_product()
     with TestClient(app) as client:
         response = client.get(
             "/products?k=%s" % product[0]['k'])
         assert response.status_code == 200
 
 
-def test_products_list_key_value():
-    product = test_product()
+def test_products_list_key_value(with_sample):
+    product = get_product()
     with TestClient(app) as client:
         response = client.get(
             "/products?k=%s&v=%s" % (product[0]['k'], product[0]['v']))
         assert response.status_code == 200
 
 
-def test_keys_list():
+def test_keys_list(with_sample):
     with TestClient(app) as client:
         response = client.get("/keys")
         assert response.status_code == 200
@@ -199,8 +254,8 @@ def test_auth_ok():
 
 
 @pytest.mark.skipif(skip_auth, reason="skip auth tests")
-def test_post():
-    p = test_product()[0]
+def test_post(with_sample):
+    p = get_product()[0]
     print(p)
     with TestClient(app) as client:
         response = client.post("/product", headers=get_auth_token(), json=
@@ -253,8 +308,8 @@ def test_post():
 
 
 @pytest.mark.skipif(skip_auth, reason="skip auth tests")
-def test_put():
-    p = test_product()[0]
+def test_put(with_sample):
+    p = get_product()[0]
     with TestClient(app) as client:
         response = client.put("/product", headers=get_auth_token(), json={
                               "product": p['product'], "k": "test_"+str(date), "v": "test", "version": 1})
@@ -270,8 +325,8 @@ def test_put():
 
 
 @pytest.mark.skipif(skip_auth, reason="skip auth tests")
-def test_delete():
-    p = test_product()[0]
+def test_delete(with_sample):
+    p = get_product()[0]
     with TestClient(app) as client:
         response = client.delete("/product/"+p['product']+"/test_"+str(date))
         assert response.status_code == 422, f'invalid auth should return 422, got {response.status_code} {response.text}'
@@ -297,8 +352,8 @@ def test_delete():
 
 
 @pytest.mark.skipif(skip_auth, reason="skip auth tests")
-def test_ended_clean():
-    p = test_product()[0]
+def test_ended_clean(with_sample):
+    p = get_product()[0]
     with TestClient(app) as client:
         response = client.delete("/product/"+p['product']+"/test_"+str(date)+"?version=1", headers=get_auth_token(),)
         assert response.status_code == 200, f'delete created entries for tests should return 200, got {response.status_code} {response.text}'

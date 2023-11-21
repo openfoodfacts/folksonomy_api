@@ -1,4 +1,4 @@
--- database initilization
+-- database initialization
 -- depends:
 -- folksonomy main table, with public/private partitionning
 CREATE TABLE folksonomy (

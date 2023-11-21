@@ -57,7 +57,7 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown():
-    db.close()
+    await db.terminate()
 
 
 @app.middleware("http")
@@ -74,16 +74,6 @@ async def hello():
     return {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
 
 
-async def db_exec(query, params = ()):
-    """
-    Execute postgresql query and collect timing
-    """
-    t = time.monotonic()
-    cur = await db.cursor()
-    await cur.execute(query, params)
-    return cur, str(round(time.monotonic()-t, 4)*1000)+"ms"
-
-
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     """
     Get current user and check token validity if present
@@ -94,13 +84,16 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
             "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,)
         )
         if cur.rowcount == 1:
-            return token.split('__U', 1)[0]
+            return User(user_id=token.split('__U', 1)[0])
+        else:
+            return User(user_id=None)
 
 
-def check_owner_user(user, owner, allow_anonymous=False):
+def check_owner_user(user: User, owner, allow_anonymous=False):
     """
     Check authentication depending on current user and 'owner' of the data
     """
+    user = user.user_id if user is not None else None
     if user is None and allow_anonymous == False:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -141,9 +134,9 @@ async def authentication(response: Response, form_data: OAuth2PasswordRequestFor
     auth_data={'user_id': user_id, 'password': password}
     async with aiohttp.ClientSession() as session:
         async with session.post(auth_url, data=auth_data) as resp:
-            status_code = resp.status_code
+            status_code = resp.status
     if status_code == 200:
-        cur, timing = await db_exec("""
+        cur, timing = await db.db_exec("""
             DELETE FROM auth WHERE user_id = %s;
             INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
         """, (user_id, user_id, token))
@@ -185,10 +178,10 @@ async def authentication(response: Response, session: Optional[str] = Cookie(Non
     auth_url = auth_server + "/cgi/auth.pl"
     async with aiohttp.ClientSession() as session:
         async with session.post(auth_url, cookies={'session': session}) as resp:
-            status_code = resp.status_code
+            status_code = resp.status
 
     if status_code == 200:
-        cur, timing = await db_exec(
+        cur, timing = await db.db_exec(
             """
             DELETE FROM auth WHERE user_id = %s;
             INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
@@ -231,7 +224,7 @@ async def product_stats(response: Response,
     """
     check_owner_user(user, owner, allow_anonymous=True)
     where, params = property_where(owner, k, v)
-    cur, timing = await db_exec("""
+    cur, timing = await db.db_exec("""
         SELECT json_agg(j.j)::json FROM(
             SELECT json_build_object(
                 'product',product,
@@ -246,6 +239,13 @@ async def product_stats(response: Response,
         params
     )
     out = await cur.fetchone()
+    # cur, timing = await db.db_exec("""
+    #     SELECT count(*)
+    #         FROM folksonomy;
+    #     """
+    # )
+    # out2 = await cur.fetchone()
+    # import pdb;pdb.set_trace()
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing":timing})
 
 
@@ -260,7 +260,7 @@ async def product_list(response: Response,
         return JSONResponse(status_code=422, content={"detail": {"msg": "missing value for k"}})
     check_owner_user(user, owner, allow_anonymous=True)
     where, params = property_where(owner, k, v)
-    cur, timing = await db_exec("""
+    cur, timing = await db.db_exec("""
         SELECT coalesce(json_agg(j.j)::json, '[]'::json) FROM(
             SELECT json_build_object(
                 'product',product,
@@ -286,7 +286,7 @@ async def product_tags_list(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    cur, timing = await db_exec("""
+    cur, timing = await db.db_exec("""
         SELECT json_agg(j)::json FROM(
             SELECT * FROM folksonomy WHERE product = %s AND owner = %s ORDER BY k
             ) as j;
@@ -311,7 +311,7 @@ async def product_tag(response: Response,
     key = re.sub(r'[^a-z0-9_\:]', '', k)
     check_owner_user(user, owner, allow_anonymous=True)
     if k[-1:] == '*':
-        cur, timing = await db_exec(
+        cur, timing = await db.db_exec(
             """
             SELECT json_agg(j)::json FROM(
                 SELECT *
@@ -322,7 +322,7 @@ async def product_tag(response: Response,
             (product, owner, '^%s(:.|$)' % key),
         )
     else:
-        cur, timing = await db_exec(
+        cur, timing = await db.db_exec(
             """
             SELECT row_to_json(j) FROM(
                 SELECT *
@@ -348,7 +348,7 @@ async def product_tag_list_versions(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    cur, timing = await db_exec(
+    cur, timing = await db.db_exec(
         """
         SELECT json_agg(j)::json FROM(
             SELECT *
@@ -380,19 +380,13 @@ async def product_tag_add(response: Response,
     a tag and add multiple values the way you want (don't forget to document how); comma
     separated list is a good option.
     """
-
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
+    # enforce user
+    product_tag.editor = user.user_id
+    # note: version is checked by postgres routine
     try:
-        cur, timing = await db_exec(
-            """
-            INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
-                VALUES (%s,%s,%s,%s,%s,%s,%s)
-            """,
-            (
-                product_tag.product, product_tag.k.lower(), product_tag.v, product_tag.owner,
-                product_tag.version, user, product_tag.comment
-            )
-        )
+        query, params = db.create_product_tag_req(product_tag, user)
+        cur, timing = await db_exec(query, params)
     except psycopg2.Error as e:
         error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
         return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
@@ -417,17 +411,12 @@ async def product_tag_update(response: Response,
     """
 
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
+    # enforce user
+    product_tag.editor = user.user_id
     try:
-        cur, timing = await db_exec(
-            """
-            UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
-                WHERE product = %s AND owner = %s AND k = %s
-            """, 
-            (
-                product_tag.v, product_tag.version, user, product_tag.comment,
-                product_tag.product, product_tag.owner, product_tag.k.lower()
-            )
-        )
+        req, params = db.update_product_tag_req(product_tag)
+        import pdb;pdb.set_trace()
+        cur, timing = await db.db_exec(req, params)
     except psycopg2.Error as e:
         raise HTTPException(
             status_code=422,
@@ -449,12 +438,12 @@ async def product_tag_delete(response: Response,
     check_owner_user(user, owner, allow_anonymous=False)
     try:
         # FIXME: why is removing equivalent to setting version to 0
-        cur, timing = await db_exec(
+        cur, timing = await db.db_exec(
             """
             UPDATE folksonomy SET version = 0, editor = %s, comment = 'DELETE'
                 WHERE product = %s AND owner = %s AND k = %s AND version = %s;
             """,
-            (user, product, owner, k, version),
+            (user.user_id, product, owner, k, version),
         )
     except psycopg2.Error as e:
         # note: transaction will be rolled back by the middleware
@@ -467,7 +456,7 @@ async def product_tag_delete(response: Response,
             status_code=422,
             detail="Unknown product/k/version for this owner",
         )
-    cur, timing = await db_exec(
+    cur, timing = await db.db_exec(
         """
         DELETE FROM folksonomy WHERE product = %s AND owner = %s AND k = %s AND version = 0;
         """,
@@ -477,7 +466,7 @@ async def product_tag_delete(response: Response,
         return "ok"
     else:
         # we have a conflict, return an error explaining conflict
-        cur, timing = await db_exec(
+        cur, timing = await db.db_exec(
             """
             SELECT version FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
             """,
@@ -506,7 +495,7 @@ async def keys_list(response: Response,
     The keys list can be restricted to private tags from some owner
     """
     check_owner_user(user, owner, allow_anonymous=True)
-    cur, timing = await db_exec(
+    cur, timing = await db.db_exec(
         """
         SELECT json_agg(j.j)::json FROM(
             SELECT json_build_object(
@@ -530,6 +519,6 @@ async def pong(response: Response):
     """
     Check server health
     """
-    cur, timing = await db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'",())
+    cur, timing = await db.db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'",())
     pong = await cur.fetchone()
     return {"ping": "pong @ %s" % pong[0]}

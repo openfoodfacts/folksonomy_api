@@ -1,13 +1,16 @@
 import contextlib
 import contextvars
 import logging
+import time
 
 
 import aiopg # interface with postgresql
 
 # import psycopg2     # interface with postgresql
 
+from . import models
 from . import settings
+
 
 
 log = logging.getLogger(__name__)
@@ -43,7 +46,7 @@ async def get_conn():
     return conn.get()
 
 
-async def cursor():
+def cursor():
     """Return current cursor to run SQL"""
     global cur
     if cur.get() is None:
@@ -51,12 +54,12 @@ async def cursor():
     return cur.get()
 
 
-async def close():
-    """Close database connection"""
+async def terminate():
+    """Close all database connection"""
     global conn
     _conn = conn.get()
-    if _conn is not Note:
-        _conn.close()
+    if _conn is not None:
+        await _conn.terminate()
         conn.set(None)
 
 
@@ -88,3 +91,43 @@ async def transaction():
                     yield _cur
     finally:
         cur.set(None)
+
+
+async def db_exec(query, params = ()):
+    """
+    Execute postgresql query and collect timing
+    """
+    t = time.monotonic()
+    cur = cursor()
+    await cur.execute(query, params)
+    return cur, str(round(time.monotonic()-t, 4)*1000)+"ms"
+
+
+def create_product_tag_req(product_tag: models.ProductTag):
+    """Request and params to create a product tag in database
+    """
+    return (
+        """
+        INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+        """,
+        (
+            product_tag.product, product_tag.k.lower(), product_tag.v, product_tag.owner,
+            product_tag.version, product_tag.editor, product_tag.comment
+        )
+    )
+
+
+def update_product_tag_req(product_tag: models.ProductTag):
+    """Request and params to update a product tag in database
+    """
+    return (
+        """
+        UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
+            WHERE product = %s AND owner = %s AND k = %s
+        """,
+        (
+            product_tag.v, product_tag.version, product_tag.editor, product_tag.comment,
+            product_tag.product, product_tag.owner, product_tag.k.lower()
+        )
+    )
