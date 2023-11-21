@@ -1,6 +1,6 @@
-# OpenFoodFacts username and password for authentication
-USER = 'myusername'
-PASSWORD = 'mypassword'
+# OpenFoodFacts username and password for authentication for tests only !
+OFF_TEST_USER = 'myusername'
+OFF_TEST_PASSWORD = 'mypassword'
 
 # Postgres
 POSTGRES_USER = '' # Leave empty if no user exists for database

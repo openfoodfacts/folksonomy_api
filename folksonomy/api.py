@@ -5,12 +5,9 @@ import logging
 from logging.handlers import RotatingFileHandler
 from .dependencies import *
 from . import db
+from . import settings
 from fastapi.middleware.cors import CORSMiddleware
 
-# If you're in dev, you can specify another auth_server; eg.
-#   AUTH_URL="http://localhost.openfoodfacts" uvicorn folksonomy.api:app --host
-# Otherwise it defaults to https://world.openfoodfacts.org
-auth_server = os.environ.get("AUTH_URL", "https://world.openfoodfacts.org")
 
 description = """
 Folksonomy Engine API allows you to add free property/value pairs to Open Food Facts products.
@@ -130,10 +127,10 @@ async def authentication(response: Response, form_data: OAuth2PasswordRequestFor
     user_id = form_data.username
     password = form_data.password
     token = user_id+'__U'+str(uuid.uuid4())
-    auth_url = auth_server + "/cgi/auth.pl"
+    auth_url = settings.AUTH_SERVER + "/cgi/auth.pl"
     auth_data={'user_id': user_id, 'password': password}
-    async with aiohttp.ClientSession() as session:
-        async with session.post(auth_url, data=auth_data) as resp:
+    async with aiohttp.ClientSession() as http_session:
+        async with http_session.post(auth_url, data=auth_data) as resp:
             status_code = resp.status
     if status_code == 200:
         cur, timing = await db.db_exec("""
@@ -143,7 +140,7 @@ async def authentication(response: Response, form_data: OAuth2PasswordRequestFor
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
     elif status_code == 403:
-        asyncio.sleep(2)   # prevents brute-force
+        await asyncio.sleep(2)   # prevents brute-force
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
@@ -162,22 +159,21 @@ async def authentication(response: Response, session: Optional[str] = Cookie(Non
 
     token is returned, to be used in later requests with usual "Authorization: bearer token" headers
     """
-
     if not session or session =='':
         raise HTTPException(
             status_code=422, detail="Missing 'session' cookie")
 
     try:
         session_data = session.split('&')
-        user_id = session_data[session_data.index('user_id')+1]
-        token = user_id+'__U'+str(uuid.uuid4())
+        user_id = session_data[session_data.index('user_id') + 1]
+        token = user_id + '__U' + str(uuid.uuid4())
     except:
         raise HTTPException(
             status_code=422, detail="Malformed 'session' cookie")
 
-    auth_url = auth_server + "/cgi/auth.pl"
-    async with aiohttp.ClientSession() as session:
-        async with session.post(auth_url, cookies={'session': session}) as resp:
+    auth_url = settings.AUTH_SERVER + "/cgi/auth.pl"
+    async with aiohttp.ClientSession() as http_session:
+        async with http_session.post(auth_url, cookies={'session': session}) as resp:
             status_code = resp.status
 
     if status_code == 200:
@@ -191,7 +187,7 @@ async def authentication(response: Response, session: Optional[str] = Cookie(Non
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
     elif status_code == 403:
-        asyncio.sleep(2)   # prevents brute-force
+        await asyncio.sleep(2) # prevents brute-force
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
@@ -199,6 +195,7 @@ async def authentication(response: Response, session: Optional[str] = Cookie(Non
         )
     raise HTTPException(
         status_code=500, detail="Server error")
+
 
 def property_where(owner, k, v):
     conditions = ['owner=%s']
@@ -415,14 +412,12 @@ async def product_tag_update(response: Response,
     product_tag.editor = user.user_id
     try:
         req, params = db.update_product_tag_req(product_tag)
-        import pdb;pdb.set_trace()
         cur, timing = await db.db_exec(req, params)
     except psycopg2.Error as e:
         raise HTTPException(
             status_code=422,
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
         )
-
     if cur.rowcount == 1:
         return "ok"
     return
@@ -437,7 +432,8 @@ async def product_tag_delete(response: Response,
     """
     check_owner_user(user, owner, allow_anonymous=False)
     try:
-        # FIXME: why is removing equivalent to setting version to 0
+        # Setting version to 0, this is seen as a reset, 
+        # while maintaining history in folksonomy_versions
         cur, timing = await db.db_exec(
             """
             UPDATE folksonomy SET version = 0, editor = %s, comment = 'DELETE'
