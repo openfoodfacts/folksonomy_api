@@ -1,4 +1,7 @@
-"""Integration tests"""
+"""Integration tests
+
+**Important:** you should run tests with PYTHONASYNCIODEBUG=1
+"""
 import asyncio
 import json
 import pytest
@@ -385,57 +388,73 @@ def test_auth_ok(fake_authentication):
         assert access_token == ""
 
 
-def test_post(with_sample):
-    p = get_product()[0]
-    print(p)
+def test_post_invalid(with_sample):
     with TestClient(app) as client:
         headers = {"Authorization":  "Bearer foo__Utest-token"}
+        # empty barcode
         response = client.post("/product", headers=headers, json=
             {"product": "", "version": 1, "k": "test", "v": "test"})
         assert response.status_code == 422, f'product = "" should return 422, got {response.status_code}'
-
+        # version 0, forbidden
         response = client.post("/product", headers=headers, json=
             {"product": "0000000000000", "version": 0, "k": "test", "v": "test"})
         assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
-
+        # version -1, forbidden
         response = client.post("/product", headers=headers, json=
             {"product": "0000000000000", "version": -1, "k": "test", "v": "test"})
         assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
-
+        # version not 1, forbidden
         response = client.post("/product", headers=headers, json=
             {"product": "0000000000000", "version": 9999, "k": "test", "v": "test"})
         assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
-
+        # non numeric barcode, forbidden
         response = client.post("/product", headers = headers, json=
                                 {"product": "aa", "version": 1, "k": "test", "v": "test"})
-        assert response.status_code == 422, f'non alphanum product should return 422, got {response.status_code}'
-
+        assert response.status_code == 422, f'non numeric product should return 422, got {response.status_code}'
+        # empty key, forbidden
         response = client.post("/product", headers=headers, json=
             {"product": "0000000000000", "version": 1, "k": "", "v": "test"})
         assert response.status_code == 422, f'k="" should return 422, got {response.status_code}'
-
+        # empty value, forbidden
         response = client.post("/product", headers=headers, json=
             {"product": "0000000000000", "version": 1, "k": "ABCD", "v": "test"})
         assert response.status_code == 422, f'non lowercase k should return 422, got {response.status_code}'
-
+        # invalid k, forbidden
         response = client.post("/product", headers=headers, json=
             {"product": "0000000000000", "version": 1, "k": "$$", "v": "test"})
         assert response.status_code == 422, f'invalid k should return 422, got {response.status_code}'
-
+        # invalid owner
         response = client.post("/product", headers=headers, json=
             {"product": "0000000000000", "version": 1, "k": "aa", "v": "test", "owner": "someone_else"})
         assert response.status_code == 422, f'invalid owner should return 422, got {response.status_code}'
-
+        # invalid barcode with 25 digits
         response = client.post("/product", headers=headers, json=
             {"product": "1234567890123456789012345", "version": 1, "k": "aa", "v": "test"})
         assert response.status_code == 422, f'invalid barcode with 25 digits should return 422, got {response.status_code}'
+        # existing key value, forbidden
+        response = client.post("/product", headers=headers, json=
+            {"product": BARCODE_1, "version": 1, "k": "color", "v": "red"})
+        assert response.status_code == 422, f'existing key value should return 422, got {response.status_code}'
+
+@pytest.mark.asyncio
+async def test_post(with_sample):
+    with TestClient(app) as client:
+        headers = {"Authorization":  "Bearer foo__Utest-token"}
 
         response = client.post("/product", headers=headers, json=
-            {"product": p['product'], "version": 1, "k": "test_"+str(date), "v": "test"})
+            {"product": BARCODE_1, "version": 1, "k": "test_new", "v": "test"})
         assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
+        # created
+        async with db.transaction():
+            cur, _ = await db.db_exec(
+                f"""SELECT product, k, v, version FROM folksonomy WHERE product='{BARCODE_1}' AND k='test_new'"""
+            )
+            assert cur.rowcount == 1, f'Row exists in database'
+            data = await cur.fetchone()
+            assert data == (BARCODE_1, "test_new", "test", 1)
 
         response = client.post("/product", headers=headers, json=
-            {"product": p['product'], "version": 1, "k": "a-1:b_2:c-3:d_4", "v": "test"})
+            {"product": BARCODE_1, "version": 1, "k": "a-1:b_2:c-3:d_4", "v": "test"})
         assert response.status_code == 200, f'lowercase k with hyphen, underscore and number should return 200, got {response.status_code}'
 
 

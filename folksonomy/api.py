@@ -382,8 +382,8 @@ async def product_tag_add(response: Response,
     product_tag.editor = user.user_id
     # note: version is checked by postgres routine
     try:
-        query, params = db.create_product_tag_req(product_tag, user)
-        cur, timing = await db_exec(query, params)
+        query, params = db.create_product_tag_req(product_tag)
+        cur, timing = await db.db_exec(query, params)
     except psycopg2.Error as e:
         error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
         return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})

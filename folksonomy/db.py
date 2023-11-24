@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import contextvars
 import logging
@@ -15,35 +16,33 @@ from . import settings
 
 log = logging.getLogger(__name__)
 
-
-conn = contextvars.ContextVar("conn")
+# connections by event loop
+# FIXME use a dict witg get_event_loop as key
+conn = {}
 """a context variable for database"""
-conn.set(None)
 
 cur = contextvars.ContextVar("cur")
 """a context variable for current cursor"""
 cur.set(None)
 
 
-async def connect(**kwargs):
-    """Connect database for current local context"""
-    global conn
-    _conn = await aiopg.create_pool(**kwargs)
-    conn.set(_conn)
-
-
 async def get_conn():
     """Get current database connection, creating it if needed"""
     global conn
-    if conn.get() is None:
-        await connect(
+    loop = asyncio.get_event_loop()
+    if loop is None:
+        raise RuntimeError("This method only works with asyncio")
+    _conn = conn.get(loop)
+    if _conn is None:
+        _conn = await aiopg.create_pool(
             dbname=settings.POSTGRES_DATABASE,
             user=settings.POSTGRES_USER,
             password=settings.POSTGRES_PASSWORD,
             host=settings.POSTGRES_HOST,
-            async_=True
+            async_=True,
         )
-    return conn.get()
+        conn[loop] = _conn
+    return _conn
 
 
 def cursor():
@@ -57,10 +56,11 @@ def cursor():
 async def terminate():
     """Close all database connection"""
     global conn
-    _conn = conn.get()
+    loop = asyncio.get_event_loop()
+    _conn = conn.get(loop)
     if _conn is not None:
-        await _conn.terminate()
-        conn.set(None)
+        _conn.terminate()
+        del conn[loop]
 
 
 @contextlib.asynccontextmanager
