@@ -22,10 +22,18 @@ jobs:
         uses: actions/setup-python@v4.7.1
         with:
           python-version: '3.8'
+          cache: 'pip'
       - name: install packages in a virtual environment
         run: |
           python -m venv .venv && \
           .venv/bin/pip install -r requirements.txt
+      - name: create local settings for tests
+        run: |
+          echo > local_settings.py
+          echo "POSTGRES_USER = 'folksonomy'" >> local_settings.py
+          echo "POSTGRES_PASSWORD = 'folksonomy'" >> local_settings.py
+          echo "POSTGRES_HOST = 'localhost'" >> local_settings.py
+          echo "POSTGRES_DATABASE = 'folksonomy'" >> local_settings.py
       - name: wait postgres to be ready
         timeout-minutes: 10
         run: |
