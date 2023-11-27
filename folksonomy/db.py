@@ -40,6 +40,7 @@ async def get_conn():
         raise NotInAsyncIOError("This method only works with asyncio")
     _conn = conn.get(loop)
     if _conn is None:
+        print(f"creating new connection to db {settings.POSTGRES_DATABASE} with user {settings.POSTGRES_USER} on host {settings.POSTGRES_HOST}")
         _conn = await aiopg.create_pool(
             dbname=settings.POSTGRES_DATABASE,
             user=settings.POSTGRES_USER,

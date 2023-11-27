@@ -42,7 +42,7 @@ jobs:
       - name: run tests
         # use PYTHONASYNCIODEBUG to ensure all asyncio tasks are closed
         run: |
-          PYTHONASYNCIODEBUG=1 .venv/bin/pytest -v --cov=folksonomy  --cov-report xml tests/ folksonomy/
+          PYTHONASYNCIODEBUG=1 .venv/bin/pytest -v --capture=no --cov=folksonomy  --cov-report xml tests/ folksonomy/
       - uses: codecov/codecov-action@v3.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
