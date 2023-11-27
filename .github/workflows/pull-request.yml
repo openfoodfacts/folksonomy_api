@@ -12,6 +12,10 @@ jobs:
     name: Run pytest tests
     runs-on: ubuntu-latest
     steps:
+      - name: checkout project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: start a postgresql docker container
         run: ./start_postgres.sh &
       - name: install python
