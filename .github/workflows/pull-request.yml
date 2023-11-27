@@ -11,6 +11,11 @@ jobs:
   run-tests:
     name: Run pytest tests
     runs-on: ubuntu-latest
+    env:
+      POSTGRES_USER: folksonomy
+      POSTGRES_PASSWORD: folksonomy
+      POSTGRES_HOST: localhost
+      POSTGRES_DATABASE: folksonomy
     steps:
       - name: checkout project
         uses: actions/checkout@v4
@@ -27,13 +32,6 @@ jobs:
         run: |
           python -m venv .venv && \
           .venv/bin/pip install -r requirements.txt
-      - name: create local settings for tests
-        run: |
-          echo > local_settings.py
-          echo "POSTGRES_USER = 'folksonomy'" >> local_settings.py
-          echo "POSTGRES_PASSWORD = 'folksonomy'" >> local_settings.py
-          echo "POSTGRES_HOST = 'localhost'" >> local_settings.py
-          echo "POSTGRES_DATABASE = 'folksonomy'" >> local_settings.py
       - name: wait postgres to be ready
         timeout-minutes: 10
         run: |
