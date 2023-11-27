@@ -19,13 +19,15 @@ PostgreSQL is used as the backend database.
 You should create unit tests for each new feature or API change (see [test_main.py](https://github.com/openfoodfacts/folksonomy_api/blob/main/tests/test_main.py)). 
 To run tests just launch:
 ```bash
-pytest
+PYTHONASYNCIODEBUG=1  pytest tests/ folksonomy/
 ```
+The `PYTHONASYNCIODEBUG` is important to check we have no pending asyncio tasks that are not executed
+(sign of a potential problem).
 
 # Generating an OpenAPI document
 
 FastAPI is based on [OpenAPI](https://github.com/OAI/OpenAPI-Specification) (previously known as Swagger) and [JSON Schema](https://json-schema.org/). FastAPI allows to generate an OpenAPI document (JSON) that you can reuse in various services (to automatically generate client libraries for example). To generate an OpenAPI document you can either:
-* download it at https://api.folksonomy.openfoodfacts.org/openapi.json 
+* download it at https://api.folksonomy.openfoodfacts.org/openapi.json
 * or generate it:
 ```bash
 ./generate_openapi_json.py
