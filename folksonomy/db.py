@@ -16,14 +16,20 @@ from . import settings
 
 log = logging.getLogger(__name__)
 
-# connections by event loop
-# FIXME use a dict witg get_event_loop as key
 conn = {}
-"""a context variable for database"""
+"""associate each event_loop with a connection pool"""
 
 cur = contextvars.ContextVar("cur")
 """a context variable for current cursor"""
 cur.set(None)
+
+
+class NotInTransactionError(Exception):
+    """Trying to get cursor outside of a transaction context manager"""
+
+
+class NotInAsyncIOError(Exception):
+    """Trying to use connection outside of asyncio context"""
 
 
 async def get_conn():
@@ -31,7 +37,7 @@ async def get_conn():
     global conn
     loop = asyncio.get_event_loop()
     if loop is None:
-        raise RuntimeError("This method only works with asyncio")
+        raise NotInAsyncIOError("This method only works with asyncio")
     _conn = conn.get(loop)
     if _conn is None:
         _conn = await aiopg.create_pool(
@@ -49,7 +55,7 @@ def cursor():
     """Return current cursor to run SQL"""
     global cur
     if cur.get() is None:
-        raise Exception("You must be in a transaction to use cursor")
+        raise NotInTransactionError("You must be in a transaction to use cursor")
     return cur.get()
 
 

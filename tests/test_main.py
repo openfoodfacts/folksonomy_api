@@ -112,7 +112,7 @@ def dummy_auth(self, auth_url, data=None, cookies=None):
     success = False
     # reject or not based on password, which should always be "test" :-)
     if data is not None:
-        assert sorted(data.keys()) == ["user_id", "password"]
+        assert sorted(data.keys()) == ["password", "user_id"]
         if data["password"] == "test":
             success = True
     # session token must be test !
@@ -135,6 +135,20 @@ def remove_last_edit(data):
     for d in data:
         d.pop("last_edit")
     return data
+
+
+async def check_tag(product, k, **kwargs):
+    expected_data = dict(product=product, k=k, **kwargs)
+    cols = list(expected_data.keys())
+    async with db.transaction():
+        cur, _ = await db.db_exec(
+            f"""SELECT {",".join(cols)} FROM folksonomy WHERE product=%s AND k=%s""",
+            (product, k)
+        )
+        assert cur.rowcount == 1, f'Row exists in database'
+        data = dict(zip(cols, await cur.fetchone()))
+        assert data == expected_data
+
 
 @pytest.mark.asyncio
 async def test_versions_history(with_sample):
@@ -211,8 +225,11 @@ def test_products_list(with_sample):
         response = client.get("/products?k=color&v=red")
         assert response.status_code == 200
         data = response.json()
-        assert data == [{'product': BARCODE_1, 'k': 'color', 'v': 'red'}]
-        # private one
+        assert data == [
+            {'product': BARCODE_1, 'k': 'color', 'v': 'red'},
+            {'product': BARCODE_3, 'k': 'color', 'v': 'red'},
+        ]
+        # private one remains private
         response = client.get("/products?k=private")
         assert response.status_code == 200
         assert response.json() == []
@@ -380,12 +397,12 @@ def test_auth_bad():
 def test_auth_ok(fake_authentication):
     with TestClient(app) as client:
         response = client.post(
-            "/auth", data={"username": off, "password": "test"})
+            "/auth", data={"username": "off", "password": "test"})
         assert response.status_code == 200
         assert 'token_type' in response.json()
         assert 'access_token' in response.json()
         access_token = response.json()['access_token']
-        assert access_token == ""
+        assert access_token.startswith("off__U")
 
 
 def test_post_invalid(with_sample):
@@ -445,71 +462,76 @@ async def test_post(with_sample):
             {"product": BARCODE_1, "version": 1, "k": "test_new", "v": "test"})
         assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
         # created
-        async with db.transaction():
-            cur, _ = await db.db_exec(
-                f"""SELECT product, k, v, version FROM folksonomy WHERE product='{BARCODE_1}' AND k='test_new'"""
-            )
-            assert cur.rowcount == 1, f'Row exists in database'
-            data = await cur.fetchone()
-            assert data == (BARCODE_1, "test_new", "test", 1)
+        await check_tag(BARCODE_1, "test_new", v="test", version=1)
 
         response = client.post("/product", headers=headers, json=
             {"product": BARCODE_1, "version": 1, "k": "a-1:b_2:c-3:d_4", "v": "test"})
         assert response.status_code == 200, f'lowercase k with hyphen, underscore and number should return 200, got {response.status_code}'
+        # created
+        await check_tag(BARCODE_1, "a-1:b_2:c-3:d_4", v="test", version=1)
 
 
-def test_put(with_sample):
-    p = get_product()[0]
+def test_put_invalid(with_sample):
     with TestClient(app) as client:
         headers = {"Authorization":  "Bearer foo__Utest-token"}
         response = client.put("/product", headers=headers, json={
-                              "product": p['product'], "k": "test_"+str(date), "v": "test", "version": 1})
-        assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
+                              "product": BARCODE_1, "k": "test_new", "v": "test", "version": 1})
+        assert response.status_code == 404, f'new key should return 404, got {response.status_code} {response.text}'
 
         response = client.put("/product", headers=headers, json={
-                              "product": p['product'], "k": "test_"+str(date), "v": "test", "version": 2})
+                              "product": BARCODE_2, "k": "color", "v": "test", "version": 2})
+        assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
+
+
+@pytest.mark.asyncio
+async def test_put(with_sample):
+        headers = {"Authorization":  "Bearer foo__Utest-token"}
+        response = client.put("/product", headers=headers, json={
+                              "product": BARCODE_1, "k": "color", "v": "purple", "version": 2})
         assert response.status_code == 200, f'valid new version should return 200, got {response.status_code} {response.text}'
-
+        await check_tag(BARCODE_1, "color", v="purple", version=2)
+        # and again
         response = client.put("/product", headers=headers, json={
-                              "product": p['product'], "k": "test_"+str(date), "v": "test", "version": 2})
-        assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
+                              "product": BARCODE_1, "k": "color", "v": "brown", "version": 3})
+        assert response.status_code == 200, f'valid new version should return 200, got {response.status_code} {response.text}'
+        await check_tag(BARCODE_1, "color", v="brown", version=3)
 
 
-def test_delete(with_sample,):
-    p = get_product()[0]
+def test_delete_invalid(with_sample):
+    headers = {"Authorization":  "Bearer foo__Utest-token"}
     with TestClient(app) as client:
-        response = client.delete("/product/"+p['product']+"/test_"+str(date))
+        response = client.delete(f"/product/{BARCODE_1}/not-existing")
         assert response.status_code == 422, f'invalid auth should return 422, got {response.status_code} {response.text}'
 
-        response = client.delete("/product/"+p['product']+"/test_"+str(date), headers=headers)
+        response = client.delete(f"/product/{BARCODE_1}/color", headers=headers)
         assert response.status_code == 422, f'missing version should return 422, got {response.status_code} {response.text}'
 
         response = client.delete(
-            "/product/"+p['product']+"/test_"+str(date)+"?version=1", headers=headers,)
+            f"/product/{BARCODE_2}/color?version=1", headers=headers,)
         assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
 
         response = client.delete(
-            "/product/"+p['product']+"/test_"+str(date)+"?version=3", headers=headers,)
+            f"/product/{BARCODE_2}/color?version=3", headers=headers,)
         assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
 
-        response = client.delete(
-            "/product/"+p['product']+"/test_"+str(date)+"?version=2", headers=headers,)
-        assert response.status_code == 200, f'valid version should return 200, got {response.status_code} {response.text}'
 
-        response = client.post("/product", headers=headers, json={
-            "product": p['product'], "version": 1, "k": "test_"+str(date), "v": "test"})
-        assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
-
-
-def test_ended_clean(with_sample):
-    p = get_product()[0]
+@pytest.mark.asyncio
+async def test_delete(with_sample):
+    headers = {"Authorization":  "Bearer foo__Utest-token"}
     with TestClient(app) as client:
-        headers = {"Authorization":  "Bearer foo__Utest-token"}
-        response = client.delete("/product/"+p['product']+"/test_"+str(date)+"?version=1", headers=headers,)
-        assert response.status_code == 200, f'delete created entries for tests should return 200, got {response.status_code} {response.text}'
-
-        response = client.delete("/product/"+p['product']+"/a-1:b_2:c-3:d_4"+"?version=1", headers=headers,)
-        assert response.status_code == 200, f'delete created entries for tests should return 200, got {response.status_code} {response.text}'
+        response = client.delete(f"/product/{BARCODE_1}/color?version=1", headers=headers,)
+        assert response.status_code == 200, f'valid version should return 200, got {response.status_code} {response.text}'
+        # assert False, "FIXME test it's not there !"
+        # add anew
+        response = client.post("/product", headers=headers, json={
+            "product": BARCODE_1, "version": 1, "k": "color", "v": "purple"})
+        assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
+        await check_tag(BARCODE_1, "color", v="purple", version=1)
+        # and update
+        response = client.put("/product", headers=headers, json={
+            "product": BARCODE_1, "version": 2, "k": "color", "v": "brown"})
+        assert response.status_code == 200, f'update on new entry should return 200, got {response.status_code} {response.text}'
+        await check_tag(BARCODE_1, "color", v="brown", version=2)
 
 
 @pytest.mark.asyncio

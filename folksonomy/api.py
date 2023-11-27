@@ -420,7 +420,16 @@ async def product_tag_update(response: Response,
         )
     if cur.rowcount == 1:
         return "ok"
-    return
+    elif cur.rowcount == 0:  # non existing key
+        raise HTTPException(
+            status_code=404,
+            detail="Key was not found",
+        )
+    else:
+        raise HTTPException(
+            status_code=503,
+            detail="Doubious update - more than one row udpated",
+        )
 
 
 @app.delete("/product/{product}/{k}")
