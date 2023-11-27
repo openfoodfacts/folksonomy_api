@@ -38,6 +38,9 @@ jobs:
         timeout-minutes: 10
         run: |
           while ! (nc -vz 127.0.0.1 5432);do echo "waiting postgres"; sleep 1;done
+      - name: initialize database
+        run: |
+          .venv/bin/python db-migration.py
       - name: run tests
         # use PYTHONASYNCIODEBUG to ensure all asyncio tasks are closed
         run: |
