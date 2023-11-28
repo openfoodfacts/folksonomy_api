@@ -71,19 +71,6 @@ async def terminate():
 
 
 @contextlib.asynccontextmanager
-async def transaction_ctx(cur):
-    """A function handling transaction init / rollback or commit"""
-    try:
-        yield cur
-    except Exception as e:
-        await cur.rollback()
-        #await conn.execute("ROLLBACK;")
-    else:
-        await cur.commit()
-        #await cur.execute("COMMIT;")
-
-
-@contextlib.asynccontextmanager
 async def transaction():
     """Context manager creating cursor in a transaction"""
     global cur
