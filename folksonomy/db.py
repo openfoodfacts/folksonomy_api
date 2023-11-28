@@ -3,6 +3,7 @@ import contextlib
 import contextvars
 import logging
 import time
+import weakref
 
 
 import aiopg # interface with postgresql
@@ -16,7 +17,7 @@ from . import settings
 
 log = logging.getLogger(__name__)
 
-conn = {}
+conn = weakref.WeakKeyDictionary()
 """associate each event_loop with a connection pool"""
 
 cur = contextvars.ContextVar("cur")
