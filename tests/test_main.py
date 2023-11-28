@@ -10,7 +10,7 @@ import time
 import aiohttp
 from fastapi.testclient import TestClient
 
-from folksonomy import db, models
+from folksonomy import db, models, settings
 from folksonomy.api import app
 
 
@@ -387,7 +387,9 @@ def test_auth_empty():
         assert response.status_code == 422
 
 
-def test_auth_bad():
+def test_auth_bad(monkeypatch):
+    # avoid waiting for 2 sec
+    monkeypatch.setattr(settings, 'FAILED_AUTH_WAIT_TIME', .1)
     with TestClient(app) as client:
         response = client.post(
             "/auth", data={"username": "foo", "password": "bar"})
@@ -535,7 +537,9 @@ async def test_delete(with_sample):
 
 
 @pytest.mark.asyncio
-async def test_auth_by_cookie(fake_authentication):
+async def test_auth_by_cookie(fake_authentication, monkeypatch):
+    # avoid waiting for too long on bad auth
+    monkeypatch.setattr(settings, 'FAILED_AUTH_WAIT_TIME', .1)
     with TestClient(app) as client:
         response = client.post("/auth_by_cookie")
         assert response.status_code == 422, f'missing cookie should return 422, got {response.status_code} {response.text}'

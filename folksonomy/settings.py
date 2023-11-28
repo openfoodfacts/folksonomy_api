@@ -12,6 +12,8 @@ POSTGRES_DATABASE = os.environ.get("POSTGRES_DATABASE", 'folksonomy')
 # Otherwise it defaults to https://world.openfoodfacts.org
 AUTH_SERVER = os.environ.get("AUTH_URL", "https://world.openfoodfacts.org")
 
+# time (in seconds) to wait for after a failed authentication attempt (to avoid brute force)
+FAILED_AUTH_WAIT_TIME = 2  # this settings is meant to be overridden by tests only
 
 try:
     # override with local_settings

@@ -140,7 +140,7 @@ async def authentication(response: Response, form_data: OAuth2PasswordRequestFor
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
     elif status_code == 403:
-        await asyncio.sleep(2)   # prevents brute-force
+        await asyncio.sleep(settings.FAILED_AUTH_WAIT_TIME)   # prevents brute-force
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
@@ -187,7 +187,7 @@ async def authentication(response: Response, session: Optional[str] = Cookie(Non
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
     elif status_code == 403:
-        await asyncio.sleep(2) # prevents brute-force
+        await asyncio.sleep(settings.FAILED_AUTH_WAIT_TIME) # prevents brute-force
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
