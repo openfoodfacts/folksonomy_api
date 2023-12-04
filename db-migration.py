@@ -1,6 +1,9 @@
 import os
+import time
+
 from yoyo import read_migrations, get_backend
-from local_settings import POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST
+
+from folksonomy.settings import POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST
 
 AUTH_DATA = ""
 if POSTGRES_USER:
@@ -17,4 +20,10 @@ backend = get_backend(url)
 migrations = read_migrations('./db/migrations')
 
 # Apply any outstanding migrations
-backend.apply_migrations(backend.to_apply(migrations))
+to_apply = backend.to_apply(migrations)
+print(f"Found {len(to_apply)} migrations to apply")
+if to_apply:
+    start = time.monotonic()
+    backend.apply_migrations(to_apply)
+    end = time.monotonic()
+    print(f"Done in {end - start:.2} seconds")

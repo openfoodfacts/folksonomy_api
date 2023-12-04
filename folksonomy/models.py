@@ -8,8 +8,9 @@ from pydantic import BaseModel, ValidationError, validator
 re_barcode = re.compile(r'[0-9]{1,24}')
 re_key = re.compile(r'[a-z0-9_-]+(\:[a-z0-9_-]+)*')
 
+
 class User(BaseModel):
-    user_id: str
+    user_id: Optional[str]
 
 
 class ProductTag(BaseModel):

@@ -1,0 +1,50 @@
+name: Pull Request checks
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run-tests:
+    name: Run pytest tests
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_USER: folksonomy
+      POSTGRES_PASSWORD: folksonomy
+      POSTGRES_HOST: "127.0.0.1"
+      POSTGRES_DATABASE: folksonomy
+    steps:
+      - name: checkout project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: start a postgresql docker container
+        run: ./start_postgres.sh &
+      - name: install python
+        uses: actions/setup-python@v4.7.1
+        with:
+          python-version: '3.8'
+          cache: 'pip'
+      - name: install packages in a virtual environment
+        run: |
+          python -m venv .venv && \
+          .venv/bin/pip install -r requirements.txt
+      - name: wait postgres to be ready
+        timeout-minutes: 10
+        run: |
+          while ! (nc -vz 127.0.0.1 5432);do echo "waiting postgres"; sleep 1;done
+      - name: initialize database
+        run: |
+          .venv/bin/python db-migration.py
+      - name: run tests
+        # use PYTHONASYNCIODEBUG to ensure all asyncio tasks are closed
+        run: |
+          PYTHONASYNCIODEBUG=1 .venv/bin/pytest -v --cov=folksonomy  --cov-report xml tests/ folksonomy/
+      - uses: codecov/codecov-action@v3.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          verbose: true
