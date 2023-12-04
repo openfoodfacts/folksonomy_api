@@ -1,4 +1,4 @@
-# OpenFoodFacts username and password for authentication for tests only !
+# OpenFoodFacts username and password for authentication for tests only!
 OFF_TEST_USER = 'myusername'
 OFF_TEST_PASSWORD = 'mypassword'
 

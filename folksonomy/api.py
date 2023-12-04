@@ -197,7 +197,9 @@ async def authentication(response: Response, session: Optional[str] = Cookie(Non
         status_code=500, detail="Server error")
 
 
-def property_where(owner, k, v):
+def property_where(owner: str, k: str, v: str):
+    """Build a SQL condition on a property, filtering by owner and eventually key and value
+    """
     conditions = ['owner=%s']
     params = [owner]
     if k != '':
