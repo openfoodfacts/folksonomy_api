@@ -1,3 +1,16 @@
+"""Simple db migrations script to apply all pending yoyo migrations
+
+In case you need, you can also use the command line. Eg to list migrations:
+```bash
+yoyo -c yoyo.ini --database postgres://you_database_url list
+```
+
+This can be usefull to mark a migration as already applied without actually applying it.
+eg:
+```bash
+yoyo -c yoyo.ini --database postgres://you_database_url mark
+```
+"""
 import os
 import time
 
