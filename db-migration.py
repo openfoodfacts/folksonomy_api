@@ -13,7 +13,7 @@ if POSTGRES_USER:
 if AUTH_DATA:
     AUTH_DATA += "@"
 
-url = "postgres://{}{}/folksonomy".format(AUTH_DATA, POSTGRES_HOST)
+url = "postgres://{}{}/folksonomy".format(AUTH_DATA, POSTGRES_HOST or "")
 backend = get_backend(url)
 
 # Add steps
