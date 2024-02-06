@@ -2,7 +2,7 @@ psycopg2-binary==2.9.9
 aiopg==1.4.0
 requests==2.31.0
 aiohttp==3.9.0
-fastapi==0.70.0
+fastapi==0.109.1
 uvicorn==0.15.0
 python-multipart==0.0.5
 yoyo-migrations==7.3.2
@@ -11,3 +11,5 @@ yoyo-migrations==7.3.2
 pytest==7.1.2
 pytest-asyncio==0.21.1
 pytest-cov==3.0.0
+# needed for tests by starlette
+httpx>=0.22.0

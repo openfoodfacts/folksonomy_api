@@ -1,5 +1,6 @@
 #! /usr/bin/python3
 
+import contextlib
 import os
 import logging
 from logging.handlers import RotatingFileHandler
@@ -23,8 +24,19 @@ The API use the main following variables:
 * [Folksonomy Engine github repository](https://github.com/openfoodfacts/folksonomy_engine)
 * [Documented properties](https://wiki.openfoodfacts.org/Folksonomy/Property)
 """
+
+# Setup FastAPI app lifespan
+@contextlib.asynccontextmanager
+async def app_lifespan(app: FastAPI):
+    async with app_logging():
+        try:
+            yield
+        finally:
+            await db.terminate()
+
 app = FastAPI(title="Open Food Facts folksonomy REST API",
-    description=description)
+    description=description, lifespan=app_lifespan)
+
 # Allow anyone to call the API from their own apps
 app.add_middleware(
     CORSMiddleware,
@@ -45,17 +57,14 @@ app.add_middleware(
 # define route for authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth", auto_error=False)
 
-@app.on_event("startup")
-async def startup_event():
+
+@contextlib.asynccontextmanager
+async def app_logging():
     logger = logging.getLogger("uvicorn.access")
     handler = logging.handlers.RotatingFileHandler("api.log",mode="a",maxBytes = 100*1024, backupCount = 3)
     handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
     logger.addHandler(handler)
-
-@app.on_event("shutdown")
-async def shutdown():
-    await db.terminate()
-
+    yield
 
 @app.middleware("http")
 async def initialize_transactions(request: Request, call_next):
@@ -335,7 +344,7 @@ async def product_tag(response: Response,
     if out:
         return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
     else:
-        return
+        return JSONResponse(status_code=404, content=None)
 
 
 @app.get("/product/{product}/{k}/versions", response_model=List[ProductTag])
