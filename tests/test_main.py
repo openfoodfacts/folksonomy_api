@@ -295,7 +295,7 @@ def test_product_key(with_sample):
 def test_product_key_missing(with_sample):
     with TestClient(app) as client:
         response = client.get(f"/product/{BARCODE_1}/not-existing")
-        assert response.status_code == 200
+        assert response.status_code == 404
         assert response.json() == None
 
 

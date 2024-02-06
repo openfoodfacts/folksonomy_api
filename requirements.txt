@@ -11,3 +11,5 @@ yoyo-migrations==7.3.2
 pytest==7.1.2
 pytest-asyncio==0.21.1
 pytest-cov==3.0.0
+# needed for tests by starlette
+httpx>=0.22.0
