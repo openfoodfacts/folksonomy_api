@@ -95,6 +95,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
             return User(user_id=None)
 
 
+def sanitize_data(k, v):
+    """Some sanitization of data"""
+    k = k.strip()
+    return k, v
+
+
 def check_owner_user(user: User, owner, allow_anonymous=False):
     """
     Check authentication depending on current user and 'owner' of the data
@@ -231,6 +237,7 @@ async def product_stats(response: Response,
     The products list can be limited to some tags (k or k=v)
     """
     check_owner_user(user, owner, allow_anonymous=True)
+    k, v = sanitize_data(k, v)
     where, params = property_where(owner, k, v)
     cur, timing = await db.db_exec("""
         SELECT json_agg(j.j)::json FROM(
@@ -267,6 +274,7 @@ async def product_list(response: Response,
     if k == '':
         return JSONResponse(status_code=422, content={"detail": {"msg": "missing value for k"}})
     check_owner_user(user, owner, allow_anonymous=True)
+    k, v = sanitize_data(k, v)
     where, params = property_where(owner, k, v)
     cur, timing = await db.db_exec("""
         SELECT coalesce(json_agg(j.j)::json, '[]'::json) FROM(
@@ -315,7 +323,7 @@ async def product_tag(response: Response,
     - /product/xxx/key returns only the requested key
     - /product/xxx/key* returns the key and subkeys (key:subkey)
     """
-
+    k, v = sanitize_data(k, None)
     key = re.sub(r'[^a-z0-9_\:]', '', k)
     check_owner_user(user, owner, allow_anonymous=True)
     if k[-1:] == '*':
@@ -356,6 +364,7 @@ async def product_tag_list_versions(response: Response,
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
+    k, v = sanitize_data(k, None)
     cur, timing = await db.db_exec(
         """
         SELECT json_agg(j)::json FROM(
@@ -451,6 +460,7 @@ async def product_tag_delete(response: Response,
     Delete a product tag
     """
     check_owner_user(user, owner, allow_anonymous=False)
+    k, v = sanitize_data(k, None)
     try:
         # Setting version to 0, this is seen as a reset, 
         # while maintaining history in folksonomy_versions

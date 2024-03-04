@@ -35,6 +35,8 @@ class ProductTag(BaseModel):
     def key_check(cls, v):
         if not v:
             raise ValueError('k cannot be empty')
+        # strip the key
+        v = v.strip()
         if not re.fullmatch(re_key, v):
             raise ValueError('k must be alpha-numeric [a-z0-9_-:]')
         return v
