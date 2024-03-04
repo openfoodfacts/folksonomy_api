@@ -43,14 +43,23 @@ SAMPLES = [
 sample_by_keys = {(s["product"], s["k"], s["version"]): s for s in SAMPLES}
 
 
+@pytest.fixture(autouse=True)
+def clean_db():
+    # clean database before running a test
+    asyncio.run(_clean_db())
+
+
+async def _clean_db():
+    async with db.transaction():
+        await clean_data()
+
 @pytest.fixture
-def with_sample():
+def with_sample(auth_tokens):
     asyncio.run(_with_sample())
 
 
 async def _with_sample():
     async with db.transaction():
-        await clean_data()
         await create_data(SAMPLES)
 
 
@@ -86,14 +95,23 @@ async def create_data(samples):
             product_tag.version = version
             req, params = db.update_product_tag_req(product_tag)
             await db.db_exec(req, params)
+
+
+@pytest.fixture
+def auth_tokens():
+    asyncio.run(_add_auth_tokens())
+
+
+async def _add_auth_tokens():
     # add a token to auth foo and bar
-    await db.db_exec(
-        """
-        INSERT INTO auth (user_id, token, last_use) VALUES
-        ('foo','foo__Utest-token',current_timestamp AT TIME ZONE 'GMT'),
-        ('bar','bar__Utest-token',current_timestamp AT TIME ZONE 'GMT')
-        """
-    )
+    async with db.transaction():
+        await db.db_exec(
+            """
+            INSERT INTO auth (user_id, token, last_use) VALUES
+            ('foo','foo__Utest-token',current_timestamp AT TIME ZONE 'GMT'),
+            ('bar','bar__Utest-token',current_timestamp AT TIME ZONE 'GMT')
+            """
+        )
 
 
 class DummyResponse:
