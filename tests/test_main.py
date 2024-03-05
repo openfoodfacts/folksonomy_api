@@ -43,14 +43,23 @@ SAMPLES = [
 sample_by_keys = {(s["product"], s["k"], s["version"]): s for s in SAMPLES}
 
 
+@pytest.fixture(autouse=True)
+def clean_db():
+    # clean database before running a test
+    asyncio.run(_clean_db())
+
+
+async def _clean_db():
+    async with db.transaction():
+        await clean_data()
+
 @pytest.fixture
-def with_sample():
+def with_sample(auth_tokens):
     asyncio.run(_with_sample())
 
 
 async def _with_sample():
     async with db.transaction():
-        await clean_data()
         await create_data(SAMPLES)
 
 
@@ -86,14 +95,23 @@ async def create_data(samples):
             product_tag.version = version
             req, params = db.update_product_tag_req(product_tag)
             await db.db_exec(req, params)
+
+
+@pytest.fixture
+def auth_tokens():
+    asyncio.run(_add_auth_tokens())
+
+
+async def _add_auth_tokens():
     # add a token to auth foo and bar
-    await db.db_exec(
-        """
-        INSERT INTO auth (user_id, token, last_use) VALUES
-        ('foo','foo__Utest-token',current_timestamp AT TIME ZONE 'GMT'),
-        ('bar','bar__Utest-token',current_timestamp AT TIME ZONE 'GMT')
-        """
-    )
+    async with db.transaction():
+        await db.db_exec(
+            """
+            INSERT INTO auth (user_id, token, last_use) VALUES
+            ('foo','foo__Utest-token',current_timestamp AT TIME ZONE 'GMT'),
+            ('bar','bar__Utest-token',current_timestamp AT TIME ZONE 'GMT')
+            """
+        )
 
 
 class DummyResponse:
@@ -291,6 +309,15 @@ def test_product_key(with_sample):
                 'product': '3701027900001', 'k': 'color', 'v': 'red', 'owner': '', 'version': 1, 'editor': 'foo', 'comment': ''
             }
 
+def test_key_stripped_on_get(with_sample):
+    with TestClient(app) as client:
+        response = client.get(f"/product/{BARCODE_1}/ color  ")
+        assert response.status_code == 200
+        data = response.json()
+        data.pop("last_edit")
+        assert data == {
+            'product': '3701027900001', 'k': 'color', 'v': 'red', 'owner': '', 'version': 1, 'editor': 'foo', 'comment': ''
+        }
 
 def test_product_key_missing(with_sample):
     with TestClient(app) as client:
@@ -471,6 +498,20 @@ async def test_post(with_sample):
         assert response.status_code == 200, f'lowercase k with hyphen, underscore and number should return 200, got {response.status_code}'
         # created
         await check_tag(BARCODE_1, "a-1:b_2:c-3:d_4", v="test", version=1)
+
+
+@pytest.mark.asyncio
+async def test_product_key_stripped_on_post(auth_tokens):
+    with TestClient(app) as client:
+        headers = {"Authorization":  "Bearer foo__Utest-token"}
+        response = client.post("/product", headers=headers, json=
+            {"product": BARCODE_1, "version": 1, "k": " test_new2  ", "v": "test"})
+        assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
+        # check created stripped
+        await check_tag(BARCODE_1, "test_new2", v="test", version=1)
+        # reachable:
+        response = client.get(f"/product/{BARCODE_1}/test_new2")
+        assert response.status_code == 200, f'getting stripped key should return 200, got {response.status_code} {response.text}'
 
 
 def test_put_invalid(with_sample):
