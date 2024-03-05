@@ -45,6 +45,8 @@ class ProductTag(BaseModel):
     def value_check(cls, v):
         if not v:
             raise ValueError('v cannot be empty')
+        # strip values
+        v = v.strip()
         return v
 
     @field_validator('version')

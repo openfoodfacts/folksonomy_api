@@ -514,6 +514,17 @@ async def test_product_key_stripped_on_post(auth_tokens):
         assert response.status_code == 200, f'getting stripped key should return 200, got {response.status_code} {response.text}'
 
 
+@pytest.mark.asyncio
+async def test_product_value_stripped_on_post(auth_tokens):
+    with TestClient(app) as client:
+        headers = {"Authorization":  "Bearer foo__Utest-token"}
+        response = client.post("/product", headers=headers, json=
+            {"product": BARCODE_1, "version": 1, "k": "test_new", "v": " a test   "})
+        assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
+        # check created stripped
+        await check_tag(BARCODE_1, "test_new", v="a test", version=1)
+
+
 def test_put_invalid(with_sample):
     with TestClient(app) as client:
         headers = {"Authorization":  "Bearer foo__Utest-token"}
