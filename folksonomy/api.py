@@ -98,6 +98,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 def sanitize_data(k, v):
     """Some sanitization of data"""
     k = k.strip()
+    v = v.strip() if v else v
     return k, v
 
 
