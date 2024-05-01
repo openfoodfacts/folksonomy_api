@@ -2,7 +2,7 @@ psycopg2-binary==2.9.9
 aiopg==1.4.0
 requests==2.31.0
 aiohttp==3.9.4
-fastapi==0.109.1
+fastapi==0.110.3
 uvicorn==0.15.0
 python-multipart==0.0.7
 yoyo-migrations==7.3.2
