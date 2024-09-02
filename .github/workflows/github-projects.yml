@@ -1,13 +1,13 @@
-name: Add bugs to the Folksonomy GitHub Project
+name: 🏷️ Add bugs to the Folksonomy GitHub Project
 
 on:
   issues:
     types:
-      - opened
+      - opened, labeled
 
 jobs:
   add-to-project:
-    name: Add issue to project
+    name: 🏷️ Add issue to the Folksonomy GitHub Project
     runs-on: ubuntu-latest
     steps:
       - uses: actions/add-to-project@main
