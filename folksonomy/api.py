@@ -136,8 +136,6 @@ def get_auth_server(request: Request):
     We deduce it by changing part of the request base URL
     according to FOLKSONOMY_PREFIX and AUTH_PREFIX settings
     """
-    if request is None:
-        raise HTTPException("Can't get auth server URL from None request")
     base_url =  f"{request.base_url.scheme}://{request.base_url.netloc}"
     # remove folksonomy prefix and add AUTH prefix
     base_url = base_url.replace(settings.FOLKSONOMY_PREFIX or "", settings.AUTH_PREFIX or "")
