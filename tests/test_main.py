@@ -3,6 +3,8 @@
 **Important:** you should run tests with PYTHONASYNCIODEBUG=1
 """
 import asyncio
+import collections
+import contextlib
 import json
 import pytest
 import time
@@ -126,7 +128,7 @@ class DummyResponse:
         pass
 
 def dummy_auth(self, auth_url, data=None, cookies=None):
-    assert auth_url.endswith("/cgi/auth.pl")
+    assert auth_url == "http://authserver/cgi/auth.pl", "'test' replaced by 'auth' in URL"
     success = False
     # reject or not based on password, which should always be "test" :-)
     if data is not None:
@@ -146,6 +148,8 @@ def dummy_auth(self, auth_url, data=None, cookies=None):
 @pytest.fixture
 def fake_authentication(monkeypatch):
     """Fake authentication using dummy_auth"""
+    monkeypatch.setattr(settings, "FOLKSONOMY_PREFIX", "test")
+    monkeypatch.setattr(settings, "AUTH_PREFIX", "auth")
     monkeypatch.setattr(aiohttp.ClientSession, "post", dummy_auth)
 
 
@@ -414,7 +418,7 @@ def test_auth_empty():
         assert response.status_code == 422
 
 
-def test_auth_bad(monkeypatch):
+def test_auth_bad(monkeypatch, fake_authentication):
     # avoid waiting for 2 sec
     monkeypatch.setattr(settings, 'FAILED_AUTH_WAIT_TIME', .1)
     with TestClient(app) as client:

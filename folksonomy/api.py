@@ -129,8 +129,21 @@ def check_owner_user(user: User, owner, allow_anonymous=False):
     return
 
 
+def get_auth_server(request: Request):
+    """
+    Get auth server URL from request
+
+    We deduce it by changing part of the request base URL
+    according to FOLKSONOMY_PREFIX and AUTH_PREFIX settings
+    """
+    base_url =  f"{request.base_url.scheme}://{request.base_url.netloc}"
+    # remove folksonomy prefix and add AUTH prefix
+    base_url = base_url.replace(settings.FOLKSONOMY_PREFIX or "", settings.AUTH_PREFIX or "")
+    return base_url
+
+
 @app.post("/auth")
-async def authentication(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
+async def authentication(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Authentication: provide user/password and get a bearer token in return
 
@@ -143,7 +156,7 @@ async def authentication(response: Response, form_data: OAuth2PasswordRequestFor
     user_id = form_data.username
     password = form_data.password
     token = user_id+'__U'+str(uuid.uuid4())
-    auth_url = settings.AUTH_SERVER + "/cgi/auth.pl"
+    auth_url = get_auth_server(request) + "/cgi/auth.pl"
     auth_data={'user_id': user_id, 'password': password}
     async with aiohttp.ClientSession() as http_session:
         async with http_session.post(auth_url, data=auth_data) as resp:
@@ -167,7 +180,7 @@ async def authentication(response: Response, form_data: OAuth2PasswordRequestFor
 
 
 @app.post("/auth_by_cookie")
-async def authentication(response: Response, session: Optional[str] = Cookie(None)):
+async def authentication(request: Request, response: Response, session: Optional[str] = Cookie(None)):
     """
     Authentication: provide Open Food Facts session cookie and get a bearer token in return
 
@@ -187,7 +200,7 @@ async def authentication(response: Response, session: Optional[str] = Cookie(Non
         raise HTTPException(
             status_code=422, detail="Malformed 'session' cookie")
 
-    auth_url = settings.AUTH_SERVER + "/cgi/auth.pl"
+    auth_url = get_auth_server(request) + "/cgi/auth.pl"
     async with aiohttp.ClientSession() as http_session:
         async with http_session.post(auth_url, cookies={'session': session}) as resp:
             status_code = resp.status
