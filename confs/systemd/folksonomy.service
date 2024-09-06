@@ -1,0 +1,20 @@
+[Unit]
+Description = Folksonomy API
+After = postgresql.service
+
+[Service]
+PermissionsStartOnly = true
+PIDFile = /run/folksonomy/folksonomy.pid
+User = folksonomy
+Group = folksonomy
+WorkingDirectory = /home/folksonomy/folksonomy_api
+ExecStartPre = /bin/mkdir /run/folksonomy    
+ExecStartPre = /bin/chown -R folksonomy:folksonomy /run/folksonomy
+ExecStart = /home/folksonomy/.local/bin/uvicorn folksonomy.api:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips 10.1.0.101 --workers 4 --reload
+ExecReload = /bin/kill -s HUP $MAINPID
+ExecStop = /bin/kill -s TERM $MAINPID
+ExecStopPost = /bin/rm -rf /run/folksonomy
+PrivateTmp = true
+
+[Install]
+WantedBy = multi-user.target
