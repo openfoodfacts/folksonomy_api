@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/openfoodfacts/folksonomy_api/compare/v1.0.1...v1.1.0) (2024-09-06)
+
+
+### Features
+
+* new auth to enable other instances auth ([#199](https://github.com/openfoodfacts/folksonomy_api/issues/199)) ([b6729d3](https://github.com/openfoodfacts/folksonomy_api/commit/b6729d3984e82005f6d3a04d96466c8a1f1959e3))
+
+
+### Bug Fixes
+
+* strip keys on CRUD operations ([#165](https://github.com/openfoodfacts/folksonomy_api/issues/165)) ([c0ee55b](https://github.com/openfoodfacts/folksonomy_api/commit/c0ee55b5a2d6527732dc8c0af09a5d86492fa923))
+* strip values on insertion ([#167](https://github.com/openfoodfacts/folksonomy_api/issues/167)) ([fbc1194](https://github.com/openfoodfacts/folksonomy_api/commit/fbc1194699d3e38fa58dd69bec4d0eae76921dad))
+
 ## [1.0.1](https://github.com/openfoodfacts/folksonomy_api/compare/v1.0.0...v1.0.1) (2023-12-11)
 
 
