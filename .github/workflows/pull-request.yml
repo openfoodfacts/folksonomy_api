@@ -44,7 +44,7 @@ jobs:
         # use PYTHONASYNCIODEBUG to ensure all asyncio tasks are closed
         run: |
           PYTHONASYNCIODEBUG=1 .venv/bin/pytest -v --cov=folksonomy  --cov-report xml tests/ folksonomy/
-      - uses: codecov/codecov-action@v4.5.0
+      - uses: codecov/codecov-action@v4.6.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
