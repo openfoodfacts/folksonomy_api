@@ -173,7 +173,10 @@ async def authentication(request: Request, response: Response, form_data: OAuth2
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
+            headers={
+            "WWW-Authenticate": "Bearer",
+            "x-auth-url": auth_url
+            },
         )
     raise HTTPException(
         status_code=500, detail="Server error")
@@ -572,7 +575,7 @@ async def get_unique_values(response: Response,
     cur, timing = await db.db_exec("""
         SELECT json_agg(j.j)::json FROM(
             SELECT json_build_object(
-                'value', v,
+                'v', v,
                 'product_count', count(*)
                 ) as j
             FROM folksonomy
