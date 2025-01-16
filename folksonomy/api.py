@@ -554,6 +554,37 @@ async def keys_list(response: Response,
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
+@app.get("/values/{k}")
+async def get_unique_values(response: Response,
+                            k: str,
+                            owner: str = '',
+                            user: User = Depends(get_current_user)):
+    """
+    Get the unique values of a given property and the corresponding number of products
+
+    - **k**: The property key to get unique values for
+    - **owner**: None or empty for public tags, or your own user_id
+
+    Returns a JSON table containing all the values and the corresponding number of products
+    """
+    check_owner_user(user, owner, allow_anonymous=True)
+    k, _ = sanitize_data(k, None)
+    cur, timing = await db.db_exec("""
+        SELECT json_agg(j.j)::json FROM(
+            SELECT json_build_object(
+                'value', v,
+                'product_count', count(*)
+                ) as j
+            FROM folksonomy
+            WHERE owner=%s and k=%s
+            GROUP BY v) as j;
+        """,
+        (owner, k)
+        )
+    out = await cur.fetchone()
+    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing}) if out else []
+
+
 @app.get("/ping")
 async def pong(response: Response):
     """
