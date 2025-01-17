@@ -24,6 +24,10 @@ jobs:
           fetch-depth: 1
       - name: start a postgresql docker container
         run: ./start_postgres.sh &
+      - name: create pgdata directory
+        run: mkdir -p /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
+      - name: change permissions for pgdata directory
+        run: sudo chmod -R 777 /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
       - name: install python
         uses: actions/setup-python@v5.2.0
         with:
