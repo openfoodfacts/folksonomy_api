@@ -136,7 +136,9 @@ def get_auth_server(request: Request):
     We deduce it by changing part of the request base URL
     according to FOLKSONOMY_PREFIX and AUTH_PREFIX settings
     """
-    if hasattr(settings, 'AUTH_SERVER_STATIC'):
+    # For dev purposes, we can use a static auth server with AUTH_SERVER_STATIC
+    # which can be specified in local_settings.py
+    if hasattr(settings, 'AUTH_SERVER_STATIC') and settings.AUTH_SERVER_STATIC:
         return settings.AUTH_SERVER_STATIC
     base_url =  f"{request.base_url.scheme}://{request.base_url.netloc}"
     # remove folksonomy prefix and add AUTH prefix
