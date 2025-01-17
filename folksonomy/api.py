@@ -136,6 +136,8 @@ def get_auth_server(request: Request):
     We deduce it by changing part of the request base URL
     according to FOLKSONOMY_PREFIX and AUTH_PREFIX settings
     """
+    if hasattr(settings, 'AUTH_SERVER_STATIC'):
+        return settings.AUTH_SERVER_STATIC
     base_url =  f"{request.base_url.scheme}://{request.base_url.netloc}"
     # remove folksonomy prefix and add AUTH prefix
     base_url = base_url.replace(settings.FOLKSONOMY_PREFIX or "", settings.AUTH_PREFIX or "")
@@ -173,6 +175,15 @@ async def authentication(request: Request, response: Response, form_data: OAuth2
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
+            headers={
+            "WWW-Authenticate": "Bearer",
+            "x-auth-url": auth_url
+            },
+        )
+    elif status_code == 404:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid auth server: 404",
             headers={
             "WWW-Authenticate": "Bearer",
             "x-auth-url": auth_url
