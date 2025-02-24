@@ -33,6 +33,10 @@ sudo -u postgres createuser $USER
 sudo -u postgres createdb folksonomy -O $USER
 psql folksonomy < db/db_setup.sql
 
+# create local_settings.py
+cp local_settings_example.py local_settings.py
+
+# edit local_settings.py to fit to your environment
 ```
 
 ## Run locally
