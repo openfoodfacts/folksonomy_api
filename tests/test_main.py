@@ -418,9 +418,37 @@ def test_get_unique_values(with_sample):
         assert response.status_code == 200
         data = sorted(response.json(), key=lambda d: d["v"])
         assert data == [
-            {'v': 'green', 'product_count': 1},
+            {'v': 'red', 'product_count': 2},
+            {'v': 'green', 'product_count': 1}
+        ]
+
+
+def test_get_unique_values_with_limit(with_sample):
+    with TestClient(app) as client:
+        response = client.get("/values/color&limit=1")
+        assert response.status_code == 200
+        data = sorted(response.json(), key=lambda d: d["v"])
+        assert data == [
             {'v': 'red', 'product_count': 2}
         ]
+
+
+def test_get_unique_values_with_filter(with_sample):
+    with TestClient(app) as client:
+        response = client.get("/values/color&q=ed")
+        assert response.status_code == 200
+        data = sorted(response.json(), key=lambda d: d["v"])
+        assert data == [
+            {'v': 'red', 'product_count': 2}
+        ]
+
+
+def test_get_unique_values_non_existing_key(with_sample):
+    with TestClient(app) as client:
+        response = client.get("/values/non_existing_key")
+        assert response.status_code == 200
+        data = response.json()
+        assert data == []
 
 
 def test_auth_empty():
