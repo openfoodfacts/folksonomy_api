@@ -28,7 +28,7 @@ if AUTH_DATA:
 
 url = "postgres://{}{}/{}".format(AUTH_DATA, POSTGRES_HOST or "", POSTGRES_DATABASE)
 backend = get_backend(url)
-print(f"Going to connect to {url}")
+print(f"Going to connect to {POSTGRES_HOST} / {POSTGRES_DATABASE}")
 
 # Add steps
 migrations = read_migrations('./db/migrations')
