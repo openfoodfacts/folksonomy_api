@@ -618,10 +618,8 @@ async def get_unique_values(response: Response,
 
     cur, timing = await db.db_exec(sql, params)
     out = await cur.fetchone()
-    if out:
-        return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
-    else:
-        return JSONResponse(status_code=404, content="No values found for this key")
+    data = out[0] if out and out[0] else []
+    return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
 
 
 @app.get("/ping")
