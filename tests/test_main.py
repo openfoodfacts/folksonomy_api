@@ -424,7 +424,7 @@ def test_get_unique_values(with_sample):
 
 def test_get_unique_values_with_limit(with_sample):
     with TestClient(app) as client:
-        response = client.get("/values/color&limit=1")
+        response = client.get("/values/color?limit=1")
         assert response.status_code == 200
         assert response.json() == [
             {'v': 'red', 'product_count': 2}
@@ -433,7 +433,7 @@ def test_get_unique_values_with_limit(with_sample):
 
 def test_get_unique_values_with_filter(with_sample):
     with TestClient(app) as client:
-        response = client.get("/values/color&q=ed")
+        response = client.get("/values/color?q=ed")
         assert response.status_code == 200
         assert response.json() == [
             {'v': 'red', 'product_count': 2}
