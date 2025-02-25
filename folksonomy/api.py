@@ -574,31 +574,54 @@ async def keys_list(response: Response,
 async def get_unique_values(response: Response,
                             k: str,
                             owner: str = '',
+                            q: str = '',
+                            limit: int = '',
                             user: User = Depends(get_current_user)):
     """
     Get the unique values of a given property and the corresponding number of products
 
     - **k**: The property key to get unique values for
     - **owner**: None or empty for public tags, or your own user_id
-
-    Returns a JSON table containing all the values and the corresponding number of products
+    - **q**: Filter values by a query string
+    - **limit**: Maximum number of values to return (default: 50; max: 1000)
     """
     check_owner_user(user, owner, allow_anonymous=True)
     k, _ = sanitize_data(k, None)
-    cur, timing = await db.db_exec("""
-        SELECT json_agg(j.j)::json FROM(
+    if not limit:
+        limit = 50
+    if limit > 1000:
+        limit = 1000
+
+    sql = """
+        SELECT json_agg(j.j)::json
+        FROM (
             SELECT json_build_object(
                 'v', v,
                 'product_count', count(*)
-                ) as j
+            ) AS j
             FROM folksonomy
-            WHERE owner=%s and k=%s
-            GROUP BY v) as j;
-        """,
-        (owner, k)
-        )
+            WHERE owner=%s AND k=%s
+    """
+    params = [owner, k]
+
+    if q:
+        sql += " AND v ILIKE %s"
+        params.append(f"%{q}%")
+
+    sql += """
+            GROUP BY v
+            ORDER BY count(*) DESC
+            LIMIT %s
+        ) AS j;
+    """
+    params.append(limit)
+
+    cur, timing = await db.db_exec(sql, params)
     out = await cur.fetchone()
-    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing}) if out else []
+    if out:
+        return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
+    else:
+        return JSONResponse(status_code=404, content="No values found for this key")
 
 
 @app.get("/ping")
