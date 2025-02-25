@@ -57,12 +57,16 @@ docker image -a
 docker rmi ef6f102be0da
 ```
 
-At the end of the setup, create a local_settings.py and adapt it to your own case:
+To finish setup:
 ```bash
 # create local_settings.py
 cp local_settings_example.py local_settings.py
 
 # edit local_settings.py to fit to your environment
+
+# At the end, launch database migration tool; it will initialize the db and/or update the database if there are migrations to apply
+# You can run it on a regular basis to apply new migrations
+python ./db-migration.py
 ```
 
 ## Run locally
