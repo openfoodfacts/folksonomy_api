@@ -25,14 +25,48 @@ workon folksonomy
 
 # install 
 pip install -r requirements.txt
-
+```
+If you install PostgreSQL yourself, here is how to set it up:
+```bash
 # create dbuser if needed
 sudo -u postgres createuser $USER
 
 # create Postgresql database if needed
 sudo -u postgres createdb folksonomy -O $USER
 psql folksonomy < db/db_setup.sql
+```
+Otherwise, you can use the `./start_postgres.sh` which launch a ready to use Postgres Docker container. You don't have to install Postgres but you need to have Docker installed. Here are some tips to use it:
+```bash
+# launch Postgres Docker container
+./start_postgres.sh # Have a look at the log messages
 
+# you can also launch it in the background
+./start_postgres.sh & # but log messages are not displayed anymore
+
+# if you have launched the container in the background, stop the container like this:
+docker stop fe_postgres
+
+# if you want to use psql inside the Docker container:
+docker exec -ti -u postgres fe_postgres psql -U folksonomy folksonomy
+
+# Docker images take up space on the disk (hundreds of MBs). If you want to remove them at the end:
+# list docker images
+docker image -a
+
+# remove a docker image by its id
+docker rmi ef6f102be0da
+```
+
+To finish setup:
+```bash
+# create local_settings.py
+cp local_settings_example.py local_settings.py
+
+# edit local_settings.py to fit to your environment
+
+# At the end, launch database migration tool; it will initialize the db and/or update the database if there are migrations to apply
+# You can run it on a regular basis to apply new migrations
+python ./db-migration.py
 ```
 
 ## Run locally
