@@ -24,6 +24,8 @@ PYTHONASYNCIODEBUG=1  pytest tests/ folksonomy/
 The `PYTHONASYNCIODEBUG` is important to check we have no pending asyncio tasks that are not executed
 (sign of a potential problem).
 
+Please note that running tests empties the database. DO NOT RUN TESTS in production.
+
 # Generating an OpenAPI document
 
 FastAPI is based on [OpenAPI](https://github.com/OAI/OpenAPI-Specification) (previously known as Swagger) and [JSON Schema](https://json-schema.org/). FastAPI allows to generate an OpenAPI document (JSON) that you can reuse in various services (to automatically generate client libraries for example). To generate an OpenAPI document you can either:
