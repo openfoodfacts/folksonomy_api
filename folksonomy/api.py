@@ -75,7 +75,7 @@ async def initialize_transactions(request: Request, call_next):
         return response
 
 
-@app.get("/", status_code=status.HTTP_200_OK)
+@app.get("/", status_code=status.HTTP_200_OK, response_model=HelloResponse)
 async def hello():
     return {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
 

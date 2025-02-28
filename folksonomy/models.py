@@ -67,3 +67,7 @@ class ProductList(BaseModel):
     product:    str
     k:          str
     v:          str
+
+
+class HelloResponse(BaseModel):
+    message: str
