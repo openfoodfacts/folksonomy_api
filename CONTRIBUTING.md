@@ -25,8 +25,8 @@ Folksonomy Engine is fully developped on Github. You will need a Github user acc
     * [Good first issues](https://github.com/openfoodfacts/folksonomy_api/issues?q=state%3Aopen%20label%3A%22%F0%9F%8F%84%E2%80%8D%E2%99%80%EF%B8%8F%20good%20first%20issue%22), is a good start for beginners
 
 * Development practices
-  * We use an [`.editorconfig`](./.editorconfig) file to help developpers maintain consistent coding style (see [EditorConfig(https://editorconfig.org/)])
-  * Want to start working on something: express you wish in the corresponding issue
-  * Create you own git branch; commit frequently; open Pull Requests when ready
+  * We use an [`.editorconfig`](./.editorconfig) file to help developpers maintain consistent coding style (see [EditorConfig](https://editorconfig.org/))
+  * Want to start working on something: express your wish in the corresponding issue
+  * Create your own git branches, one per topic/feature/bugfix; commit frequently; open Pull Requests when ready
   * We try to implement as many automated tests as possible, thanks to [Pytest(https://docs.pytest.org/en/stable/)]; see /tests directory
   * DB migrations, if any, needs to be handled by [Yoyo](https://ollycope.com/software/yoyo/latest/); see ./db-migration.py
