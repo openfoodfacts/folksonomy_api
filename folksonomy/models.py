@@ -71,3 +71,23 @@ class ProductList(BaseModel):
 
 class HelloResponse(BaseModel):
     message: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class KeyStatistics(BaseModel):
+    k: str
+    count: int
+    values: int
+
+
+class PingResponse(BaseModel):
+    ping: str
+
+
+class ValueCount(BaseModel):
+    v: str
+    product_count: int
