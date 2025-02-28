@@ -67,3 +67,8 @@ class ProductList(BaseModel):
     product:    str
     k:          str
     v:          str
+    
+class KeyStats(BaseModel):
+    k: str 
+    count: int  
+    values: int
