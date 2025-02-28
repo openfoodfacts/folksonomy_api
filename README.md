@@ -8,6 +8,10 @@ A light REST API designed for the Open Food Facts Folksonomy Engine.
 * Moderators can access it on Open Food Facts without any extension. The UI has not yet been deployed on Open Products Facts, Open Pet Food Facts or Open Beauty Facts, but has been proven to work, thanks to the extension
 
 
+# Contributor's guide
+
+Check our [contributor's guide](./CONTRIBUTING.md). Don't hesitate to improve it or ask questions.
+
 # Dependencies
 
 The code is written in Python 3.x and uses [FastAPI](https://fastapi.tiangolo.com/) framework.
