@@ -28,5 +28,5 @@ Folksonomy Engine is fully developped on Github. You will need a Github user acc
   * We use an [`.editorconfig`](./.editorconfig) file to help developpers maintain consistent coding style (see [EditorConfig](https://editorconfig.org/))
   * Want to start working on something: express your wish in the corresponding issue
   * Create your own git branches, one per topic/feature/bugfix; commit frequently; open Pull Requests when ready
-  * We try to implement as many automated tests as possible, thanks to [Pytest(https://docs.pytest.org/en/stable/)]; see /tests directory
+  * We try to implement as many automated tests as possible, thanks to [Pytest](https://docs.pytest.org/en/stable/); see [./tests](./tests) directory
   * DB migrations, if any, needs to be handled by [Yoyo](https://ollycope.com/software/yoyo/latest/); see ./db-migration.py
