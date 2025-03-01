@@ -78,12 +78,6 @@ class TokenResponse(BaseModel):
     token_type: str
 
 
-class KeyStatistics(BaseModel):
-    k: str
-    count: int
-    values: int
-
-
 class PingResponse(BaseModel):
     ping: str
 
