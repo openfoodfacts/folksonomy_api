@@ -461,6 +461,35 @@ async def product_tag_update(response: Response,
     # enforce user
     product_tag.editor = user.user_id
     try:
+        # Fetch the latest version directly from the database
+        cur, timing = await db.db_exec(
+            """
+            SELECT version FROM folksonomy
+            WHERE product = %s AND owner = %s AND k = %s;
+            """,
+            (product_tag.product, product_tag.owner, product_tag.k),
+        )
+        latest_version_row = await cur.fetchone()
+
+        if not latest_version_row:
+            raise HTTPException(status_code=404, detail="Key was not found")
+
+        latest_version = latest_version_row[0]  # Extract version from row
+
+        # Validate version increment
+        if product_tag.version != latest_version + 1:
+            raise HTTPException(
+                status_code=422,
+                detail=[
+                    {
+                        "type": "value_error",
+                        "loc": ["body", "version"],
+                        "msg": f"Value error, version must be exactly {latest_version + 1}",
+                        "input": product_tag.version,
+                    }
+                ],
+            )
+
         req, params = db.update_product_tag_req(product_tag)
         cur, timing = await db.db_exec(req, params)
     except psycopg2.Error as e:
