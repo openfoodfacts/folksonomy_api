@@ -291,6 +291,14 @@ async def product_stats(response: Response,
     # )
     # out2 = await cur.fetchone()
     # import pdb;pdb.set_trace()
+
+    if not out or not out[0]:
+        return JSONResponse(
+            status_code=200,
+            content={"message": "No products found matching the given filters."},
+            headers={"x-pg-timing": timing}
+        )
+
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing":timing})
 
 
@@ -340,6 +348,14 @@ async def product_tags_list(response: Response,
         (product, owner),
     )
     out = await cur.fetchone()
+
+    if not out or not out[0]:
+        return JSONResponse(
+            status_code=200,
+            content={"message": "No product found matching the given tags."},
+            headers={"x-pg-timing": timing}
+        )
+    
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
