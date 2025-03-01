@@ -1,41 +1,66 @@
-# HOWTO install/test Folksonomy API
+# Folksonomy API Installation Guide
+  This guide will walk you through installing and setting up the Folksonomy API on a fresh Debian 12 system.
 
-## Requirements
+ ## Prerequisites
+ A fresh Debian 12 installation
 
-- Postgresql 13 (lower version may be OK, but untested)
-- Python 3.8 (lower version may be ok too, but untested)
-- Python modules in "requirements.txt"
+ Root access or a user with sudo privileges
 
-## Setup
+ Basic knowledge of the command line
+
+## Step 1: Install required packages
+
+```apt install git sudo postgresql python3-venv -y```
+
+
+## Step 2: Create a New User for Folksonomy API
+For security reasons, it's recommended to run the API under a separate user.
+
+### Create a new user for the Folksonomy API
+   ```adduser folksonomy```
+
+### Add the new user to the sudo group to allow elevated permissions when needed
+```usermod -aG sudo folksonomy```
+
+### Switch to the newly created user:
+```su folksonomy```
+
+# Step 3: Clone the Repository
+## Navigate to your home directory and clone the Folksonomy API repository.
 
 ```
-# clone repo
+cd ~
 git clone https://github.com/openfoodfacts/folksonomy_api.git
 cd folksonomy_api
-
-# required packages to setup a virtualenv (optional, but recommended)
-apt install python3-virtualenv virtualenv virtualenvwrapper
-
-# create and switch to virtualenv
-# if mkvirtualenv command is not found, search for virtualenvwrapper.sh 
-# (/usr/share/virtualenvwrapper/virtualenvwrapper.sh, or /usr/bin/virtualenvwrapper.sh, for example)
-# add the path in your bash profile
-mkvirtualenv folksonomy -p /usr/bin/python3
-workon folksonomy
-
-# install 
-pip install -r requirements.txt
 ```
-If you install PostgreSQL yourself, here is how to set it up:
-```bash
-# create dbuser if needed
-sudo -u postgres createuser $USER
 
-# create Postgresql database if needed
-sudo -u postgres createdb folksonomy -O $USER
-psql folksonomy < db/db_setup.sql
+# Step 4: Set Up a Python Virtual Environment
+### To isolate the API's dependencies, create and activate a Python virtual environment:
+
 ```
-Otherwise, you can use the `./start_postgres.sh` which launch a ready to use Postgres Docker container. You don't have to install Postgres but you need to have Docker installed. Here are some tips to use it:
+python3 -m venv folksonomy
+. ./folksonomy/bin/activate
+```
+
+# Step 5: Install Python Dependencies
+### Once the virtual environment is activated, install the required Python dependencies from requirements.txt.
+
+```pip install -r requirements.txt```
+
+# Step 6: Set Up PostgreSQL Database
+### Create a PostgreSQL user and database for the Folksonomy API.
+
+## Create a new PostgreSQL user for the Folksonomy API
+```sudo -i -u postgres createuser $USER```
+
+## Create a new PostgreSQL database for the Folksonomy API, owned by the user
+```sudo -i -u postgres createdb folksonomy -O $USER```
+
+## Apply the migrations to set up the database schema:
+```yoyo apply --database postgresql:///folksonomy```
+
+```
+#Otherwise, you can use the `./start_postgres.sh` which launch a ready to use Postgres Docker container. You don't have to install Postgres but you need to have Docker installed. Here are some tips to use it:
 ```bash
 # launch Postgres Docker container
 ./start_postgres.sh # Have a look at the log messages
@@ -57,7 +82,8 @@ docker image -a
 docker rmi ef6f102be0da
 ```
 
-To finish setup:
+# Step 7: Configure the API
+
 ```bash
 # create local_settings.py
 cp local_settings_example.py local_settings.py
@@ -69,15 +95,12 @@ cp local_settings_example.py local_settings.py
 python ./db-migration.py
 ```
 
-## Run locally
+# Step 8: Run the API
+### Start the API using Uvicorn. Replace <my_ip_address_or_domain_name> with the IP address or domain name of your server.
 
-```
-uvicorn folksonomy.api:app --reload
-```
-or use `--host` if you want to make it available on your local network:
-```
-uvicorn folksonomy.api:app --reload --host <you-ip-address>
-```
+```uvicorn folksonomy.api:app --reload --host <my_ip_address_or_domain_name>```
+
+### This will start the Folksonomy API and reload automatically when you make changes to the code.
 
 ## Run with a local instance of Product Opener
 
@@ -95,4 +118,7 @@ This then should work:
 uvicorn folksonomy.api:app --host 127.0.0.1 --reload --port 8888
 ```
 
-You can then access the API at http://api.folksonomy.openfoodfacts.localhost:8888/docs
+## Conclusion
+You should now have the Folksonomy API running on your Debian 12 system. You can access it at http://<my_ip_address_or_domain_name>:8000 (or any other port you configure). Make sure to refer to the official documentation for more advanced configuration options.
+
+For further help, feel free to open an issue or contribute to the project!
