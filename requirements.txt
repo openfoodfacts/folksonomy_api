@@ -4,7 +4,7 @@ requests==2.32.3
 aiohttp==3.10.5
 fastapi==0.112.2
 uvicorn==0.30.6
-python-multipart==0.0.7
+python-multipart==0.0.19
 yoyo-migrations==7.3.2
 
 # dev
