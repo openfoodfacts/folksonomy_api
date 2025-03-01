@@ -8,7 +8,7 @@ from .dependencies import *
 from . import db
 from . import settings
 from fastapi.middleware.cors import CORSMiddleware
-
+from typing import List, Optional, Dict, Any, Union
 
 description = """
 Folksonomy Engine API allows you to add free property/value pairs to Open Food Facts products.
@@ -75,7 +75,7 @@ async def initialize_transactions(request: Request, call_next):
         return response
 
 
-@app.get("/", status_code=status.HTTP_200_OK)
+@app.get("/", status_code=status.HTTP_200_OK, response_model=HelloResponse)
 async def hello():
     return {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
 
@@ -146,7 +146,7 @@ def get_auth_server(request: Request):
     return base_url
 
 
-@app.post("/auth")
+@app.post("/auth", response_model=TokenResponse)
 async def authentication(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Authentication: provide user/password and get a bearer token in return
@@ -195,7 +195,7 @@ async def authentication(request: Request, response: Response, form_data: OAuth2
         status_code=500, detail="Server error")
 
 
-@app.post("/auth_by_cookie")
+@app.post("/auth_by_cookie", response_model=TokenResponse)
 async def authentication(request: Request, response: Response, session: Optional[str] = Cookie(None)):
     """
     Authentication: provide Open Food Facts session cookie and get a bearer token in return
@@ -410,7 +410,7 @@ async def product_tag_list_versions(response: Response,
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
-@app.post("/product")
+@app.post("/product", response_model=Dict[str, str])
 async def product_tag_add(response: Response,
                           product_tag: ProductTag,
                           user: User = Depends(get_current_user)):
@@ -439,11 +439,11 @@ async def product_tag_add(response: Response,
         return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
 
     if cur.rowcount == 1:
-        return "ok"
+        return {"status": "ok"}
     return
 
 
-@app.put("/product")
+@app.put("/product", response_model=Dict[str, str])
 async def product_tag_update(response: Response,
                              product_tag: ProductTag,
                              user: User = Depends(get_current_user)):
@@ -469,7 +469,7 @@ async def product_tag_update(response: Response,
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
         )
     if cur.rowcount == 1:
-        return "ok"
+        return {"status": "ok"}
     elif cur.rowcount == 0:  # non existing key
         raise HTTPException(
             status_code=404,
@@ -478,11 +478,11 @@ async def product_tag_update(response: Response,
     else:
         raise HTTPException(
             status_code=503,
-            detail="Doubious update - more than one row udpated",
+            detail="Dubious update - more than one row udpated",
         )
 
 
-@app.delete("/product/{product}/{k}")
+@app.delete("/product/{product}/{k}", response_model=Dict[str, str])
 async def product_tag_delete(response: Response,
                              product: str, k: str, version: int, owner='',
                              user: User = Depends(get_current_user)):
@@ -507,6 +507,8 @@ async def product_tag_delete(response: Response,
             status_code=422,
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
         )
+    if cur.rowcount == 1:
+        return {"status": "ok"}
     if cur.rowcount != 1:
         raise HTTPException(
             status_code=422,
@@ -519,7 +521,7 @@ async def product_tag_delete(response: Response,
         (product, owner, k.lower()),
     )
     if cur.rowcount == 1:
-        return "ok"
+        return {"status": "ok"}
     else:
         # we have a conflict, return an error explaining conflict
         cur, timing = await db.db_exec(
@@ -570,7 +572,7 @@ async def keys_list(response: Response,
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
-@app.get("/values/{k}")
+@app.get("/values/{k}", response_model=List[ValueCount])
 async def get_unique_values(response: Response,
                             k: str,
                             owner: str = '',
@@ -622,7 +624,7 @@ async def get_unique_values(response: Response,
     return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
 
 
-@app.get("/ping")
+@app.get("/ping", response_model=PingResponse)
 async def pong(response: Response):
     """
     Check server health
