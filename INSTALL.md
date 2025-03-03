@@ -39,7 +39,7 @@ cd folksonomy_api
 
 ```bash
 python3 -m venv folksonomy
-. ./folksonomy/bin/activate
+./folksonomy/bin/activate
 ```
 
 # Step 5: Install Python Dependencies
