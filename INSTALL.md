@@ -37,7 +37,7 @@ cd folksonomy_api
 # Step 4: Set Up a Python Virtual Environment
 ### To isolate the API's dependencies, create and activate a Python virtual environment:
 
-```
+```bash
 python3 -m venv folksonomy
 . ./folksonomy/bin/activate
 ```
