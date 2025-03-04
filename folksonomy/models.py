@@ -72,3 +72,8 @@ class KeyStats(BaseModel):
     k: str 
     count: int  
     values: int
+    
+
+class StatusResponse(BaseModel):
+    status: str
+    message: Optional[str] = None

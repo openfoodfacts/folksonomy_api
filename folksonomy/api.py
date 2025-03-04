@@ -410,7 +410,7 @@ async def product_tag_list_versions(response: Response,
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
-@app.post("/product")
+@app.post("/product", response_model=StatusResponse)
 async def product_tag_add(response: Response,
                           product_tag: ProductTag,
                           user: User = Depends(get_current_user)):
@@ -439,11 +439,11 @@ async def product_tag_add(response: Response,
         return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
 
     if cur.rowcount == 1:
-        return "ok"
+        return {"status": "ok"}
     return
 
 
-@app.put("/product")
+@app.put("/product", response_model=StatusResponse)
 async def product_tag_update(response: Response,
                              product_tag: ProductTag,
                              user: User = Depends(get_current_user)):
@@ -469,7 +469,7 @@ async def product_tag_update(response: Response,
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
         )
     if cur.rowcount == 1:
-        return "ok"
+        return {"status": "ok"}
     elif cur.rowcount == 0:  # non existing key
         raise HTTPException(
             status_code=404,
@@ -482,7 +482,7 @@ async def product_tag_update(response: Response,
         )
 
 
-@app.delete("/product/{product}/{k}")
+@app.delete("/product/{product}/{k}", response_model=StatusResponse)
 async def product_tag_delete(response: Response,
                              product: str, k: str, version: int, owner='',
                              user: User = Depends(get_current_user)):
@@ -519,7 +519,7 @@ async def product_tag_delete(response: Response,
         (product, owner, k.lower()),
     )
     if cur.rowcount == 1:
-        return "ok"
+        return {"status": "ok"}
     else:
         # we have a conflict, return an error explaining conflict
         cur, timing = await db.db_exec(
