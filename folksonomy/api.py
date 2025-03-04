@@ -541,7 +541,7 @@ async def product_tag_delete(response: Response,
             )
 
 
-@app.get("/keys")
+@app.get("/keys", response_model=List[KeyStats])
 async def keys_list(response: Response,
                     owner='',
                     user: User = Depends(get_current_user)):
