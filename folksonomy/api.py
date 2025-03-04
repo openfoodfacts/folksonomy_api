@@ -478,7 +478,7 @@ async def product_tag_update(response: Response,
     else:
         raise HTTPException(
             status_code=503,
-            detail="Doubious update - more than one row udpated",
+            detail="Dubious update - more than one row udpated",
         )
 
 
