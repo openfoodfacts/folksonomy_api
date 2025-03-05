@@ -497,13 +497,10 @@ async def product_tag_update(response: Response,
             status_code=422,
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
         )
+    # Check if exactly one row was updated
+    # Atlease one row will be updated, as version is checked
     if cur.rowcount == 1:
         return "ok"
-    elif cur.rowcount == 0:  # non existing key
-        raise HTTPException(
-            status_code=404,
-            detail="Key was not found",
-        )
     else:
         raise HTTPException(
             status_code=503,
