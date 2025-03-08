@@ -75,6 +75,28 @@ async def initialize_transactions(request: Request, call_next):
         return response
 
 
+@app.middleware("http")
+async def check_user_permissions(request: Request, call_next):
+    """
+    Middleware to check if the user is logged in and has the appropriate permissions
+    """
+    user = await get_current_user(request.headers.get("Authorization"))
+    if not user or not user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.is_moderator:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: moderators only",
+        )
+    response = await call_next(request)
+    return response
+
+
+
 @app.get("/", status_code=status.HTTP_200_OK)
 async def hello():
     return {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
@@ -90,7 +112,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
             "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,)
         )
         if cur.rowcount == 1:
-            return User(user_id=token.split('__U', 1)[0])
+            user_id = token.split('__U', 1)[0]
+            # Check if the user is a moderator
+            await cur.execute(
+                "SELECT is_moderator FROM users WHERE user_id = %s", (user_id,)
+            )
+            user_data = await cur.fetchone()
+            if user_data and user_data[0]:
+                return User(user_id=user_id, is_moderator=True)
+            return User(user_id=user_id, is_moderator=False)
         else:
             return User(user_id=None)
 
