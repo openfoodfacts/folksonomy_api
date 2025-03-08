@@ -2,8 +2,8 @@
 
 ## Requirements
 
-- Postgresql 13 or newer
-- Python 3.8 or newer
+- PostgreSQL 13 or newer
+- Python 3.9 or newer
 - Python modules in "requirements.txt"
 
 ## Setup on Debian 12 (Recommended Method)
