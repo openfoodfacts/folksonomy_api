@@ -469,15 +469,8 @@ async def product_tag_update(response: Response,
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
         )
     if cur.rowcount == 1:
-        # Fetch the updated tag value
-        cur, timing = await db.db_exec(
-            """
-            SELECT * FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
-            """,
-            (product_tag.product, product_tag.owner, product_tag.k)
-        )
-        updated_tag = await cur.fetchone()
-        return JSONResponse(status_code=200, content=dict(zip([desc[0] for desc in cur.description], updated_tag)), headers={"x-pg-timing": timing})
+        # Return the updated tag instead of just "ok"
+        return product_tag
     elif cur.rowcount == 0:  # non existing key
         raise HTTPException(
             status_code=404,
@@ -500,7 +493,7 @@ async def product_tag_delete(response: Response,
     check_owner_user(user, owner, allow_anonymous=False)
     k, v = sanitize_data(k, None)
     try:
-        # Setting version to 0, this is seen as a reset, 
+        # Setting version to 0, this is seen as a reset,
         # while maintaining history in folksonomy_versions
         cur, timing = await db.db_exec(
             """

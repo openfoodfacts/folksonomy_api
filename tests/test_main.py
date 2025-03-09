@@ -578,20 +578,21 @@ def test_put_invalid(with_sample):
 
 @pytest.mark.asyncio
 async def test_put(with_sample):
-    headers = {"Authorization":  "Bearer foo__Utest-token"}
-    response = client.put("/product", headers=headers, json={
-                          "product": BARCODE_1, "k": "color", "v": "purple", "version": 2})
-    assert response.status_code == 200, f'valid new version should return 200, got {response.status_code} {response.text}'
-    updated_tag = response.json()
-    assert updated_tag["v"] == "purple", f'updated value should be "purple", got {updated_tag["v"]}'
-    await check_tag(BARCODE_1, "color", v="purple", version=2)
-    # and again
-    response = client.put("/product", headers=headers, json={
-                          "product": BARCODE_1, "k": "color", "v": "brown", "version": 3})
-    assert response.status_code == 200, f'valid new version should return 200, got {response.status_code} {response.text}'
-    updated_tag = response.json()
-    assert updated_tag["v"] == "brown", f'updated value should be "brown", got {updated_tag["v"]}'
-    await check_tag(BARCODE_1, "color", v="brown", version=3)
+    with TestClient(app) as client:
+        headers = {"Authorization":  "Bearer foo__Utest-token"}
+        response = client.put("/product", headers=headers, json={
+                            "product": BARCODE_1, "k": "color", "v": "purple", "version": 2})
+        assert response.status_code == 200, f'valid new version should return 200, got {response.status_code} {response.text}'
+        updated_tag = response.json()
+        assert updated_tag["v"] == "purple", f'updated value should be "purple", got {updated_tag["v"]}'
+        await check_tag(BARCODE_1, "color", v="purple", version=2)
+        # and again
+        response = client.put("/product", headers=headers, json={
+                            "product": BARCODE_1, "k": "color", "v": "brown", "version": 3})
+        assert response.status_code == 200, f'valid new version should return 200, got {response.status_code} {response.text}'
+        updated_tag = response.json()
+        assert updated_tag["v"] == "brown", f'updated value should be "brown", got {updated_tag["v"]}'
+        await check_tag(BARCODE_1, "color", v="brown", version=3)
 
 
 def test_delete_invalid(with_sample):
