@@ -38,10 +38,13 @@ jobs:
         run: poetry install
       - name: start a postgresql docker container
         run: ./start_postgres.sh &
-      - name: wait postgres to be ready
-        timeout-minutes: 10
+      - name: wait for postgres to be ready
         run: |
-          while ! (nc -vz 127.0.0.1 5432);do echo "waiting postgres"; sleep 1;done
+          echo "Waiting for PostgreSQL to be ready..."
+          while ! nc -z 127.0.0.1 5432; do
+            sleep 1
+          done
+          echo "PostgreSQL is ready."
       - name: initialize database
         run: |
           poetry run python db-migration.py
