@@ -14,6 +14,7 @@ jobs:
     env:
       POSTGRES_USER: folksonomy
       POSTGRES_PASSWORD: folksonomy
+      # important: "localhost" does not work on github ci, only 127.0.0.1
       POSTGRES_HOST: "127.0.0.1"
       POSTGRES_DATABASE: folksonomy
     steps:
