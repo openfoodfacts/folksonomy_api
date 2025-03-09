@@ -29,25 +29,30 @@ jobs:
       - name: install python
         uses: actions/setup-python@v5.2.0
         with:
-          python-version: '3.8'
-          cache: 'pip'
+          python-version: '3.9'
+      - name: install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "export PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
+      - name: configure Poetry
+        run: poetry config virtualenvs.create false
+      - name: install dependencies
+        run: poetry install --no-root
       - name: start a postgresql docker container
         run: ./start_postgres.sh &
-      - name: install packages in a virtual environment
+      - name: wait for postgres to be ready
         run: |
-          python -m venv .venv && \
-          .venv/bin/pip install -r requirements.txt
-      - name: wait postgres to be ready
-        timeout-minutes: 10
-        run: |
-          while ! (nc -vz 127.0.0.1 5432);do echo "waiting postgres"; sleep 1;done
+          echo "Waiting for PostgreSQL to be ready..."
+          while ! nc -z 127.0.0.1 5432; do
+            sleep 1
+          done
+          echo "PostgreSQL is ready."
       - name: initialize database
-        run: |
-          .venv/bin/python db-migration.py
+        run: poetry run python db-migration.py
       - name: run tests
         # use PYTHONASYNCIODEBUG to ensure all asyncio tasks are closed
         run: |
-          PYTHONASYNCIODEBUG=1 .venv/bin/pytest -v --cov=folksonomy  --cov-report xml tests/ folksonomy/
+          PYTHONASYNCIODEBUG=1 poetry run pytest -v --cov=folksonomy --cov-report xml tests/ folksonomy/
       - uses: codecov/codecov-action@v4.5.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
