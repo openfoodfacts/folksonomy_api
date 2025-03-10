@@ -628,6 +628,30 @@ async def test_delete(with_sample):
 
 
 @pytest.mark.asyncio
+async def test_contextual_keys(with_sample):
+    with TestClient(app) as client:
+        response = client.get("/contextual_keys?context=beauty")
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        for item in data:
+            assert "k" in item
+            assert "count" in item
+            assert "values" in item
+
+
+@pytest.mark.asyncio
+async def test_contextual_keys_invalid_context(with_sample):
+    with TestClient(app) as client:
+        response = client.get("/contextual_keys?context=invalid")
+        assert response.status_code == 422
+        data = response.json()
+        assert "detail" in data
+        assert "msg" in data["detail"]
+        assert data["detail"]["msg"] == "Invalid context"
+
+
+@pytest.mark.asyncio
 async def test_auth_by_cookie(fake_authentication, monkeypatch):
     # avoid waiting for too long on bad auth
     monkeypatch.setattr(settings, 'FAILED_AUTH_WAIT_TIME', .1)
