@@ -410,6 +410,46 @@ async def product_tag_list_versions(response: Response,
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
+@app.get("/contextual_keys", response_model=List[KeyStats])
+async def contextual_keys_list(response: Response,
+                               context: str,
+                               owner='',
+                               user: User = Depends(get_current_user)):
+    """
+    Get the list of keys with statistics based on context
+
+    The keys list can be restricted to private tags from some owner
+    """
+    check_owner_user(user, owner, allow_anonymous=True)
+    context_filters = {
+        "beauty": ["cosmetic:", "food:", "non-food:", "pet-food:"]
+    }
+    filters = context_filters.get(context, [])
+    if not filters:
+        return JSONResponse(status_code=422, content={"detail": {"msg": "Invalid context"}})
+
+    cur, timing = await db.db_exec(
+        """
+        SELECT json_agg(j.j)::json FROM(
+            SELECT json_build_object(
+                'k',k,
+                'count',count(*),
+                'values',count(distinct(v))
+                ) as j
+            FROM folksonomy
+            WHERE owner=%s AND (
+                k LIKE %s OR
+                (k NOT LIKE %s AND k NOT LIKE %s AND k NOT LIKE %s)
+            )
+            GROUP BY k
+            ORDER BY count(*) DESC) as j;
+        """,
+        (owner, filters[0] + '%', filters[1] + '%', filters[2] + '%', filters[3] + '%')
+    )
+    out = await cur.fetchone()
+    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
+
+
 @app.post("/product")
 async def product_tag_add(response: Response,
                           product_tag: ProductTag,
@@ -492,7 +532,7 @@ async def product_tag_delete(response: Response,
     check_owner_user(user, owner, allow_anonymous=False)
     k, v = sanitize_data(k, None)
     try:
-        # Setting version to 0, this is seen as a reset, 
+        # Setting version to 0, this is seen as a reset,
         # while maintaining history in folksonomy_versions
         cur, timing = await db.db_exec(
             """
