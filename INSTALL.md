@@ -17,16 +17,18 @@ cd folksonomy_api
 apt install python3-virtualenv virtualenv virtualenvwrapper
 
 # create and switch to virtualenv
-# if mkvirtualenv command is not found, search for virtualenvwrapper.sh 
+# if mkvirtualenv command is not found, search for virtualenvwrapper.sh
 # (/usr/share/virtualenvwrapper/virtualenvwrapper.sh, or /usr/bin/virtualenvwrapper.sh, for example)
 # add the path in your bash profile
 mkvirtualenv folksonomy -p /usr/bin/python3
 workon folksonomy
 
-# install 
+# install
 pip install -r requirements.txt
 ```
+
 If you install PostgreSQL yourself, here is how to set it up:
+
 ```bash
 # create dbuser if needed
 sudo -u postgres createuser $USER
@@ -35,7 +37,9 @@ sudo -u postgres createuser $USER
 sudo -u postgres createdb folksonomy -O $USER
 psql folksonomy < db/db_setup.sql
 ```
+
 Otherwise, you can use the `./start_postgres.sh` which launch a ready to use Postgres Docker container. You don't have to install Postgres but you need to have Docker installed. Here are some tips to use it:
+
 ```bash
 # launch Postgres Docker container
 ./start_postgres.sh # Have a look at the log messages
@@ -58,6 +62,7 @@ docker rmi ef6f102be0da
 ```
 
 To finish setup:
+
 ```bash
 # create local_settings.py
 cp local_settings_example.py local_settings.py
@@ -74,23 +79,42 @@ python ./db-migration.py
 ```
 uvicorn folksonomy.api:app --reload
 ```
+
 or use `--host` if you want to make it available on your local network:
+
 ```
 uvicorn folksonomy.api:app --reload --host <you-ip-address>
 ```
+
+## Authentication and Adding Data to the Database
+
+### Prerequisites
+
+- A local PostgreSQL database must be running.
+- Your local server must be running; try http://127.0.0.1:8000 in your browser.
+- You must have an account at https://world.openfoodfacts.org and your login credentials.
+
+### Steps to Authenticate
+
+- Open https://127.0.0.1:8000/docs.
+- Click on the "Authorize" button in the API documentation interface.
+- Log in with your credentials.
+- Once authenticated, you can start making API requests to add data from the interface.
 
 ## Run with a local instance of Product Opener
 
 To deal with CORS and/or `401 Unauthorized` issues when running in a dev environment you have to deal with two things:
 
-* both Folksonomy Engine server and Product Opener server have to run on the same domain (openfoodfacts.localhost by default for Product Opener)
-* to allow authentication with the Product Opener cookie, you must tell Folksonomy Engine to use the local Product Opener instance as the authent server
+- both Folksonomy Engine server and Product Opener server have to run on the same domain (openfoodfacts.localhost by default for Product Opener)
+- to allow authentication with the Product Opener cookie, you must tell Folksonomy Engine to use the local Product Opener instance as the authent server
 
 To do so you can:
-* edit the `local_settings.py` (copying from `local_settings_example.py`) and uncomment proposed AUTH_PREFIX and FOLKSONOMY_PREFIX entries
-* use a the same host name as Product Opener when launching Folksonomy Engine server
+
+- edit the `local_settings.py` (copying from `local_settings_example.py`) and uncomment proposed AUTH_PREFIX and FOLKSONOMY_PREFIX entries
+- use a the same host name as Product Opener when launching Folksonomy Engine server
 
 This then should work:
+
 ```
 uvicorn folksonomy.api:app --host 127.0.0.1 --reload --port 8888
 ```
