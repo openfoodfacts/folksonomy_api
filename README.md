@@ -30,16 +30,58 @@ The `PYTHONASYNCIODEBUG` is important to check we have no pending asyncio tasks 
 
 Please note that running tests empties the database. DO NOT RUN TESTS in production.
 
-# Generating an OpenAPI document
+# Docker Setup (Recommended)
 
-FastAPI is based on [OpenAPI](https://github.com/OAI/OpenAPI-Specification) (previously known as Swagger) and [JSON Schema](https://json-schema.org/). FastAPI allows to generate an OpenAPI document (JSON) that you can reuse in various services (to automatically generate client libraries for example). To generate an OpenAPI document you can either:
-* download it at https://api.folksonomy.openfoodfacts.org/openapi.json
-* or generate it:
+The easiest way to get started with Folksonomy API is to use Docker. This approach requires minimal setup and provides a consistent development environment.
+
+## Requirements
+- Docker
+- Docker Compose
+
+## Quick Start
+
+1. Clone the repository
+   ```bash
+   git clone https://github.com/openfoodfacts/folksonomy_api.git
+   cd folksonomy_api
+   ```
+
+2. Start the services
+   ```bash
+   docker-compose up -d
+   ```
+
+3. Access the API
+   - API: http://localhost:8000
+   - Interactive documentation: http://localhost:8000/docs
+
+4. Stop the services
+   ```bash
+   docker-compose down
+   ```
+
+## Configuration
+
+The Docker setup uses environment variables defined in the `docker-compose.yml` file. You can modify these as needed:
+
+- `POSTGRES_USER`: Database username
+- `POSTGRES_PASSWORD`: Database password  
+- `POSTGRES_DATABASE`: Database name
+- `POSTGRES_HOST`: Database host (default: db)
+
+## Database Access
+
+If you need to access the PostgreSQL database directly, you can use:
+
 ```bash
-./generate_openapi_json.py
+psql -h localhost -p 5433 -U folksonomy -d folksonomy
 ```
 
-# How to install Folksonomy Engine on your local machine
+Note: The port is 5433 to avoid conflicts with any local PostgreSQL installations.
+
+# Traditional Setup
+
+If you prefer to install directly on your machine without Docker:
 
 1. Install Python 3.8+
 2. Install pip
@@ -48,6 +90,15 @@ FastAPI is based on [OpenAPI](https://github.com/OAI/OpenAPI-Specification) (pre
 5. Make a copy of [local_settings_example.py](https://github.com/openfoodfacts/folksonomy_api/blob/main/local_settings_example.py) and rename it to *local_settings.py*
 6. Change parameters accordingly in *local_settings.py*
 7. That's all!
+
+# Generating an OpenAPI document
+
+FastAPI is based on [OpenAPI](https://github.com/OAI/OpenAPI-Specification) (previously known as Swagger) and [JSON Schema](https://json-schema.org/). FastAPI allows to generate an OpenAPI document (JSON) that you can reuse in various services (to automatically generate client libraries for example). To generate an OpenAPI document you can either:
+* download it at https://api.folksonomy.openfoodfacts.org/openapi.json
+* or generate it:
+```bash
+./generate_openapi_json.py
+```
 
 ## Deployment
 
