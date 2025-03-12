@@ -101,7 +101,6 @@ def sanitize_data(k, v):
     v = v.strip() if v else v
     return k, v
 
-
 def check_owner_user(user: User, owner, allow_anonymous=False):
     """
     Check authentication depending on current user and 'owner' of the data
@@ -443,6 +442,19 @@ async def product_tag_add(response: Response,
     return
 
 
+def create_version_error(expected_version: int, received_version: int):
+    return HTTPException(
+        status_code=422,
+        detail=[
+            {
+                "type": "value_error",
+                "loc": ["body", "version"],
+                "msg": f"Value error, version must be exactly {expected_version}",
+                "input": received_version,
+            }
+        ],
+    )
+
 @app.put("/product")
 async def product_tag_update(response: Response,
                              product_tag: ProductTag,
@@ -456,7 +468,6 @@ async def product_tag_update(response: Response,
     - **version**: must be equal to previous version + 1
     - **owner**: None or empty for public tags, or your own user_id
     """
-
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
     # enforce user
     product_tag.editor = user.user_id
@@ -478,17 +489,7 @@ async def product_tag_update(response: Response,
 
         # Validate version increment
         if product_tag.version != latest_version + 1:
-            raise HTTPException(
-                status_code=422,
-                detail=[
-                    {
-                        "type": "value_error",
-                        "loc": ["body", "version"],
-                        "msg": f"Value error, version must be exactly {latest_version + 1}",
-                        "input": product_tag.version,
-                    }
-                ],
-            )
+            raise create_version_error(latest_version + 1, product_tag.version)
 
         req, params = db.update_product_tag_req(product_tag)
         cur, timing = await db.db_exec(req, params)
