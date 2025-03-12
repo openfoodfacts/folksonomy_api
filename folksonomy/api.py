@@ -339,18 +339,18 @@ async def product_tags_list(
     check_owner_user(user, owner, allow_anonymous=True)
     keys_list = [key.strip() for key in keys.split(",")] if keys else None
 
-    query = """
+    placeholders = ', '.join(['%s'] * len(keys_list)) if keys_list else ''
+
+    query = f"""
         SELECT json_agg(j)::json FROM (
-            SELECT * FROM folksonomy WHERE product = %s AND owner = %s
+            SELECT * FROM folksonomy 
+            WHERE product = %s AND owner = %s
+            {f"AND k IN ({placeholders})" if keys_list else ""}
+            ORDER BY k
+        ) as j;
     """
-    params = [product, owner]
 
-    if keys_list:
-        placeholders = ', '.join(['%s'] * len(keys_list))
-        query += f" AND k IN ({placeholders})"
-        params.extend(keys_list)
-
-    query += " ORDER BY k) as j;"
+    params = [product, owner] + (keys_list if keys_list else [])
 
     cur, timing = await db.db_exec(query, tuple(params))
     out = await cur.fetchone()
