@@ -1,4 +1,4 @@
-name: Pull Request checks
+name: Pull Request Checks
 
 on:
   pull_request:
@@ -9,51 +9,50 @@ concurrency:
 
 jobs:
   run-tests:
-    name: Run pytest tests
+    name: Run pytest Tests
     runs-on: ubuntu-latest
     env:
       POSTGRES_USER: folksonomy
       POSTGRES_PASSWORD: folksonomy
-      # important: "localhost" does not work on github ci, only 127.0.0.1
+      # Important: "localhost" does not work on GitHub CI, only 127.0.0.1
       POSTGRES_HOST: "127.0.0.1"
       POSTGRES_DATABASE: folksonomy
     steps:
-      - name: checkout project
+      - name: Checkout Project
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: create pgdata directory
+      - name: Create pgdata Directory
         run: mkdir -p /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
-      - name: change permissions for pgdata directory
+      - name: Change Permissions for pgdata Directory
         run: sudo chmod -R 777 /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
-      - name: install python
+      - name: Install Python
         uses: actions/setup-python@v5.2.0
         with:
           python-version: '3.9'
-      - name: install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "export PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
-      - name: configure Poetry
-        run: poetry config virtualenvs.create false
-      - name: install dependencies
-        run: poetry install --no-root
-      - name: start a postgresql docker container
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: false
+      - name: Start PostgreSQL Docker Container
         run: ./start_postgres.sh &
-      - name: wait for postgres to be ready
+      - name: Install Dependencies with Poetry
+        run: poetry install --no-interaction
+      - name: Wait for PostgreSQL to be Ready
+        timeout-minutes: 10
         run: |
-          echo "Waiting for PostgreSQL to be ready..."
-          while ! nc -z 127.0.0.1 5432; do
-            sleep 1
-          done
-          echo "PostgreSQL is ready."
-      - name: initialize database
-        run: poetry run python db-migration.py
-      - name: run tests
-        # use PYTHONASYNCIODEBUG to ensure all asyncio tasks are closed
+          while ! (nc -vz 127.0.0.1 5432); do echo "Waiting for PostgreSQL"; sleep 1; done
+      - name: Initialize Database
+        run: |
+          poetry run yoyo apply --database postgresql://folksonomy:folksonomy@127.0.0.1:5432/folksonomy
+      - name: Run Tests
+        # Use PYTHONASYNCIODEBUG to ensure all asyncio tasks are closed
         run: |
           PYTHONASYNCIODEBUG=1 poetry run pytest -v --cov=folksonomy --cov-report xml tests/ folksonomy/
-      - uses: codecov/codecov-action@v4.5.0
+      - name: Upload Coverage Reports
+        uses: codecov/codecov-action@v4.5.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
