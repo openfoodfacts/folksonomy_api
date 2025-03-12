@@ -58,28 +58,33 @@ apt install python3-virtualenv virtualenv virtualenvwrapper
 
 # Create and switch to virtualenv
 # If mkvirtualenv command is not found, search for virtualenvwrapper.sh
-# create and switch to virtualenv
-# if mkvirtualenv command is not found, search for virtualenvwrapper.sh
 # (/usr/share/virtualenvwrapper/virtualenvwrapper.sh, or /usr/bin/virtualenvwrapper.sh, for example)
 
 # Add the path in your bash profile
 mkvirtualenv folksonomy -p /usr/bin/python3
 workon folksonomy
 
-# install
+# Install
 pip install -r requirements.txt
 ```
+
+### PostgreSQL Setup Options
+
+#### Option 1: Manual PostgreSQL Setup
 If you install PostgreSQL yourself, here is how to set it up:
 
 ```bash
 # Create dbuser if needed
 sudo -u postgres createuser $USER
 
-# Create Postgresql database if needed
+# Create PostgreSQL database if needed
 sudo -u postgres createdb folksonomy -O $USER
 psql folksonomy < db/db_setup.sql
 ```
-Otherwise, you can use the `./start_postgres.sh` which launch a ready to use Postgres Docker container. You don't have to install Postgres but you need to have Docker installed. Here are some tips to use it:
+
+#### Option 2: Docker PostgreSQL Setup
+You can use the `./start_postgres.sh` which launches a ready-to-use Postgres Docker container. You don't have to install Postgres but you need to have Docker installed. Here are some tips to use it:
+
 ```bash
 # Launch Postgres Docker container
 ./start_postgres.sh # Have a look at the log messages
@@ -101,12 +106,16 @@ docker image -a
 docker rmi ef6f102be0da
 ```
 
-To finish setup:
+### Database Migration
+
+The recommended method now uses `yoyo-migrations`:
+
 ```bash
 yoyo apply --database postgresql:///folksonomy
 ```
 
 Alternatively, you can use the original migration script:
+
 ```bash
 # At the end, launch database migration tool; it will initialize the db and/or update the database if there are migrations to apply
 # You can run it on a regular basis to apply new migrations
@@ -120,9 +129,29 @@ uvicorn folksonomy.api:app --reload
 ```
 
 or use `--host` if you want to make it available on your local network:
+
+```bash
+uvicorn folksonomy.api:app --reload --host <your-ip-address>
 ```
-uvicorn folksonomy.api:app --reload --host <you-ip-address>
+
+## Run with a local instance of Product Opener
+
+To deal with CORS and/or `401 Unauthorized` issues when running in a dev environment you have to deal with two things:
+
+* Both Folksonomy Engine server and Product Opener server have to run on the same domain (openfoodfacts.localhost by default for Product Opener)
+* To allow authentication with the Product Opener cookie, you must tell Folksonomy Engine to use the local Product Opener instance as the authentication server
+
+To do so you can:
+* Edit the `local_settings.py` (copying from `local_settings_example.py`) and uncomment proposed AUTH_PREFIX and FOLKSONOMY_PREFIX entries
+* Use the same host name as Product Opener when launching Folksonomy Engine server
+
+This then should work:
+
+```bash
+uvicorn folksonomy.api:app --host 127.0.0.1 --reload --port 8888
 ```
+
+You can then access the API at http://api.folksonomy.openfoodfacts.localhost:8888/docs
 
 ## Authentication and Adding Data to the Database
 
@@ -134,25 +163,7 @@ uvicorn folksonomy.api:app --reload --host <you-ip-address>
 
 ### Steps to Authenticate
 
-- Open https://127.0.0.1:8000/docs.
+- Open http://127.0.0.1:8000/docs.
 - Click on the "Authorize" button in the API documentation interface.
 - Log in with your credentials.
 - Once authenticated, you can start making API requests to add data from the interface.
-
-## Run with a local instance of Product Opener
-
-To deal with CORS and/or `401 Unauthorized` issues when running in a dev environment you have to deal with two things:
-
-* both Folksonomy Engine server and Product Opener server have to run on the same domain (openfoodfacts.localhost by default for Product Opener)
-* to allow authentication with the Product Opener cookie, you must tell Folksonomy Engine to use the local Product Opener instance as the authent server
-
-To do so you can:
-* edit the `local_settings.py` (copying from `local_settings_example.py`) and uncomment proposed AUTH_PREFIX and FOLKSONOMY_PREFIX entries
-* use a the same host name as Product Opener when launching Folksonomy Engine server
-
-This then should work:
-```
-uvicorn folksonomy.api:app --host 127.0.0.1 --reload --port 8888
-```
-
-You can then access the API at http://api.folksonomy.openfoodfacts.localhost:8888/docs
