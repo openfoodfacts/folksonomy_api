@@ -17,5 +17,5 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, ValidationError, validator
 
 # folksonomy imports
-from .models import ProductTag, ProductStats, User, ProductList, KeyStats
+from .models import ProductTag, ProductStats, User, ProductList, KeyStats, StatusResponse
 
