@@ -442,7 +442,7 @@ async def product_tag_add(response: Response,
     return
 
 
-def create_version_error(expected_version: int, received_version: int):
+def _create_version_error(expected_version: int, received_version: int):
     return HTTPException(
         status_code=422,
         detail=[
