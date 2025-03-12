@@ -75,7 +75,7 @@ async def initialize_transactions(request: Request, call_next):
         return response
 
 
-@app.get("/", status_code=status.HTTP_200_OK)
+@app.get("/", status_code=status.HTTP_200_OK, response_model=HelloResponse)
 async def hello():
     return {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
 
@@ -145,7 +145,7 @@ def get_auth_server(request: Request):
     return base_url
 
 
-@app.post("/auth")
+@app.post("/auth", response_model=TokenResponse)
 async def authentication(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Authentication: provide user/password and get a bearer token in return
@@ -194,7 +194,7 @@ async def authentication(request: Request, response: Response, form_data: OAuth2
         status_code=500, detail="Server error")
 
 
-@app.post("/auth_by_cookie")
+@app.post("/auth_by_cookie", response_model=TokenResponse)
 async def authentication(request: Request, response: Response, session: Optional[str] = Cookie(None)):
     """
     Authentication: provide Open Food Facts session cookie and get a bearer token in return
@@ -505,7 +505,7 @@ async def product_tag_update(response: Response,
     else:
         raise HTTPException(
             status_code=503,
-            detail="Doubious update - more than one row udpated",
+            detail="Dubious update - more than one row udpated",
         )
 
 
@@ -568,7 +568,7 @@ async def product_tag_delete(response: Response,
             )
 
 
-@app.get("/keys")
+@app.get("/keys", response_model=List[KeyStats])
 async def keys_list(response: Response,
                     owner='',
                     user: User = Depends(get_current_user)):
@@ -597,7 +597,7 @@ async def keys_list(response: Response,
     return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
 
-@app.get("/values/{k}")
+@app.get("/values/{k}", response_model=List[ValueCount])
 async def get_unique_values(response: Response,
                             k: str,
                             owner: str = '',
@@ -649,7 +649,7 @@ async def get_unique_values(response: Response,
     return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
 
 
-@app.get("/ping")
+@app.get("/ping", response_model=PingResponse)
 async def pong(response: Response):
     """
     Check server health
