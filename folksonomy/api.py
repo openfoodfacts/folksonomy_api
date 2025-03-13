@@ -291,8 +291,12 @@ async def product_stats(response: Response,
     # )
     # out2 = await cur.fetchone()
     # import pdb;pdb.set_trace()
-    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing":timing})
 
+    return JSONResponse(
+        status_code=200,
+        content=out[0] if out and out[0] is not None else [],
+        headers={"x-pg-timing": timing}
+    )
 
 @app.get("/products", response_model=List[ProductList])
 async def product_list(response: Response,
@@ -320,8 +324,12 @@ async def product_list(response: Response,
         params
     )
     out = await cur.fetchone()
-    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing":timing})
 
+    return JSONResponse(
+        status_code=200,
+        content=out[0] if out and out[0] is not None else [],
+        headers={"x-pg-timing": timing}
+    )
 
 @app.get("/product/{product}", response_model=List[ProductTag])
 async def product_tags_list(response: Response,
@@ -340,9 +348,13 @@ async def product_tags_list(response: Response,
         (product, owner),
     )
     out = await cur.fetchone()
-    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
-
+    return JSONResponse(
+        status_code=200,
+        content=out[0] if out and out[0] is not None else [],
+        headers={"x-pg-timing": timing}
+    )
+    
 @app.get("/product/{product}/{k}", response_model=ProductTag)
 async def product_tag(response: Response,
                       product: str, k: str, owner='',
@@ -379,10 +391,12 @@ async def product_tag(response: Response,
             (product, owner, key),
         )
     out = await cur.fetchone()
-    if out:
-        return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
-    else:
-        return JSONResponse(status_code=404, content=None)
+    
+    return JSONResponse(
+        status_code=200,
+        content=out[0] if out and out[0] is not None else [],
+        headers={"x-pg-timing": timing}
+    )
 
 
 @app.get("/product/{product}/{k}/versions", response_model=List[ProductTag])
@@ -407,7 +421,13 @@ async def product_tag_list_versions(response: Response,
         (product, owner, k),
     )
     out = await cur.fetchone()
-    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
+
+    return JSONResponse(
+        status_code=200,
+        content=out[0] if out and out[0] is not None else [],
+        headers={"x-pg-timing": timing}
+    )
+    
 
 
 @app.post("/product")
@@ -569,8 +589,12 @@ async def keys_list(response: Response,
         (owner,)
     )
     out = await cur.fetchone()
-    return JSONResponse(status_code=200, content=out[0], headers={"x-pg-timing": timing})
 
+    return JSONResponse(
+        status_code=200,
+        content=out[0] if out and out[0] is not None else [],
+        headers={"x-pg-timing": timing}
+    )
 
 @app.get("/values/{k}", response_model=List[ValueCount])
 async def get_unique_values(response: Response,
