@@ -51,7 +51,7 @@ An easy way to get started with Folksonomy API is to use Docker (if you don't mi
    cp local_settings_docker_example.py local_settings.py
    ```
 
-3. Change variable local_settings.py
+3. Change variable local_settings.py (Use POSTGRES_HOST = 'db' for docker env)
    
 5. Create an environment configuration file
    ```bash
