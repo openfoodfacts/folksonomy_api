@@ -44,9 +44,6 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY . .
 
-# Copy the local_settings example to local_settings.py (if not exists)
-RUN if [ ! -f local_settings.py ]; then cp local_settings_example.py local_settings.py; fi
-
 # Create logs directory and give permissions
 RUN mkdir -p /app/logs && \
     chown -R folksonomy:folksonomy /app
