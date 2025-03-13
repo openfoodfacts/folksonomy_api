@@ -23,7 +23,7 @@ PostgreSQL is used as the backend database.
 You should create unit tests for each new feature or API change (see [test_main.py](https://github.com/openfoodfacts/folksonomy_api/blob/main/tests/test_main.py)). 
 To run tests just launch:
 ```bash
-PYTHONASYNCIODEBUG=1  pytest tests/ folksonomy/
+PYTHONASYNCIODEBUG=1 pytest tests/ folksonomy/
 ```
 The `PYTHONASYNCIODEBUG` is important to check we have no pending asyncio tasks that are not executed
 (sign of a potential problem).
@@ -83,6 +83,32 @@ You can also modify additional settings in the `local_settings.py` file to confi
 
 Note: The port is 5433 to avoid conflicts with any local PostgreSQL installations.
 
+## Working with the Database
+
+To connect to the PostgreSQL database in the Docker container:
+
+```bash
+docker compose exec db psql -U folksonomy -d folksonomy
+```
+
+Alternatively, you can use the helper script in the API container:
+
+```bash
+docker compose exec api /app/db-connect.sh
+```
+
+To perform a database dump:
+
+```bash
+docker compose exec db pg_dump -U folksonomy folksonomy > backup.sql
+```
+
+To restore a database dump:
+
+```bash
+cat backup.sql | docker compose exec -T db psql -U folksonomy -d folksonomy
+```
+
 # Traditional Setup
 
 If you prefer to install directly on your machine without Docker:
@@ -102,6 +128,11 @@ FastAPI is based on [OpenAPI](https://github.com/OAI/OpenAPI-Specification) (pre
 * or generate it:
 ```bash
 ./generate_openapi_json.py
+```
+
+When running in Docker, use:
+```bash
+docker compose exec api python generate_openapi_json.py
 ```
 
 ## Deployment

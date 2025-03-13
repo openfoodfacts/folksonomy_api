@@ -33,6 +33,7 @@ RUN useradd -m -U folksonomy
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     netcat-openbsd \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and set working directory
@@ -61,6 +62,12 @@ echo "Starting Folksonomy API server..."\n\
 uvicorn folksonomy.api:app --host 0.0.0.0 --port 8000 --proxy-headers\n\
 ' > /app/start.sh && \
     chmod +x /app/start.sh
+
+# Create a database helper script
+RUN echo '#!/bin/bash\n\
+PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DATABASE "$@"\n\
+' > /app/db-connect.sh && \
+    chmod +x /app/db-connect.sh
 
 # Switch to non-root user
 USER folksonomy
