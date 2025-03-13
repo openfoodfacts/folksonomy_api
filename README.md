@@ -74,7 +74,7 @@ An easy way to get started with Folksonomy API is to use Docker (if you don't mi
    ```bash
    docker compose down
    ```
-```
+
 
 
 ## Configuration
