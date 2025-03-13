@@ -57,9 +57,6 @@ while ! nc -z $POSTGRES_HOST 5432; do\n\
 done\n\
 echo "PostgreSQL is ready!"\n\
 \n\
-echo "Running database migrations..."\n\
-python db-migration.py\n\
-\n\
 echo "Starting Folksonomy API server..."\n\
 uvicorn folksonomy.api:app --host 0.0.0.0 --port 8000 --proxy-headers\n\
 ' > /app/start.sh && \

@@ -46,16 +46,26 @@ An easy way to get started with Folksonomy API is to use Docker (if you don't mi
    cd folksonomy_api
    ```
 
-2. Start the services
+2. Copy the example settings file for Docker
+   ```bash
+   cp local_settings_docker_example.py local_settings.py
+   ```
+
+3. Start the services
    ```bash
    docker compose up -d
    ```
 
-3. Access the API
+4. Initialize the database (necessary on first run)
+   ```bash
+   docker compose exec api python db-migration.py
+   ```
+
+5. Access the API
    - API: http://localhost:8000
    - Interactive documentation: http://localhost:8000/docs
 
-4. Stop the services
+6. Stop the services
    ```bash
    docker compose down
    ```
@@ -69,13 +79,7 @@ The Docker setup uses environment variables defined in the `docker-compose.yml` 
 - `POSTGRES_DATABASE`: Database name
 - `POSTGRES_HOST`: Database host (default: db)
 
-## Database Access
-
-If you need to access the PostgreSQL database directly, you can use:
-
-```bash
-psql -h localhost -p 5433 -U folksonomy -d folksonomy
-```
+You can also modify additional settings in the `local_settings.py` file to configure authentication and other application parameters.
 
 Note: The port is 5433 to avoid conflicts with any local PostgreSQL installations.
 
