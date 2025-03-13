@@ -436,6 +436,8 @@ async def product_tag_add(response: Response,
         cur, timing = await db.db_exec(query, params)
     except psycopg2.Error as e:
         error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
+        if "duplicate key value violates unique constraint" in e.pgerror:
+            return JSONResponse(status_code=422, content={"detail": {"msg": "Version conflict for this product (might result from a concurrent edit)"}})
         return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
 
     if cur.rowcount == 1:
