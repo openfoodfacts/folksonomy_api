@@ -32,7 +32,7 @@ Please note that running tests empties the database. DO NOT RUN TESTS in product
 
 # Docker Setup (Recommended)
 
-The easiest way to get started with Folksonomy API is to use Docker. This approach requires minimal setup and provides a consistent development environment.
+An easy way to get started with Folksonomy API is to use Docker (if you don't mind using it). This approach requires minimal setup and provides a consistent development environment.
 
 ## Requirements
 - Docker
