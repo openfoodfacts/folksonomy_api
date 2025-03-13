@@ -437,7 +437,7 @@ async def product_tag_add(response: Response,
     except psycopg2.Error as e:
         error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
         if "duplicate key value violates unique constraint" in e.pgerror:
-            return JSONResponse(status_code=422, content={"detail": {"msg": "Property already exists for this product"}})
+            return JSONResponse(status_code=422, content={"detail": {"msg": "Version conflict for this product (might result from a concurrent edit)"}})
         return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
 
     if cur.rowcount == 1:
@@ -494,7 +494,7 @@ async def product_tag_delete(response: Response,
     check_owner_user(user, owner, allow_anonymous=False)
     k, v = sanitize_data(k, None)
     try:
-        # Setting version to 0, this is seen as a reset,
+        # Setting version to 0, this is seen as a reset, 
         # while maintaining history in folksonomy_versions
         cur, timing = await db.db_exec(
             """

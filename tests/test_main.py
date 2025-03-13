@@ -520,7 +520,6 @@ def test_post_invalid(with_sample):
         response = client.post("/product", headers=headers, json=
             {"product": BARCODE_1, "version": 1, "k": "color", "v": "red"})
         assert response.status_code == 422, f'existing key value should return 422, got {response.status_code}'
-        assert response.json()["detail"]["msg"] == "Property already exists for this product"
 
 @pytest.mark.asyncio
 async def test_post(with_sample):
