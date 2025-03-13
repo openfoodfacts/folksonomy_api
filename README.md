@@ -39,7 +39,7 @@ An easy way to get started with Folksonomy API is to use Docker (if you don't mi
 - Docker Compose 1.21.0+
 
 ## Quick Start
-
+```markdown
 1. Clone the repository
    ```bash
    git clone https://github.com/openfoodfacts/folksonomy_api.git
@@ -51,24 +51,31 @@ An easy way to get started with Folksonomy API is to use Docker (if you don't mi
    cp local_settings_docker_example.py local_settings.py
    ```
 
-3. Start the services
+3. Create an environment configuration file
+   ```bash
+   cp .env.example .env
+   ```
+
+4. Start the services
    ```bash
    docker compose up -d
    ```
 
-4. Initialize the database (necessary on first run)
+5. Initialize the database (necessary on first run)
    ```bash
    docker compose exec api python db-migration.py
    ```
 
-5. Access the API
+6. Access the API
    - API: http://localhost:8000
    - Interactive documentation: http://localhost:8000/docs
 
-6. Stop the services
+7. Stop the services
    ```bash
    docker compose down
    ```
+```
+
 
 ## Configuration
 

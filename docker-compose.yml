@@ -1,5 +1,4 @@
 # Docker Compose configuration for Folksonomy API
-
 services:
   api:
     build:
@@ -18,7 +17,8 @@ services:
       - POSTGRES_DATABASE=folksonomy
       - POSTGRES_HOST=db
     depends_on:
-      - db
+      db:
+        condition: service_healthy  # Wait for DB to be fully ready
     restart: unless-stopped
 
   db:
@@ -31,6 +31,11 @@ services:
       - POSTGRES_DB=folksonomy
     ports:
       - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U folksonomy -d folksonomy"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
 volumes:
