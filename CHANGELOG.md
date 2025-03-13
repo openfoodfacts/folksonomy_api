@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.0](https://github.com/openfoodfacts/folksonomy_api/compare/v1.1.0...v1.2.0) (2025-03-13)
+
+
+### Features
+
+* Add message for existing property in product tag API ([#248](https://github.com/openfoodfacts/folksonomy_api/issues/248)) ([5a6b6d1](https://github.com/openfoodfacts/folksonomy_api/commit/5a6b6d1ff5ccd4bb53d4a36d344f9986926b8fd3))
+* Add response models (PUT/POST/DELETE endpoints untouched) ([#238](https://github.com/openfoodfacts/folksonomy_api/issues/238)) ([8e4d800](https://github.com/openfoodfacts/folksonomy_api/commit/8e4d800ea89fff575de226e7d0821f4d95e4f523))
+* Adds type for /keys endpoint ([1ef42ff](https://github.com/openfoodfacts/folksonomy_api/commit/1ef42ffdd275b1d8e743fd93ddf641ab4e2209e5))
+* Improve setup doc ([962dd32](https://github.com/openfoodfacts/folksonomy_api/commit/962dd326fd4cfb1348406383e6678c457543dbc7))
+* New route for values ([48cef31](https://github.com/openfoodfacts/folksonomy_api/commit/48cef3148c0e1d7ec22dedec4dce7860916583a4))
+
+
+### Bug Fixes
+
+* Returns a JSON response if desired result is not found ([#234](https://github.com/openfoodfacts/folksonomy_api/issues/234)) ([e83fb5b](https://github.com/openfoodfacts/folksonomy_api/commit/e83fb5bb5da06bc7766d4624b3b49ee63cb39ca6))
+
 ## [1.1.0](https://github.com/openfoodfacts/folksonomy_api/compare/v1.0.1...v1.1.0) (2024-09-06)
 
 
