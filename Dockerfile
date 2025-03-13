@@ -32,6 +32,7 @@ RUN useradd -m -U folksonomy
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and set working directory
@@ -48,12 +49,27 @@ COPY . .
 RUN mkdir -p /app/logs && \
     chown -R folksonomy:folksonomy /app
 
+# Create a startup script
+RUN echo '#!/bin/bash\n\
+echo "Waiting for PostgreSQL to be ready..."\n\
+while ! nc -z $POSTGRES_HOST 5432; do\n\
+  sleep 1\n\
+done\n\
+echo "PostgreSQL is ready!"\n\
+\n\
+echo "Running database migrations..."\n\
+python db-migration.py\n\
+\n\
+echo "Starting Folksonomy API server..."\n\
+uvicorn folksonomy.api:app --host 0.0.0.0 --port 8000 --proxy-headers\n\
+' > /app/start.sh && \
+    chmod +x /app/start.sh
+
 # Switch to non-root user
 USER folksonomy
 
 # Expose port
 EXPOSE 8000
 
-# Run db migrations and start the application
-CMD python db-migration.py && \
-    uvicorn folksonomy.api:app --host 0.0.0.0 --port 8000 --proxy-headers
+# Start the application
+CMD ["/app/start.sh"]

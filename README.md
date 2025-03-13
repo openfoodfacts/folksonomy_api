@@ -30,7 +30,7 @@ The `PYTHONASYNCIODEBUG` is important to check we have no pending asyncio tasks 
 
 Please note that running tests empties the database. DO NOT RUN TESTS in production.
 
-# Docker Setup (Recommended)
+# Docker Setup 
 
 An easy way to get started with Folksonomy API is to use Docker (if you don't mind using it). This approach requires minimal setup and provides a consistent development environment.
 
