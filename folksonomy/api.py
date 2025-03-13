@@ -489,7 +489,7 @@ async def product_tag_update(response: Response,
 
         # Validate version increment
         if product_tag.version != latest_version + 1:
-            raise create_version_error(latest_version + 1, product_tag.version)
+            raise _create_version_error(latest_version + 1, product_tag.version)
 
         req, params = db.update_product_tag_req(product_tag)
         cur, timing = await db.db_exec(req, params)
