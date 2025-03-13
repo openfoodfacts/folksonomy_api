@@ -48,7 +48,7 @@ The easiest way to get started with Folksonomy API is to use Docker. This approa
 
 2. Start the services
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 3. Access the API
@@ -57,7 +57,7 @@ The easiest way to get started with Folksonomy API is to use Docker. This approa
 
 4. Stop the services
    ```bash
-   docker-compose down
+   docker compose down
    ```
 
 ## Configuration
