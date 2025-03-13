@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "${API_EXPOSE:-8000}:8000"
     volumes:
       # Mount .env file for environment variables
       - ./.env:/app/.env
@@ -16,7 +16,7 @@ services:
     depends_on:
       db:
         condition: service_healthy  # Wait for DB to be fully ready
-    restart: unless-stopped
+    restart: ${RESTART_POLICY:-no}
 
   db:
     image: postgres:13
@@ -29,13 +29,13 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-folksonomy}
       - POSTGRES_DB=${POSTGRES_DATABASE:-folksonomy}
     ports:
-      - "5433:5432"
+      - "${DB_EXPOSE:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-folksonomy} -d ${POSTGRES_DATABASE:-folksonomy}"]
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+    restart: ${RESTART_POLICY:-no}
 
 volumes:
   postgres_data:
