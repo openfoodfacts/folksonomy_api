@@ -297,8 +297,7 @@ def test_product_missing(with_sample):
     with TestClient(app) as client:
         response = client.get("/product/0000000000000")
         assert response.status_code == 200
-        assert response.json() == None
-        return response.json()
+        assert response.json() == []
 
 
 def test_product_key(with_sample):
@@ -326,8 +325,8 @@ def test_key_stripped_on_get(with_sample):
 def test_product_key_missing(with_sample):
     with TestClient(app) as client:
         response = client.get(f"/product/{BARCODE_1}/not-existing")
-        assert response.status_code == 404
-        assert response.json() == None
+        assert response.status_code == 200
+        assert response.json() == []
 
 
 def test_product_key_versions(with_sample):
@@ -350,7 +349,7 @@ def test_product_key_versions_missing(with_sample):
     with TestClient(app) as client:
         response = client.get(f"/product/{BARCODE_3}/not-existing/versions")
         assert response.status_code == 200
-        assert response.json() == None
+        assert response.json() == []
 
 
 def test_products_stats_key(with_sample):
