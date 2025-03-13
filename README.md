@@ -58,7 +58,7 @@ An easy way to get started with Folksonomy API is to use Docker (if you don't mi
 
 4. Start the services
    ```bash
-   docker compose up -d
+   docker compose up -d --build
    ```
 
 5. Initialize the database (necessary on first run)
