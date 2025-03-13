@@ -91,23 +91,6 @@ To connect to the PostgreSQL database in the Docker container:
 docker compose exec db psql -U folksonomy -d folksonomy
 ```
 
-Alternatively, you can use the helper script in the API container:
-
-```bash
-docker compose exec api /app/db-connect.sh
-```
-
-To perform a database dump:
-
-```bash
-docker compose exec db pg_dump -U folksonomy folksonomy > backup.sql
-```
-
-To restore a database dump:
-
-```bash
-cat backup.sql | docker compose exec -T db psql -U folksonomy -d folksonomy
-```
 
 # Traditional Setup
 
