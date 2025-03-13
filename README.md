@@ -39,7 +39,7 @@ An easy way to get started with Folksonomy API is to use Docker (if you don't mi
 - Docker Compose 1.21.0+
 
 ## Quick Start
-```markdown
+
 1. Clone the repository
    ```bash
    git clone https://github.com/openfoodfacts/folksonomy_api.git
