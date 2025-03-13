@@ -51,26 +51,28 @@ An easy way to get started with Folksonomy API is to use Docker (if you don't mi
    cp local_settings_docker_example.py local_settings.py
    ```
 
-3. Create an environment configuration file
+3. Change variable local_settings.py
+   
+5. Create an environment configuration file
    ```bash
    cp .env.example .env
    ```
 
-4. Start the services
+6. Start the services
    ```bash
    docker compose up -d --build
    ```
 
-5. Initialize the database (necessary on first run)
+7. Initialize the database (necessary on first run)
    ```bash
    docker compose exec api python db-migration.py
    ```
 
-6. Access the API
+8. Access the API
    - API: http://localhost:8000
    - Interactive documentation: http://localhost:8000/docs
 
-7. Stop the services
+9. Stop the services
    ```bash
    docker compose down
    ```
