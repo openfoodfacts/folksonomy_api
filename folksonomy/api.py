@@ -354,7 +354,7 @@ async def product_tags_list(response: Response,
         content=out[0] if out and out[0] is not None else [],
         headers={"x-pg-timing": timing}
     )
-    
+
 @app.get("/product/{product}/{k}", response_model=ProductTag)
 async def product_tag(response: Response,
                       product: str, k: str, owner='',
@@ -391,7 +391,7 @@ async def product_tag(response: Response,
             (product, owner, key),
         )
     out = await cur.fetchone()
-    
+
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
@@ -427,7 +427,7 @@ async def product_tag_list_versions(response: Response,
         content=out[0] if out and out[0] is not None else [],
         headers={"x-pg-timing": timing}
     )
-    
+
 
 
 @app.post("/product")
@@ -514,7 +514,7 @@ async def product_tag_delete(response: Response,
     check_owner_user(user, owner, allow_anonymous=False)
     k, v = sanitize_data(k, None)
     try:
-        # Setting version to 0, this is seen as a reset, 
+        # Setting version to 0, this is seen as a reset,
         # while maintaining history in folksonomy_versions
         cur, timing = await db.db_exec(
             """
@@ -613,8 +613,6 @@ async def get_unique_values(response: Response,
     """
     check_owner_user(user, owner, allow_anonymous=True)
     k, _ = sanitize_data(k, None)
-    if not limit:
-        limit = 50
     if limit > 1000:
         limit = 1000
 
