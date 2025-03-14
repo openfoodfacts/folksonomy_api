@@ -630,3 +630,23 @@ async def pong(response: Response):
     cur, timing = await db.db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'",())
     pong = await cur.fetchone()
     return {"ping": "pong @ %s" % pong[0]}
+
+@app.get("/barcode/{barcode}", response_model=ProductList)
+async def get_product_barcode(barcode: str):
+    """
+    Get the key and value from product's barcode character 
+    """
+    cur, timing = await db.db_exec(f"SELECT product, k, v FROM folksonomy WHERE product = '{barcode}'")
+    res = await cur.fetchone()
+    if res:
+        return ProductList(
+            product=res[0],
+            k=res[1],
+            v=res[2]
+        )
+    else:
+        return ProductList(
+            product="Not found",
+            k="no match",
+            v="no match"
+        )
