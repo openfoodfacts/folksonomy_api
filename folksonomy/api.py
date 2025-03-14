@@ -642,7 +642,7 @@ async def get_unique_values(response: Response,
 
     cur, timing = await db.db_exec(sql, params)
     out = await cur.fetchone()
-    data = out[0] if out and out[0] else []
+    data = out[0] if out and out[0] is not None else []
     return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
 
 
