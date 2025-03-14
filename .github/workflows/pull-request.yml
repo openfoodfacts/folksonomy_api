@@ -57,7 +57,7 @@ jobs:
           done
 
       - name: Initialize Database
-        run: poetry run yoyo apply --database postgresql:///folksonomy
+        run: poetry run yoyo apply --database postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST/$POSTGRES_DATABASE
 
       - name: Run Tests
         # Use PYTHONASYNCIODEBUG to ensure all asyncio tasks are closed
