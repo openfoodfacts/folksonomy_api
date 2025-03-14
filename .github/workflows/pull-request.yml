@@ -17,40 +17,53 @@ jobs:
       # Important: "localhost" does not work on GitHub CI, only 127.0.0.1
       POSTGRES_HOST: "127.0.0.1"
       POSTGRES_DATABASE: folksonomy
+
     steps:
       - name: Checkout Project
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+
       - name: Create pgdata Directory
         run: mkdir -p /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
+
       - name: Change Permissions for pgdata Directory
         run: sudo chmod -R 777 /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
+
       - name: Install Python
         uses: actions/setup-python@v5.2.0
         with:
           python-version: '3.9'
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           version: latest
           virtualenvs-create: true
           virtualenvs-in-project: false
+
       - name: Start PostgreSQL Docker Container
         run: ./start_postgres.sh &
+
       - name: Install Dependencies with Poetry
         run: poetry install --no-interaction
+
       - name: Wait for PostgreSQL to be Ready
         timeout-minutes: 10
         run: |
-          while ! (nc -vz 127.0.0.1 5432); do echo "Waiting for PostgreSQL"; sleep 1; done
+          while ! (nc -vz 127.0.0.1 5432); do
+            echo "Waiting for PostgreSQL"
+            sleep 1
+          done
+
       - name: Initialize Database
-        run: |
-          poetry run python db-migration.py
+        run: poetry run yoyo apply --database postgresql:///folksonomy
+
       - name: Run Tests
         # Use PYTHONASYNCIODEBUG to ensure all asyncio tasks are closed
         run: |
           PYTHONASYNCIODEBUG=1 poetry run pytest -v --cov=folksonomy --cov-report xml tests/ folksonomy/
+
       - name: Upload Coverage Reports
         uses: codecov/codecov-action@v4.5.0
         with:
