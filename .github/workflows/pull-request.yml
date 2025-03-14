@@ -46,7 +46,7 @@ jobs:
           while ! (nc -vz 127.0.0.1 5432); do echo "Waiting for PostgreSQL"; sleep 1; done
       - name: Initialize Database
         run: |
-          poetry run yoyo apply --database postgresql://folksonomy:folksonomy@127.0.0.1:5432/folksonomy
+          poetry run python db-migration.py
       - name: Run Tests
         # Use PYTHONASYNCIODEBUG to ensure all asyncio tasks are closed
         run: |
