@@ -491,7 +491,7 @@ async def product_tag_update(response: Response,
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
         )
     if cur.rowcount == 1:
-        return "ok"
+        return {"detail": "Tag updated successfully"}
     elif cur.rowcount == 0:  # non existing key
         raise HTTPException(
             status_code=404,
