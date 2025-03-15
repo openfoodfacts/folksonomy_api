@@ -461,8 +461,8 @@ async def product_tag_add(response: Response,
         return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
 
     if cur.rowcount == 1:
-        return "ok"
-    return
+        return {"detail": "Tag created successfully"}
+    return {"detail": "Operation failed"}
 
 
 @app.put("/product")
