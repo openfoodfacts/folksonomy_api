@@ -110,21 +110,20 @@ def check_owner_user(user: User, owner, allow_anonymous=False):
     if user is None and allow_anonymous == False:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
+            detail={"msg": "Authentication required"},
             headers={"WWW-Authenticate": "Bearer"},
         )
     if owner != '':
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required for '%s'" % owner,
+                detail={"msg": f"Authentication required for '{owner}'"},
                 headers={"WWW-Authenticate": "Bearer"},
             )
         if owner != user:
             raise HTTPException(
                 status_code=422,
-                detail="owner should be '%s' or '' for public, but '%s' is authenticated" % (
-                    owner, user),
+                detail={"msg": f"owner should be '{owner}' or '' for public, but '{user}' is authenticated"},
             )
     return
 
@@ -176,7 +175,7 @@ async def authentication(request: Request, response: Response, form_data: OAuth2
         await asyncio.sleep(settings.FAILED_AUTH_WAIT_TIME)   # prevents brute-force
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail={"msg": "Invalid authentication credentials"},
             headers={
             "WWW-Authenticate": "Bearer",
             "x-auth-url": auth_url
@@ -185,14 +184,14 @@ async def authentication(request: Request, response: Response, form_data: OAuth2
     elif status_code == 404:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid auth server: 404",
+            detail={"msg": "Invalid auth server: 404"},
             headers={
             "WWW-Authenticate": "Bearer",
             "x-auth-url": auth_url
             },
         )
     raise HTTPException(
-        status_code=500, detail="Server error")
+        status_code=500, detail={"msg": "Server error"})
 
 
 @app.post("/auth_by_cookie", response_model=TokenResponse)
@@ -206,7 +205,7 @@ async def authentication(request: Request, response: Response, session: Optional
     """
     if not session or session =='':
         raise HTTPException(
-            status_code=422, detail="Missing 'session' cookie")
+            status_code=422, detail={"msg": "Missing 'session' cookie"})
 
     try:
         session_data = session.split('&')
@@ -214,7 +213,7 @@ async def authentication(request: Request, response: Response, session: Optional
         token = user_id + '__U' + str(uuid.uuid4())
     except:
         raise HTTPException(
-            status_code=422, detail="Malformed 'session' cookie")
+            status_code=422, detail={"msg": "Malformed 'session' cookie"})
 
     auth_url = get_auth_server(request) + "/cgi/auth.pl"
     async with aiohttp.ClientSession() as http_session:
@@ -235,11 +234,11 @@ async def authentication(request: Request, response: Response, session: Optional
         await asyncio.sleep(settings.FAILED_AUTH_WAIT_TIME) # prevents brute-force
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail={"msg": "Invalid authentication credentials"},
             headers={"WWW-Authenticate": "Bearer"},
         )
     raise HTTPException(
-        status_code=500, detail="Server error")
+        status_code=500, detail={"msg": "Server error"})
 
 
 def property_where(owner: str, k: str, v: str):
@@ -284,19 +283,13 @@ async def product_stats(response: Response,
         params
     )
     out = await cur.fetchone()
-    # cur, timing = await db.db_exec("""
-    #     SELECT count(*)
-    #         FROM folksonomy;
-    #     """
-    # )
-    # out2 = await cur.fetchone()
-    # import pdb;pdb.set_trace()
 
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
         headers={"x-pg-timing": timing}
     )
+
 
 @app.get("/products", response_model=List[ProductList])
 async def product_list(response: Response,
@@ -306,7 +299,7 @@ async def product_list(response: Response,
     Get the list of products matching k or k=v
     """
     if k == '':
-        return JSONResponse(status_code=422, content={"detail": "missing value for k"})
+        return JSONResponse(status_code=422, content={"detail": {"msg": "missing value for k"}})
     check_owner_user(user, owner, allow_anonymous=True)
     k, v = sanitize_data(k, v)
     where, params = property_where(owner, k, v)
@@ -330,6 +323,7 @@ async def product_list(response: Response,
         content=out[0] if out and out[0] is not None else [],
         headers={"x-pg-timing": timing}
     )
+
 
 @app.get("/product/{product}", response_model=List[ProductTag])
 async def product_tags_list(response: Response,
@@ -427,10 +421,9 @@ async def product_tag_list_versions(response: Response,
         content=out[0] if out and out[0] is not None else [],
         headers={"x-pg-timing": timing}
     )
-    
 
 
-@app.post("/product")
+@app.post("/product", response_model=SimpleResponse)
 async def product_tag_add(response: Response,
                           product_tag: ProductTag,
                           user: User = Depends(get_current_user)):
@@ -461,11 +454,11 @@ async def product_tag_add(response: Response,
         return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
 
     if cur.rowcount == 1:
-        return {"detail": "Tag created successfully"}
-    return {"detail": "Operation failed"}
+        return {"detail": {"msg": "Tag created successfully"}}
+    return {"detail": {"msg": "Operation failed"}}
 
 
-@app.put("/product")
+@app.put("/product", response_model=SimpleResponse)
 async def product_tag_update(response: Response,
                              product_tag: ProductTag,
                              user: User = Depends(get_current_user)):
@@ -486,25 +479,26 @@ async def product_tag_update(response: Response,
         req, params = db.update_product_tag_req(product_tag)
         cur, timing = await db.db_exec(req, params)
     except psycopg2.Error as e:
+        error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
         raise HTTPException(
             status_code=422,
-            detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
+            detail={"msg": error_msg},
         )
     if cur.rowcount == 1:
-        return {"detail": "Tag updated successfully"}
+        return {"detail": {"msg": "Tag updated successfully"}}
     elif cur.rowcount == 0:  # non existing key
         raise HTTPException(
             status_code=404,
-            detail="Key was not found",
+            detail={"msg": "Key was not found"},
         )
     else:
         raise HTTPException(
             status_code=503,
-            detail="Dubious update - more than one row udpated",
+            detail={"msg": "Dubious update - more than one row updated"},
         )
 
 
-@app.delete("/product/{product}/{k}")
+@app.delete("/product/{product}/{k}", response_model=SimpleResponse)
 async def product_tag_delete(response: Response,
                              product: str, k: str, version: int, owner='',
                              user: User = Depends(get_current_user)):
@@ -525,14 +519,15 @@ async def product_tag_delete(response: Response,
         )
     except psycopg2.Error as e:
         # note: transaction will be rolled back by the middleware
+        error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
         raise HTTPException(
             status_code=422,
-            detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
+            detail={"msg": error_msg},
         )
     if cur.rowcount != 1:
         raise HTTPException(
             status_code=422,
-            detail="Unknown product/k/version for this owner",
+            detail={"msg": "Unknown product/k/version for this owner"},
         )
     cur, timing = await db.db_exec(
         """
@@ -541,7 +536,7 @@ async def product_tag_delete(response: Response,
         (product, owner, k.lower()),
     )
     if cur.rowcount == 1:
-        return {"detail": "Tag deleted successfully"}
+        return {"detail": {"msg": "Tag deleted successfully"}}
     else:
         # we have a conflict, return an error explaining conflict
         cur, timing = await db.db_exec(
@@ -554,12 +549,12 @@ async def product_tag_delete(response: Response,
             out = await cur.fetchone()
             raise HTTPException(
                 status_code=422,
-                detail="version mismatch, last version for this product/k is %s" % out[0],
+                detail={"msg": f"version mismatch, last version for this product/k is {out[0]}"},
             )
         else:
             raise HTTPException(
                 status_code=404,
-                detail="Unknown product/k for this owner",
+                detail={"msg": "Unknown product/k for this owner"},
             )
 
 
@@ -595,6 +590,7 @@ async def keys_list(response: Response,
         content=out[0] if out and out[0] is not None else [],
         headers={"x-pg-timing": timing}
     )
+
 
 @app.get("/values/{k}", response_model=List[ValueCount])
 async def get_unique_values(response: Response,
@@ -648,11 +644,11 @@ async def get_unique_values(response: Response,
     return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
 
 
-@app.get("/ping", response_model=PingResponse)
+@app.get("/ping", response_model=SimpleResponse)
 async def pong(response: Response):
     """
     Check server health
     """
     cur, timing = await db.db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'",())
     pong = await cur.fetchone()
-    return {"ping": "pong @ %s" % pong[0]}
+    return {"detail": {"msg": f"pong @ {pong[0]}"}}

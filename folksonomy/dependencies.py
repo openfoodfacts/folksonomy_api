@@ -27,5 +27,6 @@ from .models import (
     KeyStats,
     PingResponse,
     ValueCount,
+    SimpleResponse,
 )
 
