@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional,Dict
 
 from fastapi import FastAPI, status, Response, Depends, Header
 from pydantic import BaseModel, ValidationError, field_validator
@@ -91,3 +91,6 @@ class ValueCount(BaseModel):
 
 class PingResponse(BaseModel):
     ping: str
+
+class SimpleResponse(BaseModel):
+    detail: Dict[str, str]  # Changed from str to Dict[str, str] to match the response
