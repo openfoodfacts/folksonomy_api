@@ -306,7 +306,7 @@ async def product_list(response: Response,
     Get the list of products matching k or k=v
     """
     if k == '':
-        return JSONResponse(status_code=422, content={"detail": {"msg": "missing value for k"}})
+        return JSONResponse(status_code=422, content={"detail": "missing value for k"})
     check_owner_user(user, owner, allow_anonymous=True)
     k, v = sanitize_data(k, v)
     where, params = property_where(owner, k, v)
