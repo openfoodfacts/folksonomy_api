@@ -541,7 +541,7 @@ async def product_tag_delete(response: Response,
         (product, owner, k.lower()),
     )
     if cur.rowcount == 1:
-        return "ok"
+        return {"detail": "Tag deleted successfully"}
     else:
         # we have a conflict, return an error explaining conflict
         cur, timing = await db.db_exec(
