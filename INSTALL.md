@@ -4,13 +4,16 @@
 
 - PostgreSQL 13 or newer
 - Python 3.9 or newer
-- Python modules in "requirements.txt"
+- Poetry (for dependency management)
 
 ## Setup on Debian 12 (Recommended Method)
 
 ```bash
 # Start with a fresh Debian 12 install, logged as root
-apt install git sudo postgresql python3-venv -y
+apt install git sudo postgresql python3-pip curl -y
+
+# Install Poetry
+curl -sSL https://install.python-poetry.org | python3 -
 
 # Create a user for the application (optional but recommended)
 adduser folksonomy
@@ -22,50 +25,41 @@ cd ~
 git clone https://github.com/openfoodfacts/folksonomy_api.git
 cd folksonomy_api
 
-# Create and activate Python virtual environment
-python3 -m venv folksonomy
-. ./folksonomy/bin/activate
-
-# Install required packages
-pip install -r requirements.txt
+# Install dependencies using Poetry
+poetry install
 
 # Set up PostgreSQL database
 sudo -i -u postgres createuser $USER
 sudo -i -u postgres createdb folksonomy -O $USER
 
-# Initialize the database using yoyo-migrations
-yoyo apply --database postgresql:///folksonomy
+# Initialize the database using yoyo-migrations (inside Poetry environment)
+poetry run yoyo apply --database postgresql:///folksonomy
 
 # Create local settings file
 cp local_settings_example.py local_settings.py
 # Edit local_settings.py to fit your environment if needed
 
 # Run the application
-uvicorn folksonomy.api:app --reload --host <your-ip-address>
+poetry run uvicorn folksonomy.api:app --reload --host <your-ip-address>
 ```
 
 ## Alternative Setup Methods
 
-### Using virtualenvwrapper
+### Using Poetry with an existing repository
 
 ```bash
 # Clone repo
 git clone https://github.com/openfoodfacts/folksonomy_api.git
 cd folksonomy_api
 
-# Required packages to setup a virtualenv (optional, but recommended)
-apt install python3-virtualenv virtualenv virtualenvwrapper
+# Install Poetry if not already installed
+curl -sSL https://install.python-poetry.org | python3 -
 
-# Create and switch to virtualenv
-# If mkvirtualenv command is not found, search for virtualenvwrapper.sh
-# (/usr/share/virtualenvwrapper/virtualenvwrapper.sh, or /usr/bin/virtualenvwrapper.sh, for example)
+# Install dependencies
+poetry install
 
-# Add the path in your bash profile
-mkvirtualenv folksonomy -p /usr/bin/python3
-workon folksonomy
-
-# Install
-pip install -r requirements.txt
+# Activate the virtual environment
+poetry shell
 ```
 
 ### PostgreSQL Setup Options
@@ -108,10 +102,10 @@ docker rmi ef6f102be0da
 
 ### Database Migration
 
-The recommended method now uses `yoyo-migrations`:
+Using Poetry with yoyo-migrations:
 
 ```bash
-yoyo apply --database postgresql:///folksonomy
+poetry run yoyo apply --database postgresql:///folksonomy
 ```
 
 Alternatively, you can use the original migration script:
@@ -119,19 +113,19 @@ Alternatively, you can use the original migration script:
 ```bash
 # At the end, launch database migration tool; it will initialize the db and/or update the database if there are migrations to apply
 # You can run it on a regular basis to apply new migrations
-python ./db-migration.py
+poetry run python ./db-migration.py
 ```
 
 ## Run locally
 
 ```bash
-uvicorn folksonomy.api:app --reload
+poetry run uvicorn folksonomy.api:app --reload
 ```
 
 or use `--host` if you want to make it available on your local network:
 
 ```bash
-uvicorn folksonomy.api:app --reload --host <your-ip-address>
+poetry run uvicorn folksonomy.api:app --reload --host <your-ip-address>
 ```
 
 ## Run with a local instance of Product Opener
@@ -148,7 +142,7 @@ To do so you can:
 This then should work:
 
 ```bash
-uvicorn folksonomy.api:app --host 127.0.0.1 --reload --port 8888
+poetry run uvicorn folksonomy.api:app --host 127.0.0.1 --reload --port 8888
 ```
 
 You can then access the API at http://api.folksonomy.openfoodfacts.localhost:8888/docs

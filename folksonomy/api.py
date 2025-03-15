@@ -601,7 +601,7 @@ async def get_unique_values(response: Response,
                             k: str,
                             owner: str = '',
                             q: str = '',
-                            limit: int = '',
+                            limit: int = 50,
                             user: User = Depends(get_current_user)):
     """
     Get the unique values of a given property and the corresponding number of products
@@ -613,8 +613,7 @@ async def get_unique_values(response: Response,
     """
     check_owner_user(user, owner, allow_anonymous=True)
     k, _ = sanitize_data(k, None)
-    if not limit:
-        limit = 50
+
     if limit > 1000:
         limit = 1000
 
@@ -644,7 +643,7 @@ async def get_unique_values(response: Response,
 
     cur, timing = await db.db_exec(sql, params)
     out = await cur.fetchone()
-    data = out[0] if out and out[0] else []
+    data = out[0] if out and out[0] is not None else []
     return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
 
 
