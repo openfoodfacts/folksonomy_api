@@ -329,7 +329,7 @@ async def product_tags_list(
     response: Response,
     product: str,
     owner: str = '',
-    keys: str = Query(None, description="Comma-separated list of keys to filter by"),
+    keys: str = Query(None, description="Comma-separated list of keys to filter by. If not provided, all keys are returned."),
     user: User = Depends(get_current_user)
 ):
     """
