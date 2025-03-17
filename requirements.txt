@@ -3,7 +3,7 @@ aiopg==1.4.0
 requests==2.32.3
 aiohttp==3.10.5
 fastapi==0.112.2
-uvicorn==0.30.6
+uvicorn==0.32.1
 python-multipart==0.0.7
 yoyo-migrations==7.3.2
 
