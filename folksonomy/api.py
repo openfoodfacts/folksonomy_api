@@ -1,5 +1,6 @@
 #! /usr/bin/python3
 
+from fastapi import Query
 import contextlib
 import os
 import logging
@@ -331,23 +332,36 @@ async def product_list(response: Response,
     )
 
 @app.get("/product/{product}", response_model=List[ProductTag])
-async def product_tags_list(response: Response,
-                            product: str, owner='',
-                            user: User = Depends(get_current_user)):
+async def product_tags_list(
+    response: Response,
+    product: str,
+    owner: str = '',
+    keys: str = Query(None, description="Comma-separated list of keys to filter by. If not provided, all keys are returned."),
+    user: User = Depends(get_current_user)
+):
     """
-    Get a list of existing tags for a product
+    Get a list of existing tags for a product, optionally filtering by specific keys.
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    cur, timing = await db.db_exec("""
-        SELECT json_agg(j)::json FROM(
-            SELECT * FROM folksonomy WHERE product = %s AND owner = %s ORDER BY k
-            ) as j;
-        """,
-        (product, owner),
-    )
-    out = await cur.fetchone()
+    keys_list = [key.strip() for key in keys.split(",")] if keys else None
 
+    placeholders = ', '.join(['%s'] * len(keys_list)) if keys_list else ''
+
+    query = f"""
+        SELECT json_agg(j)::json FROM (
+            SELECT * FROM folksonomy 
+            WHERE product = %s AND owner = %s
+            {f"AND k IN ({placeholders})" if keys_list else ""}
+            ORDER BY k
+        ) as j;
+    """
+
+    params = [product, owner] + (keys_list if keys_list else [])
+
+    cur, timing = await db.db_exec(query, tuple(params))
+    out = await cur.fetchone()
+    
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
