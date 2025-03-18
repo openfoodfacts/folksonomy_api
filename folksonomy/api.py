@@ -101,7 +101,6 @@ def sanitize_data(k, v):
     v = v.strip() if v else v
     return k, v
 
-
 def check_owner_user(user: User, owner, allow_anonymous=False):
     """
     Check authentication depending on current user and 'owner' of the data
@@ -465,6 +464,19 @@ async def product_tag_add(response: Response,
     return
 
 
+def _create_version_error(expected_version: int, received_version: int):
+    return HTTPException(
+        status_code=422,
+        detail=[
+            {
+                "type": "value_error",
+                "loc": ["body", "version"],
+                "msg": f"Value error, version must be exactly {expected_version}",
+                "input": received_version,
+            }
+        ],
+    )
+
 @app.put("/product")
 async def product_tag_update(response: Response,
                              product_tag: ProductTag,
@@ -478,11 +490,29 @@ async def product_tag_update(response: Response,
     - **version**: must be equal to previous version + 1
     - **owner**: None or empty for public tags, or your own user_id
     """
-
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
     # enforce user
     product_tag.editor = user.user_id
     try:
+        # Fetch the latest version directly from the database
+        cur, timing = await db.db_exec(
+            """
+            SELECT version FROM folksonomy
+            WHERE product = %s AND owner = %s AND k = %s;
+            """,
+            (product_tag.product, product_tag.owner, product_tag.k),
+        )
+        latest_version_row = await cur.fetchone()
+
+        if not latest_version_row:
+            raise HTTPException(status_code=404, detail="Key was not found")
+
+        latest_version = latest_version_row[0]  # Extract version from row
+
+        # Validate version increment
+        if product_tag.version != latest_version + 1:
+            raise _create_version_error(latest_version + 1, product_tag.version)
+
         req, params = db.update_product_tag_req(product_tag)
         cur, timing = await db.db_exec(req, params)
     except psycopg2.Error as e:
@@ -490,13 +520,10 @@ async def product_tag_update(response: Response,
             status_code=422,
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
         )
+    # Check if exactly one row was updated
+    # Atlease one row will be updated, as version is checked
     if cur.rowcount == 1:
         return "ok"
-    elif cur.rowcount == 0:  # non existing key
-        raise HTTPException(
-            status_code=404,
-            detail="Key was not found",
-        )
     else:
         raise HTTPException(
             status_code=503,
