@@ -3,21 +3,35 @@ FROM python:3.9-slim AS builder
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PYTHONFAULTHANDLER=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=false
 
 # Create and set working directory
 WORKDIR /app
 
-# Install build dependencies
+# Install build dependencies and Poetry
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -sSL https://install.python-poetry.org | python3 -
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Add Poetry to PATH
+ENV PATH="/root/.local/bin:$PATH"
+
+# Copy pyproject.toml and poetry.lock (if exists)
+COPY pyproject.toml ./
+COPY poetry.lock* ./
+
+# Install dependencies
+RUN poetry install 
+
+# Copy application code
+COPY . .
 
 # Final stage - Use a clean image
 FROM python:3.9-slim
@@ -39,12 +53,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create and set working directory
 WORKDIR /app
 
-# Copy the built dependencies from the builder stage
+# Copy from builder stage
 COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
-
-# Copy application code
-COPY . .
+COPY --from=builder /app /app
 
 # Create logs directory and give permissions
 RUN mkdir -p /app/logs && \
