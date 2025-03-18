@@ -20,7 +20,7 @@ PostgreSQL is used as the backend database.
 
 # Dev
 
-You should create unit tests for each new feature or API change (see [test_main.py](https://github.com/openfoodfacts/folksonomy_api/blob/main/tests/test_main.py)). 
+You should create unit tests for each new feature or API change (see [test_main.py](https://github.com/openfoodfacts/folksonomy_api/blob/main/tests/test_main.py)).
 To run tests just launch:
 ```bash
 PYTHONASYNCIODEBUG=1 pytest tests/ folksonomy/
@@ -103,8 +103,8 @@ docker compose exec db psql -U folksonomy -d folksonomy
 
 If you prefer to install directly on your machine without Docker:
 
-1. Install Python 3.8+
-2. Install pip
+1. Install Python 3.9+
+2. Install Poetry
 3. Install PostgreSQL 13+
 4. Follow the steps in [INSTALL.md](https://github.com/openfoodfacts/folksonomy_api/blob/main/INSTALL.md) to install requirements and for creating a db user
 5. Make a copy of [local_settings_example.py](https://github.com/openfoodfacts/folksonomy_api/blob/main/local_settings_example.py) and rename it to *local_settings.py*
