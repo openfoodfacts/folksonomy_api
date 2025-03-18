@@ -605,30 +605,38 @@ async def product_tag_delete(response: Response,
 
 
 @app.get("/keys", response_model=List[KeyStats])
-async def keys_list(response: Response,
-                    owner='',
-                    user: User = Depends(get_current_user)):
+async def keys_list(
+    response: Response,
+    q: Optional[str] = '',  # Extract 'q' from the query parameters
+    owner: str = '',
+    user: User = Depends(get_current_user)
+):
     """
-    Get the list of keys with statistics
+    Get the list of keys with statistics, with an optional search filter.
 
     The keys list can be restricted to private tags from some owner
     """
     check_owner_user(user, owner, allow_anonymous=True)
-    cur, timing = await db.db_exec(
-        """
-        SELECT json_agg(j.j)::json FROM(
+
+    query = """
+        SELECT json_agg(j.j)::json FROM (
             SELECT json_build_object(
-                'k',k,
-                'count',count(*),
-                'values',count(distinct(v))
-                ) as j
+                'k', k,
+                'count', count(*),
+                'values', count(distinct v)
+            ) AS j
             FROM folksonomy
-            WHERE owner=%s
-            GROUP BY k
-            ORDER BY count(*) DESC) as j;
-        """,
-        (owner,)
-    )
+            WHERE owner = %s
+    """
+    query_params = [owner]
+
+    if q:
+        query += " AND k ILIKE %s"
+        query_params.append(f"%{q}%")
+
+    query += "GROUP BY k ORDER BY count(*) DESC) as j;"
+
+    cur, timing = await db.db_exec(query, tuple(query_params))
     out = await cur.fetchone()
 
     return JSONResponse(
