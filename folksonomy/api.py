@@ -1,5 +1,6 @@
 #! /usr/bin/python3
 
+from fastapi import Query
 import contextlib
 import os
 import logging
@@ -100,7 +101,6 @@ def sanitize_data(k, v):
     k = k.strip()
     v = v.strip() if v else v
     return k, v
-
 
 def check_owner_user(user: User, owner, allow_anonymous=False):
     """
@@ -332,23 +332,36 @@ async def product_list(response: Response,
     )
 
 @app.get("/product/{product}", response_model=List[ProductTag])
-async def product_tags_list(response: Response,
-                            product: str, owner='',
-                            user: User = Depends(get_current_user)):
+async def product_tags_list(
+    response: Response,
+    product: str,
+    owner: str = '',
+    keys: str = Query(None, description="Comma-separated list of keys to filter by. If not provided, all keys are returned."),
+    user: User = Depends(get_current_user)
+):
     """
-    Get a list of existing tags for a product
+    Get a list of existing tags for a product, optionally filtering by specific keys.
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    cur, timing = await db.db_exec("""
-        SELECT json_agg(j)::json FROM(
-            SELECT * FROM folksonomy WHERE product = %s AND owner = %s ORDER BY k
-            ) as j;
-        """,
-        (product, owner),
-    )
-    out = await cur.fetchone()
+    keys_list = [key.strip() for key in keys.split(",")] if keys else None
 
+    placeholders = ', '.join(['%s'] * len(keys_list)) if keys_list else ''
+
+    query = f"""
+        SELECT json_agg(j)::json FROM (
+            SELECT * FROM folksonomy 
+            WHERE product = %s AND owner = %s
+            {f"AND k IN ({placeholders})" if keys_list else ""}
+            ORDER BY k
+        ) as j;
+    """
+
+    params = [product, owner] + (keys_list if keys_list else [])
+
+    cur, timing = await db.db_exec(query, tuple(params))
+    out = await cur.fetchone()
+    
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
@@ -465,6 +478,19 @@ async def product_tag_add(response: Response,
     return
 
 
+def _create_version_error(expected_version: int, received_version: int):
+    return HTTPException(
+        status_code=422,
+        detail=[
+            {
+                "type": "value_error",
+                "loc": ["body", "version"],
+                "msg": f"Value error, version must be exactly {expected_version}",
+                "input": received_version,
+            }
+        ],
+    )
+
 @app.put("/product")
 async def product_tag_update(response: Response,
                              product_tag: ProductTag,
@@ -478,11 +504,29 @@ async def product_tag_update(response: Response,
     - **version**: must be equal to previous version + 1
     - **owner**: None or empty for public tags, or your own user_id
     """
-
     check_owner_user(user, product_tag.owner, allow_anonymous=False)
     # enforce user
     product_tag.editor = user.user_id
     try:
+        # Fetch the latest version directly from the database
+        cur, timing = await db.db_exec(
+            """
+            SELECT version FROM folksonomy
+            WHERE product = %s AND owner = %s AND k = %s;
+            """,
+            (product_tag.product, product_tag.owner, product_tag.k),
+        )
+        latest_version_row = await cur.fetchone()
+
+        if not latest_version_row:
+            raise HTTPException(status_code=404, detail="Key was not found")
+
+        latest_version = latest_version_row[0]  # Extract version from row
+
+        # Validate version increment
+        if product_tag.version != latest_version + 1:
+            raise _create_version_error(latest_version + 1, product_tag.version)
+
         req, params = db.update_product_tag_req(product_tag)
         cur, timing = await db.db_exec(req, params)
     except psycopg2.Error as e:
@@ -490,13 +534,10 @@ async def product_tag_update(response: Response,
             status_code=422,
             detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
         )
+    # Check if exactly one row was updated
+    # Atlease one row will be updated, as version is checked
     if cur.rowcount == 1:
         return "ok"
-    elif cur.rowcount == 0:  # non existing key
-        raise HTTPException(
-            status_code=404,
-            detail="Key was not found",
-        )
     else:
         raise HTTPException(
             status_code=503,
@@ -601,7 +642,7 @@ async def get_unique_values(response: Response,
                             k: str,
                             owner: str = '',
                             q: str = '',
-                            limit: int = '',
+                            limit: int = 50,
                             user: User = Depends(get_current_user)):
     """
     Get the unique values of a given property and the corresponding number of products
@@ -613,8 +654,7 @@ async def get_unique_values(response: Response,
     """
     check_owner_user(user, owner, allow_anonymous=True)
     k, _ = sanitize_data(k, None)
-    if not limit:
-        limit = 50
+
     if limit > 1000:
         limit = 1000
 
@@ -644,7 +684,7 @@ async def get_unique_values(response: Response,
 
     cur, timing = await db.db_exec(sql, params)
     out = await cur.fetchone()
-    data = out[0] if out and out[0] else []
+    data = out[0] if out and out[0] is not None else []
     return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
 
 
