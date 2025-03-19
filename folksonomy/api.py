@@ -607,7 +607,7 @@ async def product_tag_delete(response: Response,
 @app.get("/keys", response_model=List[KeyStats])
 async def keys_list(
     response: Response,
-    q: Optional[str] = '',  # Extract 'q' from the query parameters
+    q: Optional[str] = '',
     owner: str = '',
     user: User = Depends(get_current_user)
 ):
@@ -618,8 +618,9 @@ async def keys_list(
     """
     check_owner_user(user, owner, allow_anonymous=True)
 
-    query = """
-        SELECT json_agg(j.j)::json FROM (
+    search_filter = f"AND k ILIKE %s" if q else ""
+    query = f"""
+        SELECT json_agg(j)::json FROM (
             SELECT json_build_object(
                 'k', k,
                 'count', count(*),
@@ -627,14 +628,13 @@ async def keys_list(
             ) AS j
             FROM folksonomy
             WHERE owner = %s
+            {search_filter}
+            GROUP BY k 
+            ORDER BY count(*) DESC
+        ) AS j;
     """
-    query_params = [owner]
 
-    if q:
-        query += " AND k ILIKE %s"
-        query_params.append(f"%{q}%")
-
-    query += "GROUP BY k ORDER BY count(*) DESC) as j;"
+    query_params = [owner] + ([f"%{q}%"] if q else [])
 
     cur, timing = await db.db_exec(query, tuple(query_params))
     out = await cur.fetchone()
