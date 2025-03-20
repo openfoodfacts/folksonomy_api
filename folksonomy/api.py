@@ -623,8 +623,8 @@ async def keys_list(
         SELECT json_agg(j)::json FROM (
             SELECT json_build_object(
                 'k', k,
-                'count', count(*),
-                'values', count(distinct v)
+                'count', COUNT(*),
+                'values', COUNT(distinct v)
             ) AS j
             FROM folksonomy
             WHERE owner = %s
