@@ -12,7 +12,7 @@ load_dotenv()
 # Retrieve from environment variables with sensible defaults
 POSTGRES_USER = os.getenv('POSTGRES_USER', 'folksonomy')
 POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', 'folksonomy')
-POSTGRES_HOST = os.getenv('POSTGRES_HOST', 'db')
+POSTGRES_HOST = os.getenv('POSTGRES_HOST', 'folksonomy_db')
 POSTGRES_DATABASE = os.getenv('POSTGRES_DATABASE', 'folksonomy')
 
 # =====================================================================
@@ -40,16 +40,4 @@ FAILED_AUTH_WAIT_TIME = int(os.getenv('FAILED_AUTH_WAIT_TIME', '2'))
 # TEST SETTINGS
 # =====================================================================
 
-# Test user credentials from environment
-OFF_TEST_USER = os.getenv('OFF_TEST_USER', '')
-OFF_TEST_PASSWORD = os.getenv('OFF_TEST_PASSWORD', '')
-
-# Determine runtime environment
-IS_PRODUCTION = os.getenv('ENVIRONMENT', 'development').lower() == 'production'
-IS_TESTING = os.getenv('ENVIRONMENT', 'development').lower() == 'testing'
-
-# Additional environment-based configuration
-DEBUG = not IS_PRODUCTION
-
-# Logging configuration
-LOGGING_LEVEL = os.getenv('LOGGING_LEVEL', 'INFO')
+# TO BE IMPLEMENTED IN FUTURE
