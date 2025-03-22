@@ -18,11 +18,11 @@ services:
     env_file:
       - .env
     depends_on:
-      db:
+      folksonomy_db:
         condition: service_healthy  # Wait for DB to be fully ready
     restart: ${RESTART_POLICY:-no}
 
-  db:
+  folksonomy_db:
     image: postgres:13
     volumes:
       - postgres_data:/var/lib/postgresql/data
