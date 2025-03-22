@@ -1,6 +1,6 @@
 # Docker Compose configuration for Folksonomy API
 services:
-  api:
+  folksonomy_api :
     build:
       context: .
       dockerfile: Dockerfile
