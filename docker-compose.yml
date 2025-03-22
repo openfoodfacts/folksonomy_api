@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "${API_EXPOSE:-8000}:8000"
+      - "${API_EXPOSE:-127.0.0.1:8000}:8000"
     volumes:
       # Mount .env file for environment variables
       - ./.env:/app/.env
