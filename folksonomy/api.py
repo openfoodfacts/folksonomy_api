@@ -350,7 +350,7 @@ async def product_tags_list(
 
     query = f"""
         SELECT json_agg(j)::json FROM (
-            SELECT * FROM folksonomy 
+            SELECT * FROM folksonomy
             WHERE product = %s AND owner = %s
             {f"AND k IN ({placeholders})" if keys_list else ""}
             ORDER BY k
@@ -361,13 +361,132 @@ async def product_tags_list(
 
     cur, timing = await db.db_exec(query, tuple(params))
     out = await cur.fetchone()
-    
+
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
         headers={"x-pg-timing": timing}
     )
-    
+
+
+@app.get("/product/{product}/knowledge-panels", response_model=ProductKnowledgePanels)
+async def product_barcode_knowledge_panels(response: Response,
+                                           product: str,
+                                           owner='',
+                                           user: User = Depends(get_current_user)):
+    """
+    Return product information in a Knowledge Panel format.
+    """
+    print("TESTTT")
+    check_owner_user(user, owner, allow_anonymous=True)
+
+    query = f"""
+        SELECT product, k, v, owner, version, editor, last_edit, comment
+        FROM folksonomy
+        WHERE product = %s
+        LIMIT 1;
+    """
+
+    cur, timing = await db.db_exec(query, tuple([product,]))
+    res = await cur.fetchone()
+
+    if not res:
+        raise HTTPException(
+                status_code=404,
+                detail="No information found",
+            )
+
+    product_value, k, v, owner_value, version, editor, last_edit, comment = res
+
+    elements = []
+
+    if product_value:
+        elements.append(Element(
+            type="text",
+            text_element=TextElement(
+                type="summary",
+                html=f"<p>Barcode: {product_value}</p>"
+            )
+        ))
+
+    if k:
+        elements.append(Element(
+            type="text",
+            text_element=TextElement(
+                type="summary",
+                html=f"<p>Key: {k}</p>"
+            )
+        ))
+
+    if v:
+        elements.append(Element(
+            type="text",
+            text_element=TextElement(
+                type="summary",
+                html=f"<p>Value: {v}</p>"
+            )
+        ))
+
+    if owner_value:
+        elements.append(Element(
+            type="text",
+            text_element=TextElement(
+                type="summary",
+                html=f"<p>Owner: {owner_value}</p>"
+            )
+        ))
+
+    if version:
+        elements.append(Element(
+            type="text",
+            text_element=TextElement(
+                type="summary",
+                html=f"<p>Version: {version}</p>"
+            )
+        ))
+
+    if editor:
+        elements.append(Element(
+            type="text",
+            text_element=TextElement(
+                type="summary",
+                html=f"<p>Editor: {editor}</p>"
+            )
+        ))
+
+    if last_edit:
+        elements.append(Element(
+            type="text",
+            text_element=TextElement(
+                type="summary",
+                html=f"<p>Last Edit Date: {last_edit}</p>"
+            )
+        ))
+
+    if comment:
+        elements.append(Element(
+            type="text",
+            text_element=TextElement(
+                type="summary",
+                html=f"<p>Comment: {comment}</p>"
+            )
+        ))
+
+    panel = Panel(
+        title_element=TitleElement(
+            title="Folksonomy Data",
+            name="folksonomy"
+        ),
+        elements=elements
+    )
+
+    response_obj = ProductKnowledgePanels(
+        knowledge_panels={"FolksonomyData": panel}
+    )
+
+    response.headers["x-pg-timing"] = timing
+    return response_obj
+
 @app.get("/product/{product}/{k}", response_model=ProductTag)
 async def product_tag(response: Response,
                       product: str, k: str, owner='',
@@ -404,7 +523,7 @@ async def product_tag(response: Response,
             (product, owner, key),
         )
     out = await cur.fetchone()
-    
+
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
@@ -440,7 +559,7 @@ async def product_tag_list_versions(response: Response,
         content=out[0] if out and out[0] is not None else [],
         headers={"x-pg-timing": timing}
     )
-    
+
 
 
 @app.post("/product")
@@ -555,7 +674,7 @@ async def product_tag_delete(response: Response,
     check_owner_user(user, owner, allow_anonymous=False)
     k, v = sanitize_data(k, None)
     try:
-        # Setting version to 0, this is seen as a reset, 
+        # Setting version to 0, this is seen as a reset,
         # while maintaining history in folksonomy_versions
         cur, timing = await db.db_exec(
             """
@@ -629,7 +748,7 @@ async def keys_list(
             FROM folksonomy
             WHERE owner = %s
             {search_filter}
-            GROUP BY k 
+            GROUP BY k
             ORDER BY count(*) DESC
         ) AS j;
     """
