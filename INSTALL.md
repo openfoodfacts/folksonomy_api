@@ -15,6 +15,10 @@ apt install git sudo postgresql python3-pip curl -y
 # Install Poetry
 curl -sSL https://install.python-poetry.org | python3 -
 
+# Add Poetry to the PATH (Optional)
+echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
 # Create a user for the application (optional but recommended)
 adduser folksonomy
 usermod -aG sudo folksonomy
