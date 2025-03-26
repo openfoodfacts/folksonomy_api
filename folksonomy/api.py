@@ -372,118 +372,128 @@ async def product_tags_list(
 @app.get("/product/{product}/knowledge-panels", response_model=ProductKnowledgePanels)
 async def product_barcode_knowledge_panels(response: Response,
                                            product: str,
+                                           k: Optional[str] = Query(None, description="Optional key to filter the results"),
                                            owner='',
                                            user: User = Depends(get_current_user)):
     """
     Return product information in a Knowledge Panel format.
+    If 'k' is provided, only that key is fetched.
+    If none is provided, all the keys are returned.
     """
-    print("TESTTT")
     check_owner_user(user, owner, allow_anonymous=True)
 
     query = f"""
         SELECT product, k, v, owner, version, editor, last_edit, comment
         FROM folksonomy
         WHERE product = %s
-        LIMIT 1;
     """
+    params = [product]
+    if k:
+        query+= " AND k = %s"
+        params.append(k)
+    query += " ORDER BY k;"
 
-    cur, timing = await db.db_exec(query, tuple([product,]))
-    res = await cur.fetchone()
+    cur, timing = await db.db_exec(query, tuple(params))
+    rows = await cur.fetchall()
 
-    if not res:
+    if not rows:
         raise HTTPException(
                 status_code=404,
                 detail="No information found",
             )
 
-    product_value, k, v, owner_value, version, editor, last_edit, comment = res
+    panels_by_key = {}
+    for row in rows:
 
-    elements = []
+        product_value, k, v, owner_value, version, editor, last_edit, comment = row
 
-    if product_value:
-        elements.append(Element(
-            type="text",
-            text_element=TextElement(
-                type="summary",
-                html=f"<p>Barcode: {product_value}</p>"
-            )
-        ))
+        if k not in panels_by_key:
+            panels_by_key[k] = []
 
-    if k:
-        elements.append(Element(
-            type="text",
-            text_element=TextElement(
-                type="summary",
-                html=f"<p>Key: {k}</p>"
-            )
-        ))
+        if product_value:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Barcode: {product_value}</p>"
+                )
+            ))
 
-    if v:
-        elements.append(Element(
-            type="text",
-            text_element=TextElement(
-                type="summary",
-                html=f"<p>Value: {v}</p>"
-            )
-        ))
+        if k:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Key: {k}</p>"
+                )
+            ))
 
-    if owner_value:
-        elements.append(Element(
-            type="text",
-            text_element=TextElement(
-                type="summary",
-                html=f"<p>Owner: {owner_value}</p>"
-            )
-        ))
+        if v:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Value: {v}</p>"
+                )
+            ))
 
-    if version:
-        elements.append(Element(
-            type="text",
-            text_element=TextElement(
-                type="summary",
-                html=f"<p>Version: {version}</p>"
-            )
-        ))
+        if owner_value:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Owner: {owner_value}</p>"
+                )
+            ))
 
-    if editor:
-        elements.append(Element(
-            type="text",
-            text_element=TextElement(
-                type="summary",
-                html=f"<p>Editor: {editor}</p>"
-            )
-        ))
+        if version:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Version: {version}</p>"
+                )
+            ))
 
-    if last_edit:
-        elements.append(Element(
-            type="text",
-            text_element=TextElement(
-                type="summary",
-                html=f"<p>Last Edit Date: {last_edit}</p>"
-            )
-        ))
+        if editor:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Editor: {editor}</p>"
+                )
+            ))
 
-    if comment:
-        elements.append(Element(
-            type="text",
-            text_element=TextElement(
-                type="summary",
-                html=f"<p>Comment: {comment}</p>"
-            )
-        ))
+        if last_edit:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Last Edit Date: {last_edit}</p>"
+                )
+            ))
 
-    panel = Panel(
-        title_element=TitleElement(
-            title="Folksonomy Data",
-            name="folksonomy"
-        ),
-        elements=elements
-    )
+        if comment:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Comment: {comment}</p>"
+                )
+            ))
 
-    response_obj = ProductKnowledgePanels(
-        knowledge_panels={"FolksonomyData": panel}
-    )
+    panels = {}
+    for key, elements in panels_by_key.items():
+        panel = Panel(
+            title_element=TitleElement(
+                title=f"Folksonomy Data for '{key}'",
+                name=key
+            ),
+            elements=elements
+        )
+        panels[key] = panel
 
+    response_obj = ProductKnowledgePanels(knowledge_panels=panels)
     response.headers["x-pg-timing"] = timing
     return response_obj
 
