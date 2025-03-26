@@ -399,7 +399,7 @@ async def product_barcode_knowledge_panels(response: Response,
     if not rows:
         raise HTTPException(
                 status_code=404,
-                detail="No information found",
+                detail="Could not find product or key",
             )
 
     panels_by_key = {}
