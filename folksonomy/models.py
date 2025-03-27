@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import FastAPI, status, Response, Depends, Header
 from pydantic import BaseModel, ValidationError, field_validator
@@ -67,20 +67,20 @@ class ProductList(BaseModel):
     product:    str
     k:          str
     v:          str
-    
+
 
 class HelloResponse(BaseModel):
     message: str
 
-    
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
-    
+
 
 class KeyStats(BaseModel):
-    k: str 
-    count: int  
+    k: str
+    count: int
     values: int
 
 
@@ -91,3 +91,22 @@ class ValueCount(BaseModel):
 
 class PingResponse(BaseModel):
     ping: str
+
+class TitleElement(BaseModel):
+    name: str
+    title: str
+
+class TextElement(BaseModel):
+    type: str
+    html: str
+
+class Element(BaseModel):
+    type: str
+    text_element: TextElement
+
+class Panel(BaseModel):
+    title_element: TitleElement
+    elements: List[Element]
+
+class ProductKnowledgePanels(BaseModel):
+    knowledge_panels: Dict[str, Panel]
