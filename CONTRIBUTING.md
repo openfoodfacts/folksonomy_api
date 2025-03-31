@@ -43,7 +43,7 @@ While not mandatory, using pre-commit hooks can save you time by automatically f
 
 1. Install pre-commit:
    ```sh
-   pip install pre-commit
+   poetry add --dev pre-commit
    ```
 
 2. Install the Git hooks:
@@ -59,7 +59,7 @@ If you prefer not to use pre-commit, you can manually run the same checks:
 
 1. Install Ruff:
    ```sh
-   pip install ruff
+   poetry add --dev ruff
    ```
 
 2. Run linting and formatting before submitting your PR:
