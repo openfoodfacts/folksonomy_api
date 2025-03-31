@@ -49,6 +49,12 @@ FastAPI is based on [OpenAPI](https://github.com/OAI/OpenAPI-Specification) (pre
 6. Change parameters accordingly in *local_settings.py*
 7. That's all!
 
+## Code Style
+
+This project uses [Ruff](https://github.com/astral-sh/ruff) for linting and code formatting.
+We recommend using pre-commit hooks for automatic linting, but this is optional.
+See our [CONTRIBUTING.md](CONTRIBUTING.md) guide for more details on code style and linting.
+
 ## Deployment
 
 [Deployment at Open Food Facts - Folksonomy Section](https://openfoodfacts.github.io/openfoodfacts-infrastructure/folksonomy/)
