@@ -410,6 +410,22 @@ def test_keys_list(with_sample):
             {'k': 'size', 'count': 2, 'values': 2}
         ]
 
+        response = client.get("/keys?q=col")
+        assert response.status_code == 200
+        assert response.json() == [
+            {'k': 'color', 'count': 3, 'values': 2}
+        ]
+
+        response = client.get("/keys?q=siz")
+        assert response.status_code == 200
+        assert response.json() == [
+            {'k': 'size', 'count': 2, 'values': 2}
+        ]
+
+        response = client.get("/keys?q=xyz")
+        assert response.status_code == 200
+        assert response.json() == []
+
 
 def test_get_unique_values(with_sample):
     with TestClient(app) as client:

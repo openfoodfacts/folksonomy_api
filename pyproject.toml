@@ -1,0 +1,37 @@
+[project]
+name = "folksonomy_api"
+version = "1.1.0"
+description = "A Folksonomy Engine for Open Food Facts"
+authors = [
+    {name = "Open Food Facts", email = "contact@openfoodfacts.org"}
+]
+license = {text = "AGPL-3.0"}
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "psycopg2-binary (>=2.9.10,<3.0.0)",
+    "aiopg (>=1.4.0,<2.0.0)",
+    "requests (>=2.32.3,<3.0.0)",
+    "aiohttp (>=3.11.13,<4.0.0)",
+    "fastapi (>=0.115.11,<0.116.0)",
+    "uvicorn (>=0.34.0,<0.35.0)",
+    "python-multipart (>=0.0.20,<0.0.21)",
+    "yoyo-migrations (>=9.0.0,<10.0.0)"
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+pytest-asyncio = "^0.25.3"
+pytest-cov = "^6.0.0"
+httpx = "^0.28.1"
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
