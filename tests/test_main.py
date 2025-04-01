@@ -49,10 +49,10 @@ def client():
     with TestClient(app) as c:
         yield c
 
+
 @pytest.fixture(autouse=True)
-def clean_db():
-    # clean database before running a test
-    asyncio.run(_clean_db())
+def clean_db(event_loop):
+    event_loop.run_until_complete(_clean_db())
 
 
 async def _clean_db():
@@ -60,9 +60,8 @@ async def _clean_db():
         await clean_data()
 
 @pytest.fixture
-def with_sample(auth_tokens):
-    asyncio.run(_with_sample())
-
+def with_sample(event_loop):
+    event_loop.run_until_complete(_with_sample())
 
 async def _with_sample():
     async with db.transaction():
@@ -104,8 +103,8 @@ async def create_data(samples):
 
 
 @pytest.fixture
-def auth_tokens():
-    asyncio.run(_add_auth_tokens())
+def auth_tokens(event_loop):
+    event_loop.run_until_complete(_add_auth_tokens())
 
 
 async def _add_auth_tokens():
@@ -210,8 +209,8 @@ def test_ping(client):
     response = client.get("/ping")
     assert response.status_code == 200
 
-
-def test_products_stats(with_sample, client):
+@pytest.mark.asyncio
+async def test_products_stats(with_sample, client):
     response = client.get("/products/stats")
     assert response.status_code == 200
     data = response.json()
@@ -229,7 +228,8 @@ def get_product(client):
     return response.json()
 
 
-def test_products_list(with_sample, client):
+@pytest.mark.asyncio
+async def test_products_list(with_sample, client):
     response = client.get("/products")
     assert response.status_code == 422
     assert "missing value for k" in response.json()["detail"]["msg"]
@@ -264,7 +264,8 @@ def test_products_list(with_sample, client):
     assert response.json() == []
 
 
-def test_products_list_private(with_sample, client):
+@pytest.mark.asyncio
+async def test_products_list_private(with_sample, client, auth_tokens):
     response = client.get("/products?owner=foo&k=private")
     assert response.status_code == 401
     # with token
@@ -277,7 +278,8 @@ def test_products_list_private(with_sample, client):
     assert response.json() == []
 
 
-def test_product(with_sample, client):
+@pytest.mark.asyncio
+async def test_product(with_sample, client):
     response = client.get("/product/" + BARCODE_1)
     assert response.status_code == 200
     data = response.json()
@@ -291,13 +293,15 @@ def test_product(with_sample, client):
     ]
 
 
-def test_product_missing(with_sample, client):
+@pytest.mark.asyncio
+async def test_product_missing(with_sample, client):
     response = client.get("/product/0000000000000")
     assert response.status_code == 200
     assert response.json() == []
 
 
-def test_product_key(with_sample, client):
+@pytest.mark.asyncio
+async def test_product_key(with_sample, client):
     for k in ["color*", "color"]:
         response = client.get(f"/product/{BARCODE_1}/{k}*")
         assert response.status_code == 200
@@ -308,7 +312,8 @@ def test_product_key(with_sample, client):
             'product': '3701027900001', 'k': 'color', 'v': 'red', 'owner': '', 'version': 1, 'editor': 'foo', 'comment': ''
         }
 
-def test_key_stripped_on_get(with_sample, client):
+@pytest.mark.asyncio
+async def test_key_stripped_on_get(with_sample, client):
     response = client.get(f"/product/{BARCODE_1}/ color  ")
     assert response.status_code == 200
     data = response.json()
@@ -317,13 +322,15 @@ def test_key_stripped_on_get(with_sample, client):
         'product': '3701027900001', 'k': 'color', 'v': 'red', 'owner': '', 'version': 1, 'editor': 'foo', 'comment': ''
     }
 
-def test_product_key_missing(with_sample, client):
+@pytest.mark.asyncio
+async def test_product_key_missing(with_sample, client):
     response = client.get(f"/product/{BARCODE_1}/not-existing")
     assert response.status_code == 200
     assert response.json() == []
 
 
-def test_product_key_versions(with_sample, client):
+@pytest.mark.asyncio
+async def test_product_key_versions(with_sample, client):
     # a product with 3 versions
     response = client.get(f"/product/{BARCODE_3}/color/versions")
     assert response.status_code == 200
@@ -338,13 +345,15 @@ def test_product_key_versions(with_sample, client):
     ]
 
 
-def test_product_key_versions_missing(with_sample, client):
+@pytest.mark.asyncio
+async def test_product_key_versions_missing(with_sample, client):
     response = client.get(f"/product/{BARCODE_3}/not-existing/versions")
     assert response.status_code == 200
     assert response.json() == []
 
 
-def test_products_stats_key(with_sample, client):
+@pytest.mark.asyncio
+async def test_products_stats_key(with_sample, client):
     response = client.get(f"/products/stats?k=color")
     assert response.status_code == 200
     data = sorted(response.json(), key=lambda d: d["product"])
@@ -356,7 +365,8 @@ def test_products_stats_key(with_sample, client):
     ]
 
 
-def test_products_stats_key_value(with_sample, client):
+@pytest.mark.asyncio
+async def test_products_stats_key_value(with_sample, client):
     response = client.get(f"/products/stats?k=color&v=red")
     assert response.status_code == 200
     data = sorted(response.json(), key=lambda d: d["product"])
@@ -367,7 +377,8 @@ def test_products_stats_key_value(with_sample, client):
     ]
 
 
-def test_products_list_key(with_sample, client):
+@pytest.mark.asyncio
+async def test_products_list_key(with_sample, client):
     response = client.get("/products?k=color")
     assert response.status_code == 200
     data = sorted(response.json(), key=lambda d: d["product"])
@@ -378,7 +389,8 @@ def test_products_list_key(with_sample, client):
     ]
 
 
-def test_products_list_key_value(with_sample, client):
+@pytest.mark.asyncio
+async def test_products_list_key_value(with_sample, client):
     response = client.get("/products?k=color&v=red")
     assert response.status_code == 200
     data = sorted(response.json(), key=lambda d: d["product"])
@@ -388,7 +400,8 @@ def test_products_list_key_value(with_sample, client):
     ]
 
 
-def test_keys_list(with_sample, client):
+@pytest.mark.asyncio
+async def test_keys_list(with_sample, client):
     response = client.get("/keys")
     assert response.status_code == 200
     data = sorted(response.json(), key=lambda d: d["k"])
@@ -414,7 +427,8 @@ def test_keys_list(with_sample, client):
     assert response.json() == []
 
 
-def test_get_unique_values(with_sample, client):
+@pytest.mark.asyncio
+async def test_get_unique_values(with_sample, client):
     response = client.get("/values/color")
     assert response.status_code == 200
     assert response.json() == [
@@ -423,7 +437,8 @@ def test_get_unique_values(with_sample, client):
     ]
 
 
-def test_get_unique_values_with_limit(with_sample, client):
+@pytest.mark.asyncio
+async def test_get_unique_values_with_limit(with_sample, client):
     response = client.get("/values/color?limit=1")
     assert response.status_code == 200
     assert response.json() == [
@@ -431,7 +446,8 @@ def test_get_unique_values_with_limit(with_sample, client):
     ]
 
 
-def test_get_unique_values_with_filter(with_sample, client):
+@pytest.mark.asyncio
+async def test_get_unique_values_with_filter(with_sample, client):
     response = client.get("/values/color?q=ed")
     assert response.status_code == 200
     assert response.json() == [
@@ -439,7 +455,8 @@ def test_get_unique_values_with_filter(with_sample, client):
     ]
 
 
-def test_get_unique_values_non_existing_key(with_sample, client):
+@pytest.mark.asyncio
+async def test_get_unique_values_non_existing_key(with_sample, client):
     response = client.get("/values/non_existing_key")
     assert response.status_code == 200
     assert response.json() == []
@@ -468,7 +485,8 @@ def test_auth_ok(fake_authentication, client):
     assert access_token.startswith("off__U")
 
 
-def test_post_invalid(with_sample, client):
+@pytest.mark.asyncio
+async def test_post_invalid(with_sample, client, auth_tokens):
     headers = {"Authorization":  "Bearer foo__Utest-token"}
     # empty barcode
     response = client.post("/product", headers=headers, json=
@@ -516,7 +534,7 @@ def test_post_invalid(with_sample, client):
     assert response.status_code == 422, f'existing key value should return 422, got {response.status_code}'
 
 @pytest.mark.asyncio
-async def test_post(with_sample, client):
+async def test_post(with_sample, client, auth_tokens):
     headers = {"Authorization":  "Bearer foo__Utest-token"}
 
     response = client.post("/product", headers=headers, json=
@@ -555,7 +573,8 @@ async def test_product_value_stripped_on_post(auth_tokens, client):
     await check_tag(BARCODE_1, "test_new", v="a test", version=1)
 
 
-def test_put_invalid(with_sample, client):
+@pytest.mark.asyncio
+async def test_put_invalid(with_sample, client, auth_tokens):
     headers = {"Authorization":  "Bearer foo__Utest-token"}
     response = client.put("/product", headers=headers, json={
                             "product": BARCODE_1, "k": "test_new", "v": "test", "version": 1})
@@ -567,7 +586,7 @@ def test_put_invalid(with_sample, client):
 
 
 @pytest.mark.asyncio
-async def test_put(with_sample, client):
+async def test_put(with_sample, client, auth_tokens):
         headers = {"Authorization":  "Bearer foo__Utest-token"}
         response = client.put("/product", headers=headers, json={
                               "product": BARCODE_1, "k": "color", "v": "purple", "version": 2})
@@ -580,7 +599,8 @@ async def test_put(with_sample, client):
         await check_tag(BARCODE_1, "color", v="brown", version=3)
 
 
-def test_delete_invalid(with_sample, client):
+@pytest.mark.asyncio
+async def test_delete_invalid(with_sample, client, auth_tokens):
     headers = {"Authorization":  "Bearer foo__Utest-token"}
     response = client.delete(f"/product/{BARCODE_1}/not-existing")
     assert response.status_code == 422, f'invalid auth should return 422, got {response.status_code} {response.text}'
@@ -598,7 +618,7 @@ def test_delete_invalid(with_sample, client):
 
 
 @pytest.mark.asyncio
-async def test_delete(with_sample, client):
+async def test_delete(with_sample, client, auth_tokens):
     headers = {"Authorization":  "Bearer foo__Utest-token"}
     response = client.delete(f"/product/{BARCODE_1}/color?version=1", headers=headers,)
     assert response.status_code == 200, f'valid version should return 200, got {response.status_code} {response.text}'
