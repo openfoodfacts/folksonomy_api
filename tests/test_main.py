@@ -44,6 +44,10 @@ SAMPLES = [
 # useful to reference samples in tests
 sample_by_keys = {(s["product"], s["k"], s["version"]): s for s in SAMPLES}
 
+@pytest.fixture(scope="session")
+def client():
+    with TestClient(app) as c:
+        yield c
 
 @pytest.fixture(autouse=True)
 def clean_db():
@@ -196,23 +200,21 @@ async def test_versions_history(with_sample):
     ]
 
 
-def test_hello():
+def test_hello(client):
     response = client.get("/")
     assert response.status_code == 200
     assert response.json() == {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
 
 
-def test_ping():
-    with TestClient(app) as client:
-        response = client.get("/ping")
-        assert response.status_code == 200
+def test_ping(client):
+    response = client.get("/ping")
+    assert response.status_code == 200
 
 
-def test_products_stats(with_sample):
-    with TestClient(app) as client:
-        response = client.get("/products/stats")
-        assert response.status_code == 200
-        data = response.json()
+def test_products_stats(with_sample, client):
+    response = client.get("/products/stats")
+    assert response.status_code == 200
+    data = response.json()
     # Only public tags are shown
     assert sorted((d["product"], d["keys"], d["editors"]) for d in data) == [
         (BARCODE_1, 2, 1), # bar user tag on product 1 is private, two tags are private
@@ -221,68 +223,64 @@ def test_products_stats(with_sample):
     ]
 
 
-def get_product():
-    with TestClient(app) as client:
-        response = client.get("/product/" + BARCODE_1)
-        assert response.status_code == 200
-        return response.json()
+def get_product(client):
+    response = client.get("/product/" + BARCODE_1)
+    assert response.status_code == 200
+    return response.json()
 
 
-def test_products_list(with_sample):
-    with TestClient(app) as client:
-        response = client.get("/products")
-        assert response.status_code == 422
-        assert "missing value for k" in response.json()["detail"]["msg"]
-        response = client.get("/products?v=red")
-        assert response.status_code == 422
-        assert "missing value for k" in response.json()["detail"]["msg"]
-        response = client.get("/products?k=color")
-        assert response.status_code == 200
-        data = response.json()
-        assert sorted(data, key=lambda d: d["product"]) == [
-            {'product': BARCODE_1, 'k': 'color', 'v': 'red'},
-            {'product': BARCODE_2, 'k': 'color', 'v': 'green'},
-            {'product': BARCODE_3, 'k': 'color', 'v': 'red'},
-        ]
-        response = client.get("/products?k=color&v=red")
-        assert response.status_code == 200
-        data = response.json()
-        assert data == [
-            {'product': BARCODE_1, 'k': 'color', 'v': 'red'},
-            {'product': BARCODE_3, 'k': 'color', 'v': 'red'},
-        ]
-        # private one remains private
-        response = client.get("/products?k=private")
-        assert response.status_code == 200
-        assert response.json() == []
-        response = client.get("/products?k=private&v=private")
-        assert response.status_code == 200
-        assert response.json() == []
-        # non existing
-        response = client.get("/products?k=doesnotexists")
-        assert response.status_code == 200
-        assert response.json() == []
+def test_products_list(with_sample, client):
+    response = client.get("/products")
+    assert response.status_code == 422
+    assert "missing value for k" in response.json()["detail"]["msg"]
+    response = client.get("/products?v=red")
+    assert response.status_code == 422
+    assert "missing value for k" in response.json()["detail"]["msg"]
+    response = client.get("/products?k=color")
+    assert response.status_code == 200
+    data = response.json()
+    assert sorted(data, key=lambda d: d["product"]) == [
+        {'product': BARCODE_1, 'k': 'color', 'v': 'red'},
+        {'product': BARCODE_2, 'k': 'color', 'v': 'green'},
+        {'product': BARCODE_3, 'k': 'color', 'v': 'red'},
+    ]
+    response = client.get("/products?k=color&v=red")
+    assert response.status_code == 200
+    data = response.json()
+    assert data == [
+        {'product': BARCODE_1, 'k': 'color', 'v': 'red'},
+        {'product': BARCODE_3, 'k': 'color', 'v': 'red'},
+    ]
+    # private one remains private
+    response = client.get("/products?k=private")
+    assert response.status_code == 200
+    assert response.json() == []
+    response = client.get("/products?k=private&v=private")
+    assert response.status_code == 200
+    assert response.json() == []
+    # non existing
+    response = client.get("/products?k=doesnotexists")
+    assert response.status_code == 200
+    assert response.json() == []
 
 
-def test_products_list_private(with_sample):
-    with TestClient(app) as client:
-        response = client.get("/products?owner=foo&k=private")
-        assert response.status_code == 401
-        # with token
-        headers = {"Authorization":  "Bearer foo__Utest-token"}
-        response = client.get("/products?owner=foo&k=private", headers=headers)
-        assert response.status_code == 200
-        assert response.json() == [{'product': '3701027900001', 'k': 'private', 'v': 'private'}]
-        response = client.get("/products?owner=foo&k=does-not-exists", headers=headers)
-        assert response.status_code == 200
-        assert response.json() == []
+def test_products_list_private(with_sample, client):
+    response = client.get("/products?owner=foo&k=private")
+    assert response.status_code == 401
+    # with token
+    headers = {"Authorization":  "Bearer foo__Utest-token"}
+    response = client.get("/products?owner=foo&k=private", headers=headers)
+    assert response.status_code == 200
+    assert response.json() == [{'product': '3701027900001', 'k': 'private', 'v': 'private'}]
+    response = client.get("/products?owner=foo&k=does-not-exists", headers=headers)
+    assert response.status_code == 200
+    assert response.json() == []
 
 
-def test_product(with_sample):
-    with TestClient(app) as client:
-        response = client.get("/product/" + BARCODE_1)
-        assert response.status_code == 200
-        data = response.json()
+def test_product(with_sample, client):
+    response = client.get("/product/" + BARCODE_1)
+    assert response.status_code == 200
+    data = response.json()
     # only public data is visible
     assert len(data) == 2
     for d in data:
@@ -293,306 +291,283 @@ def test_product(with_sample):
     ]
 
 
-def test_product_missing(with_sample):
-    with TestClient(app) as client:
-        response = client.get("/product/0000000000000")
-        assert response.status_code == 200
-        assert response.json() == []
+def test_product_missing(with_sample, client):
+    response = client.get("/product/0000000000000")
+    assert response.status_code == 200
+    assert response.json() == []
 
 
-def test_product_key(with_sample):
-    with TestClient(app) as client:
-        for k in ["color*", "color"]:
-            response = client.get(f"/product/{BARCODE_1}/{k}*")
-            assert response.status_code == 200
-            data = response.json()
-            assert len(data) == 1
-            remove_last_edit(data)
-            assert data[0] == {
-                'product': '3701027900001', 'k': 'color', 'v': 'red', 'owner': '', 'version': 1, 'editor': 'foo', 'comment': ''
-            }
-
-def test_key_stripped_on_get(with_sample):
-    with TestClient(app) as client:
-        response = client.get(f"/product/{BARCODE_1}/ color  ")
+def test_product_key(with_sample, client):
+    for k in ["color*", "color"]:
+        response = client.get(f"/product/{BARCODE_1}/{k}*")
         assert response.status_code == 200
         data = response.json()
-        data.pop("last_edit")
-        assert data == {
+        assert len(data) == 1
+        remove_last_edit(data)
+        assert data[0] == {
             'product': '3701027900001', 'k': 'color', 'v': 'red', 'owner': '', 'version': 1, 'editor': 'foo', 'comment': ''
         }
 
-def test_product_key_missing(with_sample):
-    with TestClient(app) as client:
-        response = client.get(f"/product/{BARCODE_1}/not-existing")
-        assert response.status_code == 200
-        assert response.json() == []
+def test_key_stripped_on_get(with_sample, client):
+    response = client.get(f"/product/{BARCODE_1}/ color  ")
+    assert response.status_code == 200
+    data = response.json()
+    data.pop("last_edit")
+    assert data == {
+        'product': '3701027900001', 'k': 'color', 'v': 'red', 'owner': '', 'version': 1, 'editor': 'foo', 'comment': ''
+    }
+
+def test_product_key_missing(with_sample, client):
+    response = client.get(f"/product/{BARCODE_1}/not-existing")
+    assert response.status_code == 200
+    assert response.json() == []
 
 
-def test_product_key_versions(with_sample):
-    with TestClient(app) as client:
-        # a product with 3 versions
-        response = client.get(f"/product/{BARCODE_3}/color/versions")
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 3
-        data = sorted(data, key=lambda d: d["version"])
-        remove_last_edit(data)
-        assert data == [
-            {'product': BARCODE_3, 'k': 'color', 'v': 'red - 1', 'owner': '', 'version': 1, 'editor': 'foo', 'comment': ''},
-            {'product': BARCODE_3, 'k': 'color', 'v': 'red - 2', 'owner': '', 'version': 2, 'editor': 'foo',  'comment': ''},
-            {'product': BARCODE_3, 'k': 'color', 'v': 'red', 'owner': '', 'version': 3, 'editor': 'foo', 'comment': ''},
-        ]
+def test_product_key_versions(with_sample, client):
+    # a product with 3 versions
+    response = client.get(f"/product/{BARCODE_3}/color/versions")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 3
+    data = sorted(data, key=lambda d: d["version"])
+    remove_last_edit(data)
+    assert data == [
+        {'product': BARCODE_3, 'k': 'color', 'v': 'red - 1', 'owner': '', 'version': 1, 'editor': 'foo', 'comment': ''},
+        {'product': BARCODE_3, 'k': 'color', 'v': 'red - 2', 'owner': '', 'version': 2, 'editor': 'foo',  'comment': ''},
+        {'product': BARCODE_3, 'k': 'color', 'v': 'red', 'owner': '', 'version': 3, 'editor': 'foo', 'comment': ''},
+    ]
 
 
-def test_product_key_versions_missing(with_sample):
-    with TestClient(app) as client:
-        response = client.get(f"/product/{BARCODE_3}/not-existing/versions")
-        assert response.status_code == 200
-        assert response.json() == []
+def test_product_key_versions_missing(with_sample, client):
+    response = client.get(f"/product/{BARCODE_3}/not-existing/versions")
+    assert response.status_code == 200
+    assert response.json() == []
 
 
-def test_products_stats_key(with_sample):
-    with TestClient(app) as client:
-        response = client.get(f"/products/stats?k=color")
-        assert response.status_code == 200
-        data = sorted(response.json(), key=lambda d: d["product"])
-        remove_last_edit(data)
-        assert data == [
-            {'product': BARCODE_1, 'keys': 1, 'editors': 1},
-            {'product': BARCODE_2, 'keys': 1, 'editors': 1},
-            {'product': BARCODE_3, 'keys': 1, 'editors': 1}
-        ]
+def test_products_stats_key(with_sample, client):
+    response = client.get(f"/products/stats?k=color")
+    assert response.status_code == 200
+    data = sorted(response.json(), key=lambda d: d["product"])
+    remove_last_edit(data)
+    assert data == [
+        {'product': BARCODE_1, 'keys': 1, 'editors': 1},
+        {'product': BARCODE_2, 'keys': 1, 'editors': 1},
+        {'product': BARCODE_3, 'keys': 1, 'editors': 1}
+    ]
 
 
-def test_products_stats_key_value(with_sample):
-    with TestClient(app) as client:
-        response = client.get(f"/products/stats?k=color&v=red")
-        assert response.status_code == 200
-        data = sorted(response.json(), key=lambda d: d["product"])
-        remove_last_edit(data)
-        assert data == [
-            {'product': BARCODE_1, 'keys': 1, 'editors': 1},
-            {'product': BARCODE_3, 'keys': 1, 'editors': 1},
-        ]
+def test_products_stats_key_value(with_sample, client):
+    response = client.get(f"/products/stats?k=color&v=red")
+    assert response.status_code == 200
+    data = sorted(response.json(), key=lambda d: d["product"])
+    remove_last_edit(data)
+    assert data == [
+        {'product': BARCODE_1, 'keys': 1, 'editors': 1},
+        {'product': BARCODE_3, 'keys': 1, 'editors': 1},
+    ]
 
 
-def test_products_list_key(with_sample):
-    with TestClient(app) as client:
-        response = client.get("/products?k=color")
-        assert response.status_code == 200
-        data = sorted(response.json(), key=lambda d: d["product"])
-        assert data == [
-            {'product': BARCODE_1, 'k': 'color', 'v': 'red'},
-            {'product': BARCODE_2, 'k': 'color', 'v': 'green'},
-            {'product': BARCODE_3, 'k': 'color', 'v': 'red'}
-        ]
+def test_products_list_key(with_sample, client):
+    response = client.get("/products?k=color")
+    assert response.status_code == 200
+    data = sorted(response.json(), key=lambda d: d["product"])
+    assert data == [
+        {'product': BARCODE_1, 'k': 'color', 'v': 'red'},
+        {'product': BARCODE_2, 'k': 'color', 'v': 'green'},
+        {'product': BARCODE_3, 'k': 'color', 'v': 'red'}
+    ]
 
 
-def test_products_list_key_value(with_sample):
-    with TestClient(app) as client:
-        response = client.get("/products?k=color&v=red")
-        assert response.status_code == 200
-        data = sorted(response.json(), key=lambda d: d["product"])
-        assert data == [
-            {'product': BARCODE_1, 'k': 'color', 'v': 'red'},
-            {'product': BARCODE_3, 'k': 'color', 'v': 'red'}
-        ]
+def test_products_list_key_value(with_sample, client):
+    response = client.get("/products?k=color&v=red")
+    assert response.status_code == 200
+    data = sorted(response.json(), key=lambda d: d["product"])
+    assert data == [
+        {'product': BARCODE_1, 'k': 'color', 'v': 'red'},
+        {'product': BARCODE_3, 'k': 'color', 'v': 'red'}
+    ]
 
 
-def test_keys_list(with_sample):
-    with TestClient(app) as client:
-        response = client.get("/keys")
-        assert response.status_code == 200
-        data = sorted(response.json(), key=lambda d: d["k"])
-        assert data == [
-            {'k': 'color', 'count': 3, 'values': 2},
-            {'k': 'size', 'count': 2, 'values': 2}
-        ]
+def test_keys_list(with_sample, client):
+    response = client.get("/keys")
+    assert response.status_code == 200
+    data = sorted(response.json(), key=lambda d: d["k"])
+    assert data == [
+        {'k': 'color', 'count': 3, 'values': 2},
+        {'k': 'size', 'count': 2, 'values': 2}
+    ]
 
-        response = client.get("/keys?q=col")
-        assert response.status_code == 200
-        assert response.json() == [
-            {'k': 'color', 'count': 3, 'values': 2}
-        ]
+    response = client.get("/keys?q=col")
+    assert response.status_code == 200
+    assert response.json() == [
+        {'k': 'color', 'count': 3, 'values': 2}
+    ]
 
-        response = client.get("/keys?q=siz")
-        assert response.status_code == 200
-        assert response.json() == [
-            {'k': 'size', 'count': 2, 'values': 2}
-        ]
+    response = client.get("/keys?q=siz")
+    assert response.status_code == 200
+    assert response.json() == [
+        {'k': 'size', 'count': 2, 'values': 2}
+    ]
 
-        response = client.get("/keys?q=xyz")
-        assert response.status_code == 200
-        assert response.json() == []
-
-
-def test_get_unique_values(with_sample):
-    with TestClient(app) as client:
-        response = client.get("/values/color")
-        assert response.status_code == 200
-        assert response.json() == [
-            {'v': 'red', 'product_count': 2},
-            {'v': 'green', 'product_count': 1}
-        ]
+    response = client.get("/keys?q=xyz")
+    assert response.status_code == 200
+    assert response.json() == []
 
 
-def test_get_unique_values_with_limit(with_sample):
-    with TestClient(app) as client:
-        response = client.get("/values/color?limit=1")
-        assert response.status_code == 200
-        assert response.json() == [
-            {'v': 'red', 'product_count': 2}
-        ]
+def test_get_unique_values(with_sample, client):
+    response = client.get("/values/color")
+    assert response.status_code == 200
+    assert response.json() == [
+        {'v': 'red', 'product_count': 2},
+        {'v': 'green', 'product_count': 1}
+    ]
 
 
-def test_get_unique_values_with_filter(with_sample):
-    with TestClient(app) as client:
-        response = client.get("/values/color?q=ed")
-        assert response.status_code == 200
-        assert response.json() == [
-            {'v': 'red', 'product_count': 2}
-        ]
+def test_get_unique_values_with_limit(with_sample, client):
+    response = client.get("/values/color?limit=1")
+    assert response.status_code == 200
+    assert response.json() == [
+        {'v': 'red', 'product_count': 2}
+    ]
 
 
-def test_get_unique_values_non_existing_key(with_sample):
-    with TestClient(app) as client:
-        response = client.get("/values/non_existing_key")
-        assert response.status_code == 200
-        assert response.json() == []
+def test_get_unique_values_with_filter(with_sample, client):
+    response = client.get("/values/color?q=ed")
+    assert response.status_code == 200
+    assert response.json() == [
+        {'v': 'red', 'product_count': 2}
+    ]
 
 
-def test_auth_empty():
-    with TestClient(app) as client:
-        response = client.post("/auth")
-        assert response.status_code == 422
+def test_get_unique_values_non_existing_key(with_sample, client):
+    response = client.get("/values/non_existing_key")
+    assert response.status_code == 200
+    assert response.json() == []
 
 
-def test_auth_bad(monkeypatch, fake_authentication):
+def test_auth_empty(client):
+    response = client.post("/auth")
+    assert response.status_code == 422
+
+
+def test_auth_bad(monkeypatch, fake_authentication, client):
     # avoid waiting for 2 sec
     monkeypatch.setattr(settings, 'FAILED_AUTH_WAIT_TIME', .1)
-    with TestClient(app) as client:
-        response = client.post(
-            "/auth", data={"username": "foo", "password": "bar"})
-        assert response.status_code == 401
+    response = client.post(
+        "/auth", data={"username": "foo", "password": "bar"})
+    assert response.status_code == 401
 
 
-def test_auth_ok(fake_authentication):
-    with TestClient(app) as client:
-        response = client.post(
-            "/auth", data={"username": "off", "password": "test"})
-        assert response.status_code == 200
-        assert 'token_type' in response.json()
-        assert 'access_token' in response.json()
-        access_token = response.json()['access_token']
-        assert access_token.startswith("off__U")
+def test_auth_ok(fake_authentication, client):
+    response = client.post(
+        "/auth", data={"username": "off", "password": "test"})
+    assert response.status_code == 200
+    assert 'token_type' in response.json()
+    assert 'access_token' in response.json()
+    access_token = response.json()['access_token']
+    assert access_token.startswith("off__U")
 
 
-def test_post_invalid(with_sample):
-    with TestClient(app) as client:
-        headers = {"Authorization":  "Bearer foo__Utest-token"}
-        # empty barcode
-        response = client.post("/product", headers=headers, json=
-            {"product": "", "version": 1, "k": "test", "v": "test"})
-        assert response.status_code == 422, f'product = "" should return 422, got {response.status_code}'
-        # version 0, forbidden
-        response = client.post("/product", headers=headers, json=
-            {"product": "0000000000000", "version": 0, "k": "test", "v": "test"})
-        assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
-        # version -1, forbidden
-        response = client.post("/product", headers=headers, json=
-            {"product": "0000000000000", "version": -1, "k": "test", "v": "test"})
-        assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
-        # version not 1, forbidden
-        response = client.post("/product", headers=headers, json=
-            {"product": "0000000000000", "version": 9999, "k": "test", "v": "test"})
-        assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
-        # non numeric barcode, forbidden
-        response = client.post("/product", headers = headers, json=
-                                {"product": "aa", "version": 1, "k": "test", "v": "test"})
-        assert response.status_code == 422, f'non numeric product should return 422, got {response.status_code}'
-        # empty key, forbidden
-        response = client.post("/product", headers=headers, json=
-            {"product": "0000000000000", "version": 1, "k": "", "v": "test"})
-        assert response.status_code == 422, f'k="" should return 422, got {response.status_code}'
-        # empty value, forbidden
-        response = client.post("/product", headers=headers, json=
-            {"product": "0000000000000", "version": 1, "k": "ABCD", "v": "test"})
-        assert response.status_code == 422, f'non lowercase k should return 422, got {response.status_code}'
-        # invalid k, forbidden
-        response = client.post("/product", headers=headers, json=
-            {"product": "0000000000000", "version": 1, "k": "$$", "v": "test"})
-        assert response.status_code == 422, f'invalid k should return 422, got {response.status_code}'
-        # invalid owner
-        response = client.post("/product", headers=headers, json=
-            {"product": "0000000000000", "version": 1, "k": "aa", "v": "test", "owner": "someone_else"})
-        assert response.status_code == 422, f'invalid owner should return 422, got {response.status_code}'
-        # invalid barcode with 25 digits
-        response = client.post("/product", headers=headers, json=
-            {"product": "1234567890123456789012345", "version": 1, "k": "aa", "v": "test"})
-        assert response.status_code == 422, f'invalid barcode with 25 digits should return 422, got {response.status_code}'
-        # existing key value, forbidden
-        response = client.post("/product", headers=headers, json=
-            {"product": BARCODE_1, "version": 1, "k": "color", "v": "red"})
-        assert response.status_code == 422, f'existing key value should return 422, got {response.status_code}'
+def test_post_invalid(with_sample, client):
+    headers = {"Authorization":  "Bearer foo__Utest-token"}
+    # empty barcode
+    response = client.post("/product", headers=headers, json=
+        {"product": "", "version": 1, "k": "test", "v": "test"})
+    assert response.status_code == 422, f'product = "" should return 422, got {response.status_code}'
+    # version 0, forbidden
+    response = client.post("/product", headers=headers, json=
+        {"product": "0000000000000", "version": 0, "k": "test", "v": "test"})
+    assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
+    # version -1, forbidden
+    response = client.post("/product", headers=headers, json=
+        {"product": "0000000000000", "version": -1, "k": "test", "v": "test"})
+    assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
+    # version not 1, forbidden
+    response = client.post("/product", headers=headers, json=
+        {"product": "0000000000000", "version": 9999, "k": "test", "v": "test"})
+    assert response.status_code == 422, f'version != 1 should return 422, got {response.status_code}'
+    # non numeric barcode, forbidden
+    response = client.post("/product", headers = headers, json=
+                            {"product": "aa", "version": 1, "k": "test", "v": "test"})
+    assert response.status_code == 422, f'non numeric product should return 422, got {response.status_code}'
+    # empty key, forbidden
+    response = client.post("/product", headers=headers, json=
+        {"product": "0000000000000", "version": 1, "k": "", "v": "test"})
+    assert response.status_code == 422, f'k="" should return 422, got {response.status_code}'
+    # empty value, forbidden
+    response = client.post("/product", headers=headers, json=
+        {"product": "0000000000000", "version": 1, "k": "ABCD", "v": "test"})
+    assert response.status_code == 422, f'non lowercase k should return 422, got {response.status_code}'
+    # invalid k, forbidden
+    response = client.post("/product", headers=headers, json=
+        {"product": "0000000000000", "version": 1, "k": "$$", "v": "test"})
+    assert response.status_code == 422, f'invalid k should return 422, got {response.status_code}'
+    # invalid owner
+    response = client.post("/product", headers=headers, json=
+        {"product": "0000000000000", "version": 1, "k": "aa", "v": "test", "owner": "someone_else"})
+    assert response.status_code == 422, f'invalid owner should return 422, got {response.status_code}'
+    # invalid barcode with 25 digits
+    response = client.post("/product", headers=headers, json=
+        {"product": "1234567890123456789012345", "version": 1, "k": "aa", "v": "test"})
+    assert response.status_code == 422, f'invalid barcode with 25 digits should return 422, got {response.status_code}'
+    # existing key value, forbidden
+    response = client.post("/product", headers=headers, json=
+        {"product": BARCODE_1, "version": 1, "k": "color", "v": "red"})
+    assert response.status_code == 422, f'existing key value should return 422, got {response.status_code}'
 
 @pytest.mark.asyncio
-async def test_post(with_sample):
-    with TestClient(app) as client:
-        headers = {"Authorization":  "Bearer foo__Utest-token"}
+async def test_post(with_sample, client):
+    headers = {"Authorization":  "Bearer foo__Utest-token"}
 
-        response = client.post("/product", headers=headers, json=
-            {"product": BARCODE_1, "version": 1, "k": "test_new", "v": "test"})
-        assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
-        # created
-        await check_tag(BARCODE_1, "test_new", v="test", version=1)
+    response = client.post("/product", headers=headers, json=
+        {"product": BARCODE_1, "version": 1, "k": "test_new", "v": "test"})
+    assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
+    # created
+    await check_tag(BARCODE_1, "test_new", v="test", version=1)
 
-        response = client.post("/product", headers=headers, json=
-            {"product": BARCODE_1, "version": 1, "k": "a-1:b_2:c-3:d_4", "v": "test"})
-        assert response.status_code == 200, f'lowercase k with hyphen, underscore and number should return 200, got {response.status_code}'
-        # created
-        await check_tag(BARCODE_1, "a-1:b_2:c-3:d_4", v="test", version=1)
+    response = client.post("/product", headers=headers, json=
+        {"product": BARCODE_1, "version": 1, "k": "a-1:b_2:c-3:d_4", "v": "test"})
+    assert response.status_code == 200, f'lowercase k with hyphen, underscore and number should return 200, got {response.status_code}'
+    # created
+    await check_tag(BARCODE_1, "a-1:b_2:c-3:d_4", v="test", version=1)
 
 
 @pytest.mark.asyncio
-async def test_product_key_stripped_on_post(auth_tokens):
-    with TestClient(app) as client:
-        headers = {"Authorization":  "Bearer foo__Utest-token"}
-        response = client.post("/product", headers=headers, json=
-            {"product": BARCODE_1, "version": 1, "k": " test_new2  ", "v": "test"})
-        assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
-        # check created stripped
-        await check_tag(BARCODE_1, "test_new2", v="test", version=1)
-        # reachable:
-        response = client.get(f"/product/{BARCODE_1}/test_new2")
-        assert response.status_code == 200, f'getting stripped key should return 200, got {response.status_code} {response.text}'
+async def test_product_key_stripped_on_post(auth_tokens, client):
+    headers = {"Authorization":  "Bearer foo__Utest-token"}
+    response = client.post("/product", headers=headers, json=
+        {"product": BARCODE_1, "version": 1, "k": " test_new2  ", "v": "test"})
+    assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
+    # check created stripped
+    await check_tag(BARCODE_1, "test_new2", v="test", version=1)
+    # reachable:
+    response = client.get(f"/product/{BARCODE_1}/test_new2")
+    assert response.status_code == 200, f'getting stripped key should return 200, got {response.status_code} {response.text}'
 
 
 @pytest.mark.asyncio
-async def test_product_value_stripped_on_post(auth_tokens):
-    with TestClient(app) as client:
-        headers = {"Authorization":  "Bearer foo__Utest-token"}
-        response = client.post("/product", headers=headers, json=
-            {"product": BARCODE_1, "version": 1, "k": "test_new", "v": " a test   "})
-        assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
-        # check created stripped
-        await check_tag(BARCODE_1, "test_new", v="a test", version=1)
+async def test_product_value_stripped_on_post(auth_tokens, client):
+    headers = {"Authorization":  "Bearer foo__Utest-token"}
+    response = client.post("/product", headers=headers, json=
+        {"product": BARCODE_1, "version": 1, "k": "test_new", "v": " a test   "})
+    assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
+    # check created stripped
+    await check_tag(BARCODE_1, "test_new", v="a test", version=1)
 
 
-def test_put_invalid(with_sample):
-    with TestClient(app) as client:
-        headers = {"Authorization":  "Bearer foo__Utest-token"}
-        response = client.put("/product", headers=headers, json={
-                              "product": BARCODE_1, "k": "test_new", "v": "test", "version": 1})
-        assert response.status_code == 404, f'new key should return 404, got {response.status_code} {response.text}'
+def test_put_invalid(with_sample, client):
+    headers = {"Authorization":  "Bearer foo__Utest-token"}
+    response = client.put("/product", headers=headers, json={
+                            "product": BARCODE_1, "k": "test_new", "v": "test", "version": 1})
+    assert response.status_code == 404, f'new key should return 404, got {response.status_code} {response.text}'
 
-        response = client.put("/product", headers=headers, json={
-                              "product": BARCODE_2, "k": "color", "v": "test", "version": 2})
-        assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
+    response = client.put("/product", headers=headers, json={
+                            "product": BARCODE_2, "k": "color", "v": "test", "version": 2})
+    assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
 
 
 @pytest.mark.asyncio
-async def test_put(with_sample):
+async def test_put(with_sample, client):
         headers = {"Authorization":  "Bearer foo__Utest-token"}
         response = client.put("/product", headers=headers, json={
                               "product": BARCODE_1, "k": "color", "v": "purple", "version": 2})
@@ -605,63 +580,60 @@ async def test_put(with_sample):
         await check_tag(BARCODE_1, "color", v="brown", version=3)
 
 
-def test_delete_invalid(with_sample):
+def test_delete_invalid(with_sample, client):
     headers = {"Authorization":  "Bearer foo__Utest-token"}
-    with TestClient(app) as client:
-        response = client.delete(f"/product/{BARCODE_1}/not-existing")
-        assert response.status_code == 422, f'invalid auth should return 422, got {response.status_code} {response.text}'
+    response = client.delete(f"/product/{BARCODE_1}/not-existing")
+    assert response.status_code == 422, f'invalid auth should return 422, got {response.status_code} {response.text}'
 
-        response = client.delete(f"/product/{BARCODE_1}/color", headers=headers)
-        assert response.status_code == 422, f'missing version should return 422, got {response.status_code} {response.text}'
+    response = client.delete(f"/product/{BARCODE_1}/color", headers=headers)
+    assert response.status_code == 422, f'missing version should return 422, got {response.status_code} {response.text}'
 
-        response = client.delete(
-            f"/product/{BARCODE_2}/color?version=1", headers=headers,)
-        assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
+    response = client.delete(
+        f"/product/{BARCODE_2}/color?version=1", headers=headers,)
+    assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
 
-        response = client.delete(
-            f"/product/{BARCODE_2}/color?version=3", headers=headers,)
-        assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
+    response = client.delete(
+        f"/product/{BARCODE_2}/color?version=3", headers=headers,)
+    assert response.status_code == 422, f'invalid version should return 422, got {response.status_code} {response.text}'
 
 
 @pytest.mark.asyncio
-async def test_delete(with_sample):
+async def test_delete(with_sample, client):
     headers = {"Authorization":  "Bearer foo__Utest-token"}
-    with TestClient(app) as client:
-        response = client.delete(f"/product/{BARCODE_1}/color?version=1", headers=headers,)
-        assert response.status_code == 200, f'valid version should return 200, got {response.status_code} {response.text}'
-        # assert False, "FIXME test it's not there !"
-        # add anew
-        response = client.post("/product", headers=headers, json={
-            "product": BARCODE_1, "version": 1, "k": "color", "v": "purple"})
-        assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
-        await check_tag(BARCODE_1, "color", v="purple", version=1)
-        # and update
-        response = client.put("/product", headers=headers, json={
-            "product": BARCODE_1, "version": 2, "k": "color", "v": "brown"})
-        assert response.status_code == 200, f'update on new entry should return 200, got {response.status_code} {response.text}'
-        await check_tag(BARCODE_1, "color", v="brown", version=2)
+    response = client.delete(f"/product/{BARCODE_1}/color?version=1", headers=headers,)
+    assert response.status_code == 200, f'valid version should return 200, got {response.status_code} {response.text}'
+    # assert False, "FIXME test it's not there !"
+    # add anew
+    response = client.post("/product", headers=headers, json={
+        "product": BARCODE_1, "version": 1, "k": "color", "v": "purple"})
+    assert response.status_code == 200, f'valid new entry should return 200, got {response.status_code} {response.text}'
+    await check_tag(BARCODE_1, "color", v="purple", version=1)
+    # and update
+    response = client.put("/product", headers=headers, json={
+        "product": BARCODE_1, "version": 2, "k": "color", "v": "brown"})
+    assert response.status_code == 200, f'update on new entry should return 200, got {response.status_code} {response.text}'
+    await check_tag(BARCODE_1, "color", v="brown", version=2)
 
 
 @pytest.mark.asyncio
-async def test_auth_by_cookie(fake_authentication, monkeypatch):
+async def test_auth_by_cookie(fake_authentication, monkeypatch, client):
     # avoid waiting for too long on bad auth
     monkeypatch.setattr(settings, 'FAILED_AUTH_WAIT_TIME', .1)
-    with TestClient(app) as client:
-        response = client.post("/auth_by_cookie")
-        assert response.status_code == 422, f'missing cookie should return 422, got {response.status_code} {response.text}'
+    response = client.post("/auth_by_cookie")
+    assert response.status_code == 422, f'missing cookie should return 422, got {response.status_code} {response.text}'
 
-        response = client.post("/auth_by_cookie", headers={'Cookie': 'session=test'})
-        assert response.status_code == 422, f'Malformed session cookie should return 422, got {response.status_code} {response.text}'
+    response = client.post("/auth_by_cookie", headers={'Cookie': 'session=test'})
+    assert response.status_code == 422, f'Malformed session cookie should return 422, got {response.status_code} {response.text}'
 
-        response = client.post("/auth_by_cookie", headers={'Cookie': 'session=user_session&test'})
-        assert response.status_code == 422, f'Malformed session cookie should return 422, got {response.status_code} {response.text}'
+    response = client.post("/auth_by_cookie", headers={'Cookie': 'session=user_session&test'})
+    assert response.status_code == 422, f'Malformed session cookie should return 422, got {response.status_code} {response.text}'
 
-        response = client.post("/auth_by_cookie", headers={'Cookie': 'session=user_session&not-a-good-token&user_id&bibifricotin'})
-        assert response.status_code == 401, f'Well formed cookie but invalid authentication credentials should return 401, got {response.status_code} {response.text}'
+    response = client.post("/auth_by_cookie", headers={'Cookie': 'session=user_session&not-a-good-token&user_id&bibifricotin'})
+    assert response.status_code == 401, f'Well formed cookie but invalid authentication credentials should return 401, got {response.status_code} {response.text}'
 
-        response = client.post("/auth_by_cookie", headers={'Cookie': 'session=user_session&test&user_id&bibifricotin'})
-        assert response.status_code == 200, f'Well formed cookie and valid authentication credentials should return 200, got {response.status_code} {response.text}'
-        # token created
-        async with db.transaction():
-            cur, _ = await db.db_exec("""SELECT user_id FROM auth WHERE user_id = 'bibifricotin'""")
-            assert cur.rowcount == 1, f'Well formed cookie and valid authentication credentials should create a token, got {cur.rowcount}'
+    response = client.post("/auth_by_cookie", headers={'Cookie': 'session=user_session&test&user_id&bibifricotin'})
+    assert response.status_code == 200, f'Well formed cookie and valid authentication credentials should return 200, got {response.status_code} {response.text}'
+    # token created
+    async with db.transaction():
+        cur, _ = await db.db_exec("""SELECT user_id FROM auth WHERE user_id = 'bibifricotin'""")
+        assert cur.rowcount == 1, f'Well formed cookie and valid authentication credentials should create a token, got {cur.rowcount}'
