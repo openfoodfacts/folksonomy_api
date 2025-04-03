@@ -63,7 +63,7 @@ An easy way to get started with Folksonomy API is to use Docker (if you don't mi
 
 6. Initialize the database (necessary on first run, or if there are database migrations)
    ```bash
-   docker compose exec api python db-migration.py
+   docker exec -it folksonomy_api-folksonomy_api-1 python db-migration.py
    ```
 
 7. Access the API
