@@ -125,6 +125,12 @@ When running in Docker, use:
 docker compose exec api python generate_openapi_json.py
 ```
 
+## Code Style
+
+This project uses [Ruff](https://github.com/astral-sh/ruff) for linting and code formatting.
+We recommend using pre-commit hooks for automatic linting, but this is optional.
+See our [CONTRIBUTING.md](CONTRIBUTING.md) guide for more details on code style and linting.
+
 ## Deployment
 
 [Deployment at Open Food Facts - Folksonomy Section](https://openfoodfacts.github.io/openfoodfacts-infrastructure/folksonomy/)

@@ -1,0 +1,30 @@
+name: Lint Code
+
+on:
+  pull_request:
+    branches:
+      - main
+  merge_group:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Install Pre-Commit
+        run: python -m pip install pre-commit
+
+      - name: Run Pre-Commit Hooks
+        run: |
+          pre-commit run --show-diff-on-failure --color=always \
+            --from-ref ${{ github.event.pull_request.base.sha }} \
+            --to-ref ${{ github.event.pull_request.head.sha }}
