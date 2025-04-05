@@ -350,7 +350,7 @@ async def product_tags_list(
 
     query = f"""
         SELECT json_agg(j)::json FROM (
-            SELECT * FROM folksonomy 
+            SELECT * FROM folksonomy
             WHERE product = %s AND owner = %s
             {f"AND k IN ({placeholders})" if keys_list else ""}
             ORDER BY k
@@ -361,13 +361,142 @@ async def product_tags_list(
 
     cur, timing = await db.db_exec(query, tuple(params))
     out = await cur.fetchone()
-    
+
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
         headers={"x-pg-timing": timing}
     )
-    
+
+
+@app.get("/product/{product}/knowledge-panels", response_model=ProductKnowledgePanels)
+async def product_barcode_knowledge_panels(response: Response,
+                                           product: str,
+                                           k: Optional[str] = Query(None, description="Optional key to filter the results"),
+                                           owner='',
+                                           user: User = Depends(get_current_user)):
+    """
+    Return product information in a Knowledge Panel format.
+    If 'k' is provided, only that key is fetched.
+    If none is provided, all the keys are returned.
+    """
+    check_owner_user(user, owner, allow_anonymous=True)
+
+    query = f"""
+        SELECT product, k, v, owner, version, editor, last_edit, comment
+        FROM folksonomy
+        WHERE product = %s
+    """
+    params = [product]
+    if k:
+        query+= " AND k = %s"
+        params.append(k)
+    query += " ORDER BY k;"
+
+    cur, timing = await db.db_exec(query, tuple(params))
+    rows = await cur.fetchall()
+
+    if not rows:
+        raise HTTPException(
+                status_code=404,
+                detail="Could not find product or key",
+            )
+
+    panels_by_key = {}
+    for row in rows:
+
+        product_value, k, v, owner_value, version, editor, last_edit, comment = row
+
+        if k not in panels_by_key:
+            panels_by_key[k] = []
+
+        if product_value:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Barcode: {product_value}</p>"
+                )
+            ))
+
+        if k:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Key: {k}</p>"
+                )
+            ))
+
+        if v:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Value: {v}</p>"
+                )
+            ))
+
+        if owner_value:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Owner: {owner_value}</p>"
+                )
+            ))
+
+        if version:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Version: {version}</p>"
+                )
+            ))
+
+        if editor:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Editor: {editor}</p>"
+                )
+            ))
+
+        if last_edit:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Last Edit Date: {last_edit}</p>"
+                )
+            ))
+
+        if comment:
+            panels_by_key[k].append(Element(
+                type="text",
+                text_element=TextElement(
+                    type="summary",
+                    html=f"<p>Comment: {comment}</p>"
+                )
+            ))
+
+    panels = {}
+    for key, elements in panels_by_key.items():
+        panel = Panel(
+            title_element=TitleElement(
+                title=f"Folksonomy Data for '{key}'",
+                name=key
+            ),
+            elements=elements
+        )
+        panels[key] = panel
+
+    response_obj = ProductKnowledgePanels(knowledge_panels=panels)
+    response.headers["x-pg-timing"] = timing
+    return response_obj
+
 @app.get("/product/{product}/{k}", response_model=ProductTag)
 async def product_tag(response: Response,
                       product: str, k: str, owner='',
@@ -404,7 +533,7 @@ async def product_tag(response: Response,
             (product, owner, key),
         )
     out = await cur.fetchone()
-    
+
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
@@ -440,7 +569,7 @@ async def product_tag_list_versions(response: Response,
         content=out[0] if out and out[0] is not None else [],
         headers={"x-pg-timing": timing}
     )
-    
+
 
 
 @app.post("/product")
@@ -555,7 +684,7 @@ async def product_tag_delete(response: Response,
     check_owner_user(user, owner, allow_anonymous=False)
     k, v = sanitize_data(k, None)
     try:
-        # Setting version to 0, this is seen as a reset, 
+        # Setting version to 0, this is seen as a reset,
         # while maintaining history in folksonomy_versions
         cur, timing = await db.db_exec(
             """
@@ -629,7 +758,7 @@ async def keys_list(
             FROM folksonomy
             WHERE owner = %s
             {search_filter}
-            GROUP BY k 
+            GROUP BY k
             ORDER BY count(*) DESC
         ) AS j;
     """

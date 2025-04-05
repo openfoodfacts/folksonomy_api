@@ -27,5 +27,10 @@ from .models import (
     KeyStats,
     PingResponse,
     ValueCount,
+    TitleElement,
+    TextElement,
+    Element,
+    Panel,
+    ProductKnowledgePanels,
 )
 

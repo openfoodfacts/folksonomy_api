@@ -533,6 +533,35 @@ async def test_post_invalid(with_sample, client, auth_tokens):
         {"product": BARCODE_1, "version": 1, "k": "color", "v": "red"})
     assert response.status_code == 422, f'existing key value should return 422, got {response.status_code}'
 
+def test_product_knowledge_panels(with_sample):
+    with TestClient(app) as client:
+        headers = {"Authorization": "Bearer foo__Utest-token"}
+        # all panels, no k to filter
+        response = client.get(f"/product/{BARCODE_1}/knowledge-panels", headers=headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert "knowledge_panels" in data
+        panels = data["knowledge_panels"]
+        assert "color" in panels
+        assert "size" in panels
+        assert "x-pg-timing" in response.headers
+        # filtered for only one k
+        response = client.get(f"/product/{BARCODE_1}/knowledge-panels?k=color", headers=headers)
+        assert response.status_code == 200
+        data = response.json()
+        panels = data["knowledge_panels"]
+        assert len(panels) == 1
+        assert "color" in panels
+        assert "x-pg-timing" in response.headers
+        # non-existing product
+        response = client.get("/product/0000000000000/knowledge-panels", headers=headers)
+        assert response.status_code == 404
+        data = response.json()
+        assert "Could not find product or key" in data["detail"]
+        # existing product but non-existing key
+        response = client.get(f"/product/{BARCODE_1}/knowledge-panels?k=nonexistent", headers=headers)
+        assert response.status_code == 404
+
 @pytest.mark.asyncio
 async def test_post(with_sample, client, auth_tokens):
     headers = {"Authorization":  "Bearer foo__Utest-token"}
