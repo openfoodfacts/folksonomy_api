@@ -36,7 +36,7 @@ class NotInAsyncIOError(Exception):
 async def get_conn():
     """Get current database connection, creating it if needed"""
     global conn
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     if loop is None:
         raise NotInAsyncIOError("This method only works with asyncio")
     _conn = conn.get(loop)
@@ -63,7 +63,7 @@ def cursor():
 async def terminate():
     """Close all database connection"""
     global conn
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     _conn = conn.get(loop)
     if _conn is not None:
         _conn.terminate()
