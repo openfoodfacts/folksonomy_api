@@ -695,7 +695,25 @@ async def get_unique_values(response: Response,
     data = out[0] if out and out[0] is not None else []
     return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
 
+# ====== NEW TAGS ENDPOINTS ======
+@app.delete("/tags/{tag_id}", response_model=dict)
+async def delete_tag(
+    tag_id: int,
+    user: User = Depends(get_current_user),
+    owner: str = ""
+):
+    [rest of your delete endpoint code...]
 
+@app.get("/tags/search", response_model=List[dict])
+async def search_tags(
+    [parameters...]
+):
+    [rest of your search endpoint code...]
+
+# ====== EXISTING PING ENDPOINT ======
+@app.get("/ping", response_model=PingResponse)
+async def pong(response: Response):
+    [existing ping code...]
 @app.get("/ping", response_model=PingResponse)
 async def pong(response: Response):
     """
