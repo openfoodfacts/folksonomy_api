@@ -70,7 +70,12 @@ An easy way to get started with Folksonomy API is to use Docker (if you don't mi
    - API: http://localhost:8000
    - Interactive documentation: http://localhost:8000/docs
 
-8. Stop the services
+8. Test the API
+   ```bash
+   docker compose exec folksonomy_api pytest tests 
+   ```
+
+9. Stop the services
    ```bash
    docker compose down
    ```
