@@ -405,93 +405,69 @@ async def product_barcode_knowledge_panels(response: Response,
     panels_by_key = {}
     for row in rows:
 
-        product_value, k, v, owner_value, version, editor, last_edit, comment = row
+        product_value, k, v, _, _, _, _, _ = row
 
         if k not in panels_by_key:
-            panels_by_key[k] = []
-
-        if product_value:
-            panels_by_key[k].append(Element(
-                type="text",
-                text_element=TextElement(
-                    type="summary",
-                    html=f"<p>Barcode: {product_value}</p>"
-                )
-            ))
-
-        if k:
-            panels_by_key[k].append(Element(
-                type="text",
-                text_element=TextElement(
-                    type="summary",
-                    html=f"<p>Key: {k}</p>"
-                )
-            ))
-
-        if v:
-            panels_by_key[k].append(Element(
-                type="text",
-                text_element=TextElement(
-                    type="summary",
-                    html=f"<p>Value: {v}</p>"
-                )
-            ))
-
-        if owner_value:
-            panels_by_key[k].append(Element(
-                type="text",
-                text_element=TextElement(
-                    type="summary",
-                    html=f"<p>Owner: {owner_value}</p>"
-                )
-            ))
-
-        if version:
-            panels_by_key[k].append(Element(
-                type="text",
-                text_element=TextElement(
-                    type="summary",
-                    html=f"<p>Version: {version}</p>"
-                )
-            ))
-
-        if editor:
-            panels_by_key[k].append(Element(
-                type="text",
-                text_element=TextElement(
-                    type="summary",
-                    html=f"<p>Editor: {editor}</p>"
-                )
-            ))
-
-        if last_edit:
-            panels_by_key[k].append(Element(
-                type="text",
-                text_element=TextElement(
-                    type="summary",
-                    html=f"<p>Last Edit Date: {last_edit}</p>"
-                )
-            ))
-
-        if comment:
-            panels_by_key[k].append(Element(
-                type="text",
-                text_element=TextElement(
-                    type="summary",
-                    html=f"<p>Comment: {comment}</p>"
-                )
-            ))
+            panels_by_key[k] = {
+                "Barcode": product_value,
+                "Key": k,
+                "Value": v
+            }
+        else:
+            data = panels_by_key[k]
+            if not data.get("Barcode") and product_value:
+                data["Barcode"] = product_value
+            if not data.get("Value") and v:
+                data["Value"] = v
 
     panels = {}
-    for key, elements in panels_by_key.items():
+    for k, data in panels_by_key.items():
+        rows_html = ""
+        for property, value in data.items():
+            if value is None:
+                continue
+
+            # Links for Key and Value property
+            if property == "Key":
+                value_cell = (
+                    f'<a href="world.openfoodfacts.org/property/{value}">{value}</a> '
+                    f'<a href="wiki.openfoodfacts.org/Folksonomy/Property/{value}">&#8505;</a>'
+                )
+            elif property == "Value":
+                value_cell = f'<a href="world.openfoodfacts.org/property/{data["Key"]}/value/{value}">{value}</a>'
+            else:
+                value_cell = value
+
+            row_html = f"<tr><td>{property}</td><td>{value_cell}</td></tr>"
+            rows_html += row_html
+
+
+
+        table_html = f"<table>{rows_html}</table>"
+
+        table_element = TableElement(
+            id=k,
+            title=f"Folksonomy Data for '{k}'",
+            rows=table_html,
+            columns=[
+                TableColumn(type="text", text="Property"),
+                TableColumn(type="text", text="Value")
+            ]
+        )
+
+        element = Element(
+            type="table",
+            table_element=table_element
+        )
+
         panel = Panel(
             title_element=TitleElement(
-                title=f"Folksonomy Data for '{key}'",
-                name=key
+                title=f"Folksonomy Data for '{k}'",
+                name=k
             ),
-            elements=elements
+            elements=[element]
         )
-        panels[key] = panel
+        panels[k] = panel
 
     response_obj = ProductKnowledgePanels(knowledge_panels=panels)
     response.headers["x-pg-timing"] = timing

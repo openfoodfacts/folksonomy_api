@@ -96,13 +96,19 @@ class TitleElement(BaseModel):
     name: str
     title: str
 
-class TextElement(BaseModel):
+class TableColumn(BaseModel):
     type: str
-    html: str
+    text: str
+
+class TableElement(BaseModel):
+    id: str
+    title: str
+    rows: str
+    columns: List[TableColumn]
 
 class Element(BaseModel):
     type: str
-    text_element: TextElement
+    table_element: TableElement
 
 class Panel(BaseModel):
     title_element: TitleElement
