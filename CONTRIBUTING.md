@@ -43,7 +43,7 @@ While not mandatory, using pre-commit hooks can save you time by automatically f
 
 1. Install pre-commit:
    ```sh
-   poetry add --dev pre-commit
+   poetry install --with dev
    ```
 
 2. Install the Git hooks:
@@ -52,6 +52,7 @@ While not mandatory, using pre-commit hooks can save you time by automatically f
    ```
 
 3. Pre-commit will now run automatically on each commit.
+   You can also run it manually at any moment with: `pre-commit run`, adding -a flag if you want to run it on all files.
 
 ### Running Without Pre-commit
 
@@ -59,7 +60,7 @@ If you prefer not to use pre-commit, you can manually run the same checks:
 
 1. Install Ruff:
    ```sh
-   poetry add --dev ruff
+   poetry install --with dev
    ```
 
 2. Run linting and formatting before submitting your PR:
