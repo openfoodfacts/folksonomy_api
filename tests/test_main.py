@@ -93,7 +93,7 @@ sample_by_keys = {(s["product"], s["k"], s["version"]): s for s in SAMPLES}
 
 
 @pytest.fixture(scope="session")
-def client_session():
+def client():
     with TestClient(app) as c:
         yield c
 
