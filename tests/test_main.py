@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from folksonomy import db, models, settings
 from folksonomy.api import app
 
-client = TestClient(app)
+test_client = TestClient(app)
 access_token = None
 date = int(time.time())
 
@@ -922,6 +922,10 @@ async def test_auth_by_cookie(fake_authentication, monkeypatch, client):
         headers={
             "Cookie": "session=user_session&not-a-good-token&user_id&bibifricotin"
         },
+        data={
+            "username": "bibifricotin",
+            "password": "wrong-password",
+        },
     )
     assert response.status_code == 401, (
         f"Well formed cookie but invalid authentication credentials should return 401, got {response.status_code} {response.text}"
@@ -930,6 +934,7 @@ async def test_auth_by_cookie(fake_authentication, monkeypatch, client):
     response = client.post(
         "/auth_by_cookie",
         headers={"Cookie": "session=user_session&test&user_id&bibifricotin"},
+        data={"username": "bibifricotin", "password": "test"},
     )
     assert response.status_code == 200, (
         f"Well formed cookie and valid authentication credentials should return 200, got {response.status_code} {response.text}"
