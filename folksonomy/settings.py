@@ -1,10 +1,14 @@
 import os
 
 # Postgres
-POSTGRES_USER = os.environ.get("POSTGRES_USER", None) # Leave empty if no user exists for database
-POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", None) # Leave empty if no password exists for user
-POSTGRES_HOST = os.environ.get("POSTGRES_HOST", None) # Change if necessary
-POSTGRES_DATABASE = os.environ.get("POSTGRES_DATABASE", 'folksonomy')
+POSTGRES_USER = os.environ.get(
+    "POSTGRES_USER", None
+)  # Leave empty if no user exists for database
+POSTGRES_PASSWORD = os.environ.get(
+    "POSTGRES_PASSWORD", None
+)  # Leave empty if no password exists for user
+POSTGRES_HOST = os.environ.get("POSTGRES_HOST", None)  # Change if necessary
+POSTGRES_DATABASE = os.environ.get("POSTGRES_DATABASE", "folksonomy")
 
 
 # we deduce the URL to which to authenticate from the base url,
@@ -17,6 +21,6 @@ FAILED_AUTH_WAIT_TIME = 2  # this settings is meant to be overridden by tests on
 
 try:
     # override with local_settings
-    from local_settings import *
+    from local_settings import *  # noqa: F403
 except ImportError:
     pass

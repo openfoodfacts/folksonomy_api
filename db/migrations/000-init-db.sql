@@ -13,11 +13,11 @@ CREATE TABLE folksonomy (
 ) PARTITION BY LIST (owner);
 
 -- public partition
-CREATE TABLE folksonomy_public PARTITION OF folksonomy 
+CREATE TABLE folksonomy_public PARTITION OF folksonomy
     FOR VALUES IN ('');
 
 -- private partition
-CREATE TABLE folksonomy_private PARTITION OF folksonomy 
+CREATE TABLE folksonomy_private PARTITION OF folksonomy
     DEFAULT;
 
 -- automatic timestamp + version check

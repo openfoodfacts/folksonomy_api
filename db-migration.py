@@ -11,12 +11,17 @@ eg:
 yoyo -c yoyo.ini --database postgres://you_database_url mark
 ```
 """
-import os
+
 import time
 
 from yoyo import read_migrations, get_backend
 
-from folksonomy.settings import POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, POSTGRES_DATABASE
+from folksonomy.settings import (
+    POSTGRES_USER,
+    POSTGRES_PASSWORD,
+    POSTGRES_HOST,
+    POSTGRES_DATABASE,
+)
 
 AUTH_DATA = ""
 if POSTGRES_USER:
@@ -31,7 +36,7 @@ backend = get_backend(url)
 print(f"Going to connect to {POSTGRES_HOST} / {POSTGRES_DATABASE}")
 
 # Add steps
-migrations = read_migrations('./db/migrations')
+migrations = read_migrations("./db/migrations")
 
 # Apply any outstanding migrations
 to_apply = backend.to_apply(migrations)

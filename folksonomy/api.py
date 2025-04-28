@@ -1,14 +1,42 @@
 #! /usr/bin/python3
 
-from fastapi import Query
+import asyncio
 import contextlib
-import os
 import logging
-from logging.handlers import RotatingFileHandler
-from .dependencies import *
+import logging.handlers
+import re
+import uuid
+from typing import List, Optional
+
+import aiohttp  # async requests to call OFF for login/password check
+import psycopg2  # interface with postgresql
+from fastapi import (
+    Cookie,
+    Depends,
+    FastAPI,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    status,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
 from . import db
 from . import settings
-from fastapi.middleware.cors import CORSMiddleware
+from .models import (
+    HelloResponse,
+    KeyStats,
+    PingResponse,
+    ProductList,
+    ProductStats,
+    ProductTag,
+    TokenResponse,
+    User,
+    ValueCount,
+)
 
 
 description = """
@@ -26,6 +54,7 @@ The API use the main following variables:
 * [Documented properties](https://wiki.openfoodfacts.org/Folksonomy/Property)
 """
 
+
 # Setup FastAPI app lifespan
 @contextlib.asynccontextmanager
 async def app_lifespan(app: FastAPI):
@@ -35,8 +64,12 @@ async def app_lifespan(app: FastAPI):
         finally:
             await db.terminate()
 
-app = FastAPI(title="Open Food Facts folksonomy REST API",
-    description=description, lifespan=app_lifespan)
+
+app = FastAPI(
+    title="Open Food Facts folksonomy REST API",
+    description=description,
+    lifespan=app_lifespan,
+)
 
 # Allow anyone to call the API from their own apps
 app.add_middleware(
@@ -48,7 +81,7 @@ app.add_middleware(
     # So, for everything to work correctly, it's better to specify explicitly the allowed origins."
     # => Workarround: use allow_origin_regex
     # Source: https://github.com/tiangolo/fastapi/issues/133#issuecomment-646985050
-    allow_origin_regex='https?://.*',
+    allow_origin_regex="https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -62,10 +95,13 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth", auto_error=False)
 @contextlib.asynccontextmanager
 async def app_logging():
     logger = logging.getLogger("uvicorn.access")
-    handler = logging.handlers.RotatingFileHandler("api.log",mode="a",maxBytes = 100*1024, backupCount = 3)
+    handler = logging.handlers.RotatingFileHandler(
+        "api.log", mode="a", maxBytes=100 * 1024, backupCount=3
+    )
     handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
     logger.addHandler(handler)
     yield
+
 
 @app.middleware("http")
 async def initialize_transactions(request: Request, call_next):
@@ -85,13 +121,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     """
     Get current user and check token validity if present
     """
-    if token and '__U' in token:
+    if token and "__U" in token:
         cur = db.cursor()
         await cur.execute(
-            "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,)
+            "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s",
+            (token,),
         )
         if cur.rowcount == 1:
-            return User(user_id=token.split('__U', 1)[0])
+            return User(user_id=token.split("__U", 1)[0])
         else:
             return User(user_id=None)
 
@@ -102,18 +139,19 @@ def sanitize_data(k, v):
     v = v.strip() if v else v
     return k, v
 
+
 def check_owner_user(user: User, owner, allow_anonymous=False):
     """
     Check authentication depending on current user and 'owner' of the data
     """
     user = user.user_id if user is not None else None
-    if user is None and allow_anonymous == False:
+    if user is None and not allow_anonymous:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    if owner != '':
+    if owner != "":
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -123,8 +161,8 @@ def check_owner_user(user: User, owner, allow_anonymous=False):
         if owner != user:
             raise HTTPException(
                 status_code=422,
-                detail="owner should be '%s' or '' for public, but '%s' is authenticated" % (
-                    owner, user),
+                detail="owner should be '%s' or '' for public, but '%s' is authenticated"
+                % (owner, user),
             )
     return
 
@@ -138,16 +176,24 @@ def get_auth_server(request: Request):
     """
     # For dev purposes, we can use a static auth server with AUTH_SERVER_STATIC
     # which can be specified in local_settings.py
-    if hasattr(settings, 'AUTH_SERVER_STATIC') and settings.AUTH_SERVER_STATIC:
+    if hasattr(settings, "AUTH_SERVER_STATIC") and settings.AUTH_SERVER_STATIC:
         return settings.AUTH_SERVER_STATIC
-    base_url =  f"{request.base_url.scheme}://{request.base_url.netloc}"
+    base_url = f"{request.base_url.scheme}://{request.base_url.netloc}"
     # remove folksonomy prefix and add AUTH prefix
-    base_url = base_url.replace(settings.FOLKSONOMY_PREFIX or "", settings.AUTH_PREFIX or "")
+    base_url = base_url.replace(
+        settings.FOLKSONOMY_PREFIX or "", settings.AUTH_PREFIX or ""
+    )
     return base_url
 
 
 @app.post("/auth", response_model=TokenResponse)
-async def authentication(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
+@app.post("/auth_by_cookie", response_model=TokenResponse)
+async def authentication_by_cookie(
+    request: Request,
+    response: Response,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: Optional[str] = Cookie(None),
+):
     """
     Authentication: provide user/password and get a bearer token in return
 
@@ -159,44 +205,42 @@ async def authentication(request: Request, response: Response, form_data: OAuth2
 
     user_id = form_data.username
     password = form_data.password
-    token = user_id+'__U'+str(uuid.uuid4())
+    token = user_id + "__U" + str(uuid.uuid4())
     auth_url = get_auth_server(request) + "/cgi/auth.pl"
-    auth_data={'user_id': user_id, 'password': password}
+    auth_data = {"user_id": user_id, "password": password}
     async with aiohttp.ClientSession() as http_session:
         async with http_session.post(auth_url, data=auth_data) as resp:
             status_code = resp.status
     if status_code == 200:
-        cur, timing = await db.db_exec("""
+        cur, timing = await db.db_exec(
+            """
             DELETE FROM auth WHERE user_id = %s;
             INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
-        """, (user_id, user_id, token))
+        """,
+            (user_id, user_id, token),
+        )
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
     elif status_code == 403:
-        await asyncio.sleep(settings.FAILED_AUTH_WAIT_TIME)   # prevents brute-force
+        await asyncio.sleep(settings.FAILED_AUTH_WAIT_TIME)  # prevents brute-force
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
-            headers={
-            "WWW-Authenticate": "Bearer",
-            "x-auth-url": auth_url
-            },
+            headers={"WWW-Authenticate": "Bearer", "x-auth-url": auth_url},
         )
     elif status_code == 404:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid auth server: 404",
-            headers={
-            "WWW-Authenticate": "Bearer",
-            "x-auth-url": auth_url
-            },
+            headers={"WWW-Authenticate": "Bearer", "x-auth-url": auth_url},
         )
-    raise HTTPException(
-        status_code=500, detail="Server error")
+    raise HTTPException(status_code=500, detail="Server error")
 
 
 @app.post("/auth_by_cookie", response_model=TokenResponse)
-async def authentication(request: Request, response: Response, session: Optional[str] = Cookie(None)):
+async def authentication(
+    request: Request, response: Response, session: Optional[str] = Cookie(None)
+):
     """
     Authentication: provide Open Food Facts session cookie and get a bearer token in return
 
@@ -204,21 +248,19 @@ async def authentication(request: Request, response: Response, session: Optional
 
     token is returned, to be used in later requests with usual "Authorization: bearer token" headers
     """
-    if not session or session =='':
-        raise HTTPException(
-            status_code=422, detail="Missing 'session' cookie")
+    if not session or session == "":
+        raise HTTPException(status_code=422, detail="Missing 'session' cookie")
 
     try:
-        session_data = session.split('&')
-        user_id = session_data[session_data.index('user_id') + 1]
-        token = user_id + '__U' + str(uuid.uuid4())
-    except:
-        raise HTTPException(
-            status_code=422, detail="Malformed 'session' cookie")
+        session_data = session.split("&")
+        user_id = session_data[session_data.index("user_id") + 1]
+        token = user_id + "__U" + str(uuid.uuid4())
+    except (ValueError, IndexError):
+        raise HTTPException(status_code=422, detail="Malformed 'session' cookie")
 
     auth_url = get_auth_server(request) + "/cgi/auth.pl"
     async with aiohttp.ClientSession() as http_session:
-        async with http_session.post(auth_url, cookies={'session': session}) as resp:
+        async with http_session.post(auth_url, cookies={"session": session}) as resp:
             status_code = resp.status
 
     if status_code == 200:
@@ -227,40 +269,38 @@ async def authentication(request: Request, response: Response, session: Optional
             DELETE FROM auth WHERE user_id = %s;
             INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
             """,
-            (user_id, user_id, token)
+            (user_id, user_id, token),
         )
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
     elif status_code == 403:
-        await asyncio.sleep(settings.FAILED_AUTH_WAIT_TIME) # prevents brute-force
+        await asyncio.sleep(settings.FAILED_AUTH_WAIT_TIME)  # prevents brute-force
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    raise HTTPException(
-        status_code=500, detail="Server error")
+    raise HTTPException(status_code=500, detail="Server error")
 
 
 def property_where(owner: str, k: str, v: str):
-    """Build a SQL condition on a property, filtering by owner and eventually key and value
-    """
-    conditions = ['owner=%s']
+    """Build a SQL condition on a property, filtering by owner and eventually key and value"""
+    conditions = ["owner=%s"]
     params = [owner]
-    if k != '':
-        conditions.append('k=%s')
+    if k != "":
+        conditions.append("k=%s")
         params.append(k)
-        if v != '':
-            conditions.append('v=%s')
+        if v != "":
+            conditions.append("v=%s")
             params.append(v)
     where = " AND ".join(conditions)
     return where, params
 
 
 @app.get("/products/stats", response_model=List[ProductStats])
-async def product_stats(response: Response,
-                       owner='', k='', v='',
-                       user: User = Depends(get_current_user)):
+async def product_stats(
+    response: Response, owner="", k="", v="", user: User = Depends(get_current_user)
+):
     """
     Get the list of products with tags statistics
 
@@ -269,7 +309,8 @@ async def product_stats(response: Response,
     check_owner_user(user, owner, allow_anonymous=True)
     k, v = sanitize_data(k, v)
     where, params = property_where(owner, k, v)
-    cur, timing = await db.db_exec("""
+    cur, timing = await db.db_exec(
+        """
         SELECT json_agg(j.j)::json FROM(
             SELECT json_build_object(
                 'product',product,
@@ -280,8 +321,9 @@ async def product_stats(response: Response,
             FROM folksonomy
             WHERE %s
             GROUP BY product) as j;
-        """ % where,
-        params
+        """
+        % where,
+        params,
     )
     out = await cur.fetchone()
     # cur, timing = await db.db_exec("""
@@ -295,22 +337,26 @@ async def product_stats(response: Response,
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
-        headers={"x-pg-timing": timing}
+        headers={"x-pg-timing": timing},
     )
 
+
 @app.get("/products", response_model=List[ProductList])
-async def product_list(response: Response,
-                       owner='', k='', v='',
-                       user: User = Depends(get_current_user)):
+async def product_list(
+    response: Response, owner="", k="", v="", user: User = Depends(get_current_user)
+):
     """
     Get the list of products matching k or k=v
     """
-    if k == '':
-        return JSONResponse(status_code=422, content={"detail": {"msg": "missing value for k"}})
+    if k == "":
+        return JSONResponse(
+            status_code=422, content={"detail": {"msg": "missing value for k"}}
+        )
     check_owner_user(user, owner, allow_anonymous=True)
     k, v = sanitize_data(k, v)
     where, params = property_where(owner, k, v)
-    cur, timing = await db.db_exec("""
+    cur, timing = await db.db_exec(
+        """
         SELECT coalesce(json_agg(j.j)::json, '[]'::json) FROM(
             SELECT json_build_object(
                 'product',product,
@@ -320,24 +366,29 @@ async def product_list(response: Response,
             FROM folksonomy
             WHERE %s
             ) as j;
-        """ % where,
-        params
+        """
+        % where,
+        params,
     )
     out = await cur.fetchone()
 
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
-        headers={"x-pg-timing": timing}
+        headers={"x-pg-timing": timing},
     )
+
 
 @app.get("/product/{product}", response_model=List[ProductTag])
 async def product_tags_list(
     response: Response,
     product: str,
-    owner: str = '',
-    keys: str = Query(None, description="Comma-separated list of keys to filter by. If not provided, all keys are returned."),
-    user: User = Depends(get_current_user)
+    owner: str = "",
+    keys: str = Query(
+        None,
+        description="Comma-separated list of keys to filter by. If not provided, all keys are returned.",
+    ),
+    user: User = Depends(get_current_user),
 ):
     """
     Get a list of existing tags for a product, optionally filtering by specific keys.
@@ -346,11 +397,11 @@ async def product_tags_list(
     check_owner_user(user, owner, allow_anonymous=True)
     keys_list = [key.strip() for key in keys.split(",")] if keys else None
 
-    placeholders = ', '.join(['%s'] * len(keys_list)) if keys_list else ''
+    placeholders = ", ".join(["%s"] * len(keys_list)) if keys_list else ""
 
     query = f"""
         SELECT json_agg(j)::json FROM (
-            SELECT * FROM folksonomy 
+            SELECT * FROM folksonomy
             WHERE product = %s AND owner = %s
             {f"AND k IN ({placeholders})" if keys_list else ""}
             ORDER BY k
@@ -361,17 +412,22 @@ async def product_tags_list(
 
     cur, timing = await db.db_exec(query, tuple(params))
     out = await cur.fetchone()
-    
+
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
-        headers={"x-pg-timing": timing}
+        headers={"x-pg-timing": timing},
     )
-    
+
+
 @app.get("/product/{product}/{k}", response_model=ProductTag)
-async def product_tag(response: Response,
-                      product: str, k: str, owner='',
-                      user: User = Depends(get_current_user)):
+async def product_tag(
+    response: Response,
+    product: str,
+    k: str,
+    owner="",
+    user: User = Depends(get_current_user),
+):
     """
     Get a specific tag or tag hierarchy on a product
 
@@ -379,9 +435,9 @@ async def product_tag(response: Response,
     - /product/xxx/key* returns the key and subkeys (key:subkey)
     """
     k, v = sanitize_data(k, None)
-    key = re.sub(r'[^a-z0-9_\:]', '', k)
+    key = re.sub(r"[^a-z0-9_\:]", "", k)
     check_owner_user(user, owner, allow_anonymous=True)
-    if k[-1:] == '*':
+    if k[-1:] == "*":
         cur, timing = await db.db_exec(
             """
             SELECT json_agg(j)::json FROM(
@@ -390,7 +446,7 @@ async def product_tag(response: Response,
                 WHERE product = %s AND owner = %s AND k ~ %s
                 ORDER BY k) as j;
             """,
-            (product, owner, '^%s(:.|$)' % key),
+            (product, owner, "^%s(:.|$)" % key),
         )
     else:
         cur, timing = await db.db_exec(
@@ -404,18 +460,22 @@ async def product_tag(response: Response,
             (product, owner, key),
         )
     out = await cur.fetchone()
-    
+
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
-        headers={"x-pg-timing": timing}
+        headers={"x-pg-timing": timing},
     )
 
 
 @app.get("/product/{product}/{k}/versions", response_model=List[ProductTag])
-async def product_tag_list_versions(response: Response,
-                                    product: str, k: str, owner='',
-                                    user: User = Depends(get_current_user)):
+async def product_tag_list_versions(
+    response: Response,
+    product: str,
+    k: str,
+    owner="",
+    user: User = Depends(get_current_user),
+):
     """
     Get a list of all versions of a tag for a product
     """
@@ -438,15 +498,14 @@ async def product_tag_list_versions(response: Response,
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
-        headers={"x-pg-timing": timing}
+        headers={"x-pg-timing": timing},
     )
-    
 
 
 @app.post("/product")
-async def product_tag_add(response: Response,
-                          product_tag: ProductTag,
-                          user: User = Depends(get_current_user)):
+async def product_tag_add(
+    response: Response, product_tag: ProductTag, user: User = Depends(get_current_user)
+):
     """
     Create a new product tag (version=1)
 
@@ -468,9 +527,16 @@ async def product_tag_add(response: Response,
         query, params = db.create_product_tag_req(product_tag)
         cur, timing = await db.db_exec(query, params)
     except psycopg2.Error as e:
-        error_msg = re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1]
+        error_msg = re.sub(r".*@@ (.*) @@\n.*$", r"\1", e.pgerror)[:-1]
         if "duplicate key value violates unique constraint" in e.pgerror:
-            return JSONResponse(status_code=422, content={"detail": {"msg": "Version conflict for this product (might result from a concurrent edit)"}})
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "detail": {
+                        "msg": "Version conflict for this product (might result from a concurrent edit)"
+                    }
+                },
+            )
         return JSONResponse(status_code=422, content={"detail": {"msg": error_msg}})
 
     if cur.rowcount == 1:
@@ -491,10 +557,11 @@ def _create_version_error(expected_version: int, received_version: int):
         ],
     )
 
+
 @app.put("/product")
-async def product_tag_update(response: Response,
-                             product_tag: ProductTag,
-                             user: User = Depends(get_current_user)):
+async def product_tag_update(
+    response: Response, product_tag: ProductTag, user: User = Depends(get_current_user)
+):
     """
     Update a product tag
 
@@ -532,7 +599,7 @@ async def product_tag_update(response: Response,
     except psycopg2.Error as e:
         raise HTTPException(
             status_code=422,
-            detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
+            detail=re.sub(r".*@@ (.*) @@\n.*$", r"\1", e.pgerror)[:-1],
         )
     # Check if exactly one row was updated
     # Atlease one row will be updated, as version is checked
@@ -546,16 +613,21 @@ async def product_tag_update(response: Response,
 
 
 @app.delete("/product/{product}/{k}")
-async def product_tag_delete(response: Response,
-                             product: str, k: str, version: int, owner='',
-                             user: User = Depends(get_current_user)):
+async def product_tag_delete(
+    response: Response,
+    product: str,
+    k: str,
+    version: int,
+    owner="",
+    user: User = Depends(get_current_user),
+):
     """
     Delete a product tag
     """
     check_owner_user(user, owner, allow_anonymous=False)
     k, v = sanitize_data(k, None)
     try:
-        # Setting version to 0, this is seen as a reset, 
+        # Setting version to 0, this is seen as a reset,
         # while maintaining history in folksonomy_versions
         cur, timing = await db.db_exec(
             """
@@ -568,7 +640,7 @@ async def product_tag_delete(response: Response,
         # note: transaction will be rolled back by the middleware
         raise HTTPException(
             status_code=422,
-            detail=re.sub(r'.*@@ (.*) @@\n.*$', r'\1', e.pgerror)[:-1],
+            detail=re.sub(r".*@@ (.*) @@\n.*$", r"\1", e.pgerror)[:-1],
         )
     if cur.rowcount != 1:
         raise HTTPException(
@@ -589,13 +661,14 @@ async def product_tag_delete(response: Response,
             """
             SELECT version FROM folksonomy WHERE product = %s AND owner = %s AND k = %s
             """,
-            (product, owner, k)
+            (product, owner, k),
         )
         if cur.rowcount == 1:
             out = await cur.fetchone()
             raise HTTPException(
                 status_code=422,
-                detail="version mismatch, last version for this product/k is %s" % out[0],
+                detail="version mismatch, last version for this product/k is %s"
+                % out[0],
             )
         else:
             raise HTTPException(
@@ -607,9 +680,9 @@ async def product_tag_delete(response: Response,
 @app.get("/keys", response_model=List[KeyStats])
 async def keys_list(
     response: Response,
-    q: Optional[str] = '',
-    owner: str = '',
-    user: User = Depends(get_current_user)
+    q: Optional[str] = "",
+    owner: str = "",
+    user: User = Depends(get_current_user),
 ):
     """
     Get the list of keys with statistics, with an optional search filter.
@@ -618,7 +691,7 @@ async def keys_list(
     """
     check_owner_user(user, owner, allow_anonymous=True)
 
-    search_filter = f"AND k ILIKE %s" if q else ""
+    search_filter = "AND k ILIKE %s" if q else ""
     query = f"""
         SELECT json_agg(j)::json FROM (
             SELECT json_build_object(
@@ -629,7 +702,7 @@ async def keys_list(
             FROM folksonomy
             WHERE owner = %s
             {search_filter}
-            GROUP BY k 
+            GROUP BY k
             ORDER BY count(*) DESC
         ) AS j;
     """
@@ -642,16 +715,19 @@ async def keys_list(
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
-        headers={"x-pg-timing": timing}
+        headers={"x-pg-timing": timing},
     )
 
+
 @app.get("/values/{k}", response_model=List[ValueCount])
-async def get_unique_values(response: Response,
-                            k: str,
-                            owner: str = '',
-                            q: str = '',
-                            limit: int = 50,
-                            user: User = Depends(get_current_user)):
+async def get_unique_values(
+    response: Response,
+    k: str,
+    owner: str = "",
+    q: str = "",
+    limit: int = 50,
+    user: User = Depends(get_current_user),
+):
     """
     Get the unique values of a given property and the corresponding number of products
 
@@ -701,6 +777,6 @@ async def pong(response: Response):
     """
     Check server health
     """
-    cur, timing = await db.db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'",())
+    cur, timing = await db.db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'", ())
     pong = await cur.fetchone()
     return {"ping": "pong @ %s" % pong[0]}

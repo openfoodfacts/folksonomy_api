@@ -2,31 +2,57 @@
 
 Welcome! As a collaborative, civic-minded project, we always welcome new participants.
 
-This project share the global [Open Food Facts' code of conduct](https://world.openfoodfacts.org/code-of-conduct).
+This project shares the global [Open Food Facts Code of Conduct](https://world.openfoodfacts.org/code-of-conduct).
 
-## Very first steps
+## Very First Steps
 
 Suggestions for better understanding what we do and how we work:
-* [Have a look at our database](https://world.openfoodfacts.org/), this the core of our project
-* Install and explore [our mobile app](https://world.openfoodfacts.org/open-food-facts-mobile-app)
-  * Scan few products and enjoy
-  * Update a product: update photos; fill the missing data
-* Check our [last blog posts](https://blog.openfoodfacts.org), allowing you to better understand how the project is growing
-* Check our [major components map](https://github.com/openfoodfacts/.github/blob/main/profile/README.md#major_components_map), to understand our components' ecosystem
-* Hey, [we also have a wiki](https://wiki.openfoodfacts.org), where we can find useful knowledge
+
+- [Explore our database](https://world.openfoodfacts.org/) – This is the core of our project.
+- Install and explore [our mobile app](https://world.openfoodfacts.org/open-food-facts-mobile-app):
+  - Scan a few products and enjoy.
+  - Update a product: update photos, fill in missing data.
+- Check our [latest blog posts](https://blog.openfoodfacts.org) to better understand how the project is evolving.
+- Review our [Major Components Map](https://github.com/openfoodfacts/.github/blob/main/profile/README.md#major_components_map) to understand our ecosystem.
+- Visit [our wiki](https://wiki.openfoodfacts.org) for useful knowledge.
 
 ## Contributing
 
-Folksonomy Engine is fully developped on Github. You will need a Github user account to participate.
+The Folksonomy Engine is fully developed on GitHub. You will need a GitHub account to participate.
 
-* All contributions [start with an issue](https://github.com/openfoodfacts/folksonomy_api/issues)
-  * Issues are prioritized:
-    * P0 tag means high priority issues; while P4 means lower priority
-    * [Good first issues](https://github.com/openfoodfacts/folksonomy_api/issues?q=state%3Aopen%20label%3A%22%F0%9F%8F%84%E2%80%8D%E2%99%80%EF%B8%8F%20good%20first%20issue%22), is a good start for beginners
+- All contributions [start with an issue](https://github.com/openfoodfacts/folksonomy_api/issues):
+  - Issues are prioritized:
+    - `P0` tag means high-priority, while `P4` means lower priority.
+    - [Good first issues](https://github.com/openfoodfacts/folksonomy_api/issues?q=state%3Aopen%20label%3A%22%F0%9F%8F%84%E2%80%8D%E2%99%80%EF%B8%8F%20good%20first%20issue%22) are a great starting point for beginners.
 
-* Development practices
-  * We use an [`.editorconfig`](./.editorconfig) file to help developpers maintain consistent coding style (see [EditorConfig](https://editorconfig.org/))
-  * Want to start working on something: express your wish in the corresponding issue
-  * Create your own git branches, one per topic/feature/bugfix; commit frequently; open Pull Requests when ready
-  * We try to implement as many automated tests as possible, thanks to [Pytest](https://docs.pytest.org/en/stable/); see [./tests](./tests) directory
-  * DB migrations, if any, needs to be handled by [Yoyo](https://ollycope.com/software/yoyo/latest/); see ./db-migration.py
+## Development Practices
+
+- We use an [.editorconfig](https://editorconfig.org/) file to help maintain a consistent coding style.
+- Before starting work, comment on the corresponding issue to express your interest.
+- Create your own Git branches – one branch per topic/feature/bugfix.
+- Commit frequently and open Pull Requests (PRs) when ready.
+- We implement automated tests using [Pytest](https://docs.pytest.org/en/stable/); see the `tests/` directory.
+- Handle database migrations using [Yoyo](https://ollycope.com/software/yoyo/latest/); see `db-migration.py`.
+
+## Code Style and Linting
+
+We use [Ruff](https://docs.astral.sh/ruff/) for Python linting and code formatting, along with [pre-commit](https://pre-commit.com/) hooks to maintain code quality and consistency.
+
+### Pre-commit Hooks
+
+The project uses pre-commit hooks to automatically handle:
+
+- Fixing trailing whitespace
+- Ensuring files end with a newline
+- Checking JSON and YAML files
+- Linting and formatting Python code with Ruff
+
+**Pre-commit** is installed with the project dependencies.
+
+To manually run all hooks:
+
+```bash
+poetry run pre-commit run --all-files
+```
+
+**Note**: Our CI pipeline runs these same checks on all PRs. Ensuring your code passes them locally will make your PR easier and faster to merge!
