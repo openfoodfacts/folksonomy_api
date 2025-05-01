@@ -9,6 +9,8 @@ from .dependencies import *
 from . import db
 from . import settings
 from fastapi.middleware.cors import CORSMiddleware
+from .utils import *
+from .knowledge_panels import router as knowledge_panels_router
 
 
 description = """
@@ -37,6 +39,8 @@ async def app_lifespan(app: FastAPI):
 
 app = FastAPI(title="Open Food Facts folksonomy REST API",
     description=description, lifespan=app_lifespan)
+
+app.include_router(knowledge_panels_router)
 
 # Allow anyone to call the API from their own apps
 app.add_middleware(
@@ -81,52 +85,11 @@ async def hello():
     return {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    """
-    Get current user and check token validity if present
-    """
-    if token and '__U' in token:
-        cur = db.cursor()
-        await cur.execute(
-            "UPDATE auth SET last_use = current_timestamp AT TIME ZONE 'GMT' WHERE token = %s", (token,)
-        )
-        if cur.rowcount == 1:
-            return User(user_id=token.split('__U', 1)[0])
-        else:
-            return User(user_id=None)
-
-
 def sanitize_data(k, v):
     """Some sanitization of data"""
     k = k.strip()
     v = v.strip() if v else v
     return k, v
-
-def check_owner_user(user: User, owner, allow_anonymous=False):
-    """
-    Check authentication depending on current user and 'owner' of the data
-    """
-    user = user.user_id if user is not None else None
-    if user is None and allow_anonymous == False:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    if owner != '':
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required for '%s'" % owner,
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        if owner != user:
-            raise HTTPException(
-                status_code=422,
-                detail="owner should be '%s' or '' for public, but '%s' is authenticated" % (
-                    owner, user),
-            )
-    return
 
 
 def get_auth_server(request: Request):
@@ -368,110 +331,6 @@ async def product_tags_list(
         headers={"x-pg-timing": timing}
     )
 
-
-@app.get("/product/{product}/knowledge-panels", response_model=ProductKnowledgePanels)
-async def product_barcode_knowledge_panels(response: Response,
-                                           product: str,
-                                           k: Optional[str] = Query(None, description="Optional key to filter the results"),
-                                           owner='',
-                                           user: User = Depends(get_current_user)):
-    """
-    Return product information in a Knowledge Panel format.
-    If 'k' is provided, only that key is fetched.
-    If none is provided, all the keys are returned.
-    """
-    check_owner_user(user, owner, allow_anonymous=True)
-
-    query = f"""
-        SELECT product, k, v, owner, version, editor, last_edit, comment
-        FROM folksonomy
-        WHERE product = %s
-    """
-    params = [product]
-    if k:
-        query+= " AND k = %s"
-        params.append(k)
-    query += " ORDER BY k;"
-
-    cur, timing = await db.db_exec(query, tuple(params))
-    rows = await cur.fetchall()
-
-    if not rows:
-        raise HTTPException(
-                status_code=404,
-                detail="Could not find product or key",
-            )
-
-    panels_by_key = {}
-    for row in rows:
-
-        product_value, k, v, _, _, _, _, _ = row
-
-        if k not in panels_by_key:
-            panels_by_key[k] = {
-                "Barcode": product_value,
-                "Key": k,
-                "Value": v
-            }
-        else:
-            data = panels_by_key[k]
-            if not data.get("Barcode") and product_value:
-                data["Barcode"] = product_value
-            if not data.get("Value") and v:
-                data["Value"] = v
-
-    panels = {}
-    for k, data in panels_by_key.items():
-        rows_html = ""
-        for property, value in data.items():
-            if value is None:
-                continue
-
-            # Links for Key and Value property
-            if property == "Key":
-                value_cell = (
-                    f'<a href="world.openfoodfacts.org/property/{value}">{value}</a> '
-                    f'<a href="wiki.openfoodfacts.org/Folksonomy/Property/{value}">&#8505;</a>'
-                )
-            elif property == "Value":
-                value_cell = f'<a href="world.openfoodfacts.org/property/{data["Key"]}/value/{value}">{value}</a>'
-            else:
-                value_cell = value
-
-            row_html = f"<tr><td>{property}</td><td>{value_cell}</td></tr>"
-            rows_html += row_html
-
-
-
-        table_html = f"<table>{rows_html}</table>"
-
-        table_element = TableElement(
-            id=k,
-            title=f"Folksonomy Data for '{k}'",
-            rows=table_html,
-            columns=[
-                TableColumn(type="text", text="Property"),
-                TableColumn(type="text", text="Value")
-            ]
-        )
-
-        element = Element(
-            type="table",
-            table_element=table_element
-        )
-
-        panel = Panel(
-            title_element=TitleElement(
-                title=f"Folksonomy Data for '{k}'",
-                name=k
-            ),
-            elements=[element]
-        )
-        panels[k] = panel
-
-    response_obj = ProductKnowledgePanels(knowledge_panels=panels)
-    response.headers["x-pg-timing"] = timing
-    return response_obj
 
 @app.get("/product/{product}/{k}", response_model=ProductTag)
 async def product_tag(response: Response,
