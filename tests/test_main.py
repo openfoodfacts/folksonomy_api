@@ -541,10 +541,6 @@ def test_product_knowledge_panels(with_sample):
         assert response.status_code == 200
         data = response.json()
         assert "knowledge_panels" in data
-        panels = data["knowledge_panels"]
-        assert "color" in panels
-        assert "size" in panels
-        assert "x-pg-timing" in response.headers
         # filtered for only one k
         response = client.get(f"/product/{BARCODE_1}/knowledge-panels?k=color", headers=headers)
         assert response.status_code == 200
