@@ -2,9 +2,9 @@
 
 from fastapi import APIRouter, Response, Depends, HTTPException, Query
 from typing import Optional
-from .dependencies import *
 from . import db
 from .utils import *
+from .models import *
 
 router = APIRouter()
 
