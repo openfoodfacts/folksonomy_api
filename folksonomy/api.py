@@ -37,7 +37,7 @@ from .models import (
     User,
     ValueCount,
 )
-from .utils import *
+from .utils import get_current_user, check_owner_user
 from .knowledge_panels import router as knowledge_panels_router
 
 
@@ -461,7 +461,6 @@ async def product_tag_list_versions(
         content=out[0] if out and out[0] is not None else [],
         headers={"x-pg-timing": timing},
     )
-
 
 
 @app.post("/product")

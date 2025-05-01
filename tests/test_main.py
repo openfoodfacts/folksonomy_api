@@ -734,7 +734,9 @@ def test_product_knowledge_panels(with_sample):
         data = response.json()
         assert "knowledge_panels" in data
         # filtered for only one k
-        response = client.get(f"/product/{BARCODE_1}/knowledge-panels?k=color", headers=headers)
+        response = client.get(
+            f"/product/{BARCODE_1}/knowledge-panels?k=color", headers=headers
+        )
         assert response.status_code == 200
         data = response.json()
         panels = data["knowledge_panels"]
@@ -742,13 +744,18 @@ def test_product_knowledge_panels(with_sample):
         assert "color" in panels
         assert "x-pg-timing" in response.headers
         # non-existing product
-        response = client.get("/product/0000000000000/knowledge-panels", headers=headers)
+        response = client.get(
+            "/product/0000000000000/knowledge-panels", headers=headers
+        )
         assert response.status_code == 404
         data = response.json()
         assert "Could not find product or key" in data["detail"]
         # existing product but non-existing key
-        response = client.get(f"/product/{BARCODE_1}/knowledge-panels?k=nonexistent", headers=headers)
+        response = client.get(
+            f"/product/{BARCODE_1}/knowledge-panels?k=nonexistent", headers=headers
+        )
         assert response.status_code == 404
+
 
 @pytest.mark.asyncio
 async def test_post(with_sample, client, auth_tokens):
