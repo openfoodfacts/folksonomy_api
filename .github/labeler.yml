@@ -8,7 +8,7 @@ tests:
 
 database:
 - changed-files:  
-  -any-glob-to-any-file: 'db/**/*'
+  - any-glob-to-any-file: 'db/**/*'
 
 api:
 - changed-files:  
