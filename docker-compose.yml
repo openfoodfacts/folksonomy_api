@@ -1,0 +1,46 @@
+# Docker Compose configuration for Folksonomy API
+services:
+  folksonomy_api :
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${API_EXPOSE:-127.0.0.1:8000}:8000"
+    volumes:
+      # Mount .env file for environment variables
+      - ./.env:/app/.env
+      # Mount a volume for logs
+      - api_logs:/app/logs
+      # Mount source code for development (hot reload)
+      - ./folksonomy:/app/folksonomy:ro
+      - ./tests:/app/tests:ro
+      - ./db:/app/db:ro
+    env_file:
+      - .env
+    depends_on:
+      folksonomy_db:
+        condition: service_healthy  # Wait for DB to be fully ready
+    restart: ${RESTART_POLICY:-no}
+
+  folksonomy_db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-folksonomy}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-folksonomy}
+      - POSTGRES_DB=${POSTGRES_DATABASE:-folksonomy}
+    ports:
+      - "${DB_EXPOSE:-127.0.0.1:5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-folksonomy} -d ${POSTGRES_DATABASE:-folksonomy}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: ${RESTART_POLICY:-no}
+
+volumes:
+  postgres_data:
+  api_logs:
