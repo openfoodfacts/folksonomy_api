@@ -2,16 +2,16 @@ github:
   - ".github/**/*"
 
 tests:
-  - tests/**/*
+  - "tests/**/*"
 
 database:
-  - db/**/*
+  - "db/**/*"
 
 api:
-  - folksonomy/api.py
+  - "folksonomy/api.py"
 
 models:
-  - folksonomy/models.py
+  - "folksonomy/models.py"
 
-dependancies:
-  - folksonomy/dependencies.py
+dependencies:
+  - "folksonomy/dependencies.py"
