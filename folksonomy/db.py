@@ -6,13 +6,12 @@ import time
 import weakref
 
 
-import aiopg # interface with postgresql
+import aiopg  # interface with postgresql
 
 # import psycopg2     # interface with postgresql
 
 from . import models
 from . import settings
-
 
 
 log = logging.getLogger(__name__)
@@ -36,7 +35,7 @@ class NotInAsyncIOError(Exception):
 async def get_conn():
     """Get current database connection, creating it if needed"""
     global conn
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     if loop is None:
         raise NotInAsyncIOError("This method only works with asyncio")
     _conn = conn.get(loop)
@@ -63,7 +62,7 @@ def cursor():
 async def terminate():
     """Close all database connection"""
     global conn
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     _conn = conn.get(loop)
     if _conn is not None:
         _conn.terminate()
@@ -87,41 +86,49 @@ async def transaction():
         cur.set(None)
 
 
-async def db_exec(query, params = ()):
+async def db_exec(query, params=()):
     """
     Execute postgresql query and collect timing
     """
     t = time.monotonic()
     cur = cursor()
     await cur.execute(query, params)
-    return cur, str(round(time.monotonic()-t, 4)*1000)+"ms"
+    return cur, str(round(time.monotonic() - t, 4) * 1000) + "ms"
 
 
 def create_product_tag_req(product_tag: models.ProductTag):
-    """Request and params to create a product tag in database
-    """
+    """Request and params to create a product tag in database"""
     return (
         """
         INSERT INTO folksonomy (product,k,v,owner,version,editor,comment)
             VALUES (%s,%s,%s,%s,%s,%s,%s)
         """,
         (
-            product_tag.product, product_tag.k.lower(), product_tag.v, product_tag.owner,
-            product_tag.version, product_tag.editor, product_tag.comment
-        )
+            product_tag.product,
+            product_tag.k.lower(),
+            product_tag.v,
+            product_tag.owner,
+            product_tag.version,
+            product_tag.editor,
+            product_tag.comment,
+        ),
     )
 
 
 def update_product_tag_req(product_tag: models.ProductTag):
-    """Request and params to update a product tag in database
-    """
+    """Request and params to update a product tag in database"""
     return (
         """
         UPDATE folksonomy SET v = %s, version = %s, editor = %s, comment = %s
             WHERE product = %s AND owner = %s AND k = %s
         """,
         (
-            product_tag.v, product_tag.version, product_tag.editor, product_tag.comment,
-            product_tag.product, product_tag.owner, product_tag.k.lower()
-        )
+            product_tag.v,
+            product_tag.version,
+            product_tag.editor,
+            product_tag.comment,
+            product_tag.product,
+            product_tag.owner,
+            product_tag.k.lower(),
+        ),
     )
