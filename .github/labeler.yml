@@ -7,17 +7,17 @@ tests:
   - any-glob-to-any-file: 'tests/**/*'
 
 database:
-- changed-files:  
+- changed-files:
   - any-glob-to-any-file: 'db/**/*'
 
 api:
-- changed-files:  
+- changed-files:
   - any-glob-to-any-file: 'folksonomy/api.py'
 
 models:
-- changed-files:  
+- changed-files:
   - any-glob-to-any-file: 'folksonomy/models.py'
 
 dependancies:
-- changed-files:  
+- changed-files:
   - any-glob-to-any-file: 'folksonomy/dependencies.py'
