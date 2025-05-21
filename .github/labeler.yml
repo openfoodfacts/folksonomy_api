@@ -1,17 +1,23 @@
-github:
-  - ".github/**/*"
+GitHub Actions:
+- changed-files:
+  - any-glob-to-any-file: '.github/**/*'
 
 tests:
-  - "tests/**/*"
+- changed-files:
+  - any-glob-to-any-file: 'tests/**/*'
 
 database:
-  - "db/**/*"
+- changed-files:
+  - any-glob-to-any-file: 'db/**/*'
 
 api:
-  - "folksonomy/api.py"
+- changed-files:
+  - any-glob-to-any-file: 'folksonomy/api.py'
 
 models:
-  - "folksonomy/models.py"
+- changed-files:
+  - any-glob-to-any-file: 'folksonomy/models.py'
 
-dependencies:
-  - "folksonomy/dependencies.py"
+dependancies:
+- changed-files:
+  - any-glob-to-any-file: 'folksonomy/dependencies.py'
