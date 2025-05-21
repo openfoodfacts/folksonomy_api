@@ -23,7 +23,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
       - name: Create pgdata Directory
         run: mkdir -p /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
 
@@ -31,7 +30,7 @@ jobs:
         run: sudo chmod -R 777 /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
 
       - name: Install Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.3.0
         with:
           python-version: '3.9'
 
