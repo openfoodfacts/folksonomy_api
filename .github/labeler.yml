@@ -8,16 +8,16 @@ tests:
 
 database:
 - changed-files:  
-  -any-glob-to-any-file: db/**/*
+  -any-glob-to-any-file: 'db/**/*'
 
 api:
 - changed-files:  
-  - any-glob-to-any-file: folksonomy/api.py
+  - any-glob-to-any-file: 'folksonomy/api.py'
 
 models:
 - changed-files:  
-  - any-glob-to-any-file: folksonomy/models.py
+  - any-glob-to-any-file: 'folksonomy/models.py'
 
 dependancies:
 - changed-files:  
-  - any-glob-to-any-file: folksonomy/dependencies.py
+  - any-glob-to-any-file: 'folksonomy/dependencies.py'
