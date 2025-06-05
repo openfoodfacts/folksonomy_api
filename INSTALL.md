@@ -35,6 +35,7 @@ poetry install
 # Set up PostgreSQL database
 sudo -i -u postgres createuser $USER
 sudo -i -u postgres createdb folksonomy -O $USER
+sudo -u postgres psql -c "ALTER USER your_username WITH PASSWORD 'your_password';" # optional, it creates a password
 
 # Initialize the database using yoyo-migrations (inside Poetry environment)
 poetry run yoyo apply --database postgresql:///folksonomy
