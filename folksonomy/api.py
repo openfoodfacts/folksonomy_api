@@ -189,6 +189,7 @@ def get_auth_server(request: Request):
     )
     return base_url
 
+
 @app.post("/auth", response_model=TokenResponse)
 async def authentication(
     request: Request,
