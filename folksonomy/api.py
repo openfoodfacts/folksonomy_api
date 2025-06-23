@@ -191,8 +191,7 @@ def get_auth_server(request: Request):
 
 
 @app.post("/auth", response_model=TokenResponse)
-@app.post("/auth_by_cookie", response_model=TokenResponse)
-async def authentication_by_cookie(
+async def authentication(
     request: Request,
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -242,7 +241,7 @@ async def authentication_by_cookie(
 
 
 @app.post("/auth_by_cookie", response_model=TokenResponse)
-async def authentication(
+async def authentication_by_cookie(
     request: Request, response: Response, session: Optional[str] = Cookie(None)
 ):
     """
