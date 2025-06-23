@@ -240,7 +240,7 @@ async def authentication(
 
 
 @app.post("/auth_by_cookie", response_model=TokenResponse)
-async def authentication(
+async def authentication_by_cookie(
     request: Request, response: Response, session: Optional[str] = Cookie(None)
 ):
     """
