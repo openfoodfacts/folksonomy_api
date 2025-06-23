@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/openfoodfacts/folksonomy_api/compare/v1.2.0...v1.2.1) (2025-06-23)
+
+
+### Bug Fixes
+
+* adds fix for mistaken code for /auth API endpoint ([#288](https://github.com/openfoodfacts/folksonomy_api/issues/288)) ([59ab4fa](https://github.com/openfoodfacts/folksonomy_api/commit/59ab4fa2d356d3410353c3aa16028ae121bda7d0))
+* use poetry for systemd unit ([#286](https://github.com/openfoodfacts/folksonomy_api/issues/286)) ([5804ff7](https://github.com/openfoodfacts/folksonomy_api/commit/5804ff7e0a8d51bca123d42d9333ec2a66a8e3a7))
+
 ## [1.2.0](https://github.com/openfoodfacts/folksonomy_api/compare/v1.1.0...v1.2.0) (2025-06-19)
 
 
