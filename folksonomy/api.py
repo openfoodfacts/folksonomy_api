@@ -81,11 +81,7 @@ app.add_middleware(
     # So, for everything to work correctly, it's better to specify explicitly the allowed origins."
     # => Workarround: use allow_origin_regex
     # Source: https://github.com/tiangolo/fastapi/issues/133#issuecomment-646985050
-    allow_origins=[
-        "http://localhost:8000",
-        "http://world.openfoodfacts.localhost",
-    ],
-    allow_origin_regex="https?://.*",
+    allow_origin_regex=r"^https://.*|^http://(localhost|.*\.localhost)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
