@@ -9,6 +9,7 @@ import uuid
 from typing import List, Optional
 
 import aiohttp  # async requests to call OFF for login/password check
+import httpx
 import psycopg2  # interface with postgresql
 from fastapi import (
     Cookie,
@@ -136,6 +137,42 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         else:
             return User(user_id=None)
 
+async def _fetch_user_data(session_cookie: str, auth_base_url: str) -> dict:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            auth_base_url, cookies={"session": session_cookie}, params={"body": "1"}
+        )
+
+    if response.status_code != 200:
+        await asyncio.sleep(2)
+        raise HTTPException(status_code=401, detail="Invalid session token")
+
+    return response.json().get("user", {})
+
+async def get_moderator_status_from_session(request: Request) -> Optional[bool]:
+    """
+    Get moderator status from session cookie only
+    """
+    print("Debug: Entering get_moderator_status_from_session function")
+    print(f"Debug: All cookies: {request.cookies}")
+    
+    session_cookie = request.cookies.get("session") #is this correct? (I get empty)
+    print(f"Debug: Session cookie value: {session_cookie}")
+    
+    if not session_cookie:
+        print("Debug: No session cookie found, returning None")
+        return None
+    
+    try:
+        print(f"Debug: Found session cookie: {session_cookie[:50]}..." if len(session_cookie) > 50 else f"Debug: Found session cookie: {session_cookie}")
+        auth_base_url = "https://world.openfoodfacts.org/cgi/auth.pl"
+        user_data = await _fetch_user_data(session_cookie, auth_base_url)
+        print(f"Debug: User data fetched: {user_data}")
+        return user_data.get("moderator", 0) == 1 if "id" in user_data else None
+    except HTTPException as e:
+        print(f"Debug: HTTPException in get_moderator_status_from_session: {e}")
+        return None
+
 
 def sanitize_data(k, v):
     """Some sanitization of data"""
@@ -209,7 +246,7 @@ async def authentication(
     user_id = form_data.username
     password = form_data.password
     token = user_id + "__U" + str(uuid.uuid4())
-    auth_url = get_auth_server(request) + "/cgi/auth.pl"
+    auth_url = "https://world.openfoodfacts.org/cgi/auth.pl"
     auth_data = {"user_id": user_id, "password": password}
     async with aiohttp.ClientSession() as http_session:
         async with http_session.post(auth_url, data=auth_data) as resp:
@@ -783,3 +820,20 @@ async def pong(response: Response):
     cur, timing = await db.db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'", ())
     pong = await cur.fetchone()
     return {"ping": "pong @ %s" % pong[0]}
+
+
+@app.get("/user/me")  
+async def get_user_info(request: Request):
+    """
+    Get current user moderator status for testing
+    """
+    print("Debug: /user/me endpoint called")
+    print(f"Debug: Request URL: {request.url}")
+    print(f"Debug: Request cookies: {request.cookies}")
+    
+    is_moderator = await get_moderator_status_from_session(request)
+    
+    print(f"Debug: Final is_moderator result: {is_moderator}")
+    return {
+        "is_moderator": is_moderator,
+    }

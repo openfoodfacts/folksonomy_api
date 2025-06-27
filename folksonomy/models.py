@@ -10,6 +10,7 @@ re_key = re.compile(r"[a-z0-9_-]+(\:[a-z0-9_-]+)*")
 
 class User(BaseModel):
     user_id: Optional[str]
+    is_moderator: Optional[bool] = None
 
 
 class ProductTag(BaseModel):
