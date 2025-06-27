@@ -61,6 +61,11 @@ It requires minimal setup and ensures a consistent development environment.
    cp .env.example .env
    ```
 
+3. Eventually create the shared network (it might already exist if you develop with [openfoodfacts-server](https://github.com/openfoodfacts/openfoodfacts-server/pulls))
+   ```bash
+   docker network create po_default
+   ```
+
 4. Start the services:
    ```bash
    docker compose up -d
@@ -79,6 +84,18 @@ It requires minimal setup and ensures a consistent development environment.
    ```bash
    docker compose down
    ```
+
+### Development with Product Opener (Open Food Facts server)
+
+If you want to test the integration with the Open Food Facts server,
+you just have to edit your .env to set:
+```conf
+AUTH_SERVER_STATIC=http://world.openfoodfacts.localhost
+```
+Then run your server and also run folksonomy_api.
+
+Change your local openfoodfacts-server instance to use your local folksonomy_api instance, which is at folksonomy_api:8000.
+**TODO:** document how
 
 ## Configuration
 

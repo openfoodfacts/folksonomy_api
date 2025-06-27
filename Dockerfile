@@ -70,7 +70,7 @@ done\n\
 echo "PostgreSQL is ready!"\n\
 \n\
 echo "Starting Folksonomy API server..."\n\
-uvicorn folksonomy.api:app --host 0.0.0.0 --port 8000 --proxy-headers\n\
+uvicorn folksonomy.api:app --host 0.0.0.0 --port 8000 --proxy-headers $UVICORN_OPTS\n\
 ' > /app/start.sh && \
     chmod +x /app/start.sh
 
