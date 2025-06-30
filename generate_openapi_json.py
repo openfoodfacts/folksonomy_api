@@ -2,24 +2,24 @@
 
 import json
 import sys
-import os
 
 # Mock the database dependencies for OpenAPI generation when DB is not available
 try:
     import psycopg2
 except ImportError:
-    sys.modules['psycopg2'] = type(sys)('psycopg2')
+    sys.modules["psycopg2"] = type(sys)("psycopg2")
 
 try:
     import aiopg
 except ImportError:
-    sys.modules['aiopg'] = type(sys)('aiopg')
+    sys.modules["aiopg"] = type(sys)("aiopg")
 
 # Mock the database module to avoid connection errors during OpenAPI generation
-if 'folksonomy.db' not in sys.modules:
+if "folksonomy.db" not in sys.modules:
     import types
-    db_mock = types.ModuleType('db')
-    sys.modules['folksonomy.db'] = db_mock
+
+    db_mock = types.ModuleType("db")
+    sys.modules["folksonomy.db"] = db_mock
 
 from folksonomy.api import app
 
