@@ -19,13 +19,12 @@ AUTH_PREFIX = os.environ.get("AUTH_PREFIX", "world")
 # OpenAPI server configuration
 API_SERVERS = [
     {
-        "url": os.environ.get("API_SERVER_URL", "https://api.folksonomy.openfoodfacts.org"),
-        "description": os.environ.get("API_SERVER_DESCRIPTION", "Production server")
+        "url": os.environ.get(
+            "API_SERVER_URL", "https://api.folksonomy.openfoodfacts.org"
+        ),
+        "description": os.environ.get("API_SERVER_DESCRIPTION", "Production server"),
     },
-    {
-        "url": "http://localhost:8000",
-        "description": "Local development server"
-    }
+    {"url": "http://localhost:8000", "description": "Local development server"},
 ]
 
 # time (in seconds) to wait for after a failed authentication attempt (to avoid brute force)

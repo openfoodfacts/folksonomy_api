@@ -71,27 +71,21 @@ app = FastAPI(
     lifespan=app_lifespan,
     servers=settings.API_SERVERS,
     openapi_tags=[
+        {"name": "System", "description": "System health and general API information"},
         {
-            "name": "System",
-            "description": "System health and general API information"
+            "name": "Authentication",
+            "description": "User authentication and authorization endpoints",
         },
-        {
-            "name": "Authentication", 
-            "description": "User authentication and authorization endpoints"
-        },
-        {
-            "name": "Products",
-            "description": "Product discovery and statistics"
-        },
+        {"name": "Products", "description": "Product discovery and statistics"},
         {
             "name": "Product Tags",
-            "description": "CRUD operations for product tags and properties"
+            "description": "CRUD operations for product tags and properties",
         },
         {
             "name": "Keys & Values",
-            "description": "Browse available keys and their possible values"
-        }
-    ]
+            "description": "Browse available keys and their possible values",
+        },
+    ],
 )
 
 # Allow anyone to call the API from their own apps
@@ -139,7 +133,9 @@ async def initialize_transactions(request: Request, call_next):
         return response
 
 
-@app.get("/", status_code=status.HTTP_200_OK, response_model=HelloResponse, tags=["System"])
+@app.get(
+    "/", status_code=status.HTTP_200_OK, response_model=HelloResponse, tags=["System"]
+)
 async def hello():
     return {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
 
@@ -494,7 +490,11 @@ async def product_tag(
     )
 
 
-@app.get("/product/{product}/{k}/versions", response_model=List[ProductTag], tags=["Product Tags"])
+@app.get(
+    "/product/{product}/{k}/versions",
+    response_model=List[ProductTag],
+    tags=["Product Tags"],
+)
 async def product_tag_list_versions(
     response: Response,
     product: str,
