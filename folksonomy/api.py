@@ -69,6 +69,29 @@ app = FastAPI(
     title="Open Food Facts folksonomy REST API",
     description=description,
     lifespan=app_lifespan,
+    servers=settings.API_SERVERS,
+    openapi_tags=[
+        {
+            "name": "System",
+            "description": "System health and general API information"
+        },
+        {
+            "name": "Authentication", 
+            "description": "User authentication and authorization endpoints"
+        },
+        {
+            "name": "Products",
+            "description": "Product discovery and statistics"
+        },
+        {
+            "name": "Product Tags",
+            "description": "CRUD operations for product tags and properties"
+        },
+        {
+            "name": "Keys & Values",
+            "description": "Browse available keys and their possible values"
+        }
+    ]
 )
 
 # Allow anyone to call the API from their own apps
@@ -116,7 +139,7 @@ async def initialize_transactions(request: Request, call_next):
         return response
 
 
-@app.get("/", status_code=status.HTTP_200_OK, response_model=HelloResponse)
+@app.get("/", status_code=status.HTTP_200_OK, response_model=HelloResponse, tags=["System"])
 async def hello():
     return {"message": "Hello folksonomy World! Tip: open /docs for documentation"}
 
@@ -190,7 +213,7 @@ def get_auth_server(request: Request):
     return base_url
 
 
-@app.post("/auth", response_model=TokenResponse)
+@app.post("/auth", response_model=TokenResponse, tags=["Authentication"])
 async def authentication(
     request: Request,
     response: Response,
@@ -240,7 +263,7 @@ async def authentication(
     raise HTTPException(status_code=500, detail="Server error")
 
 
-@app.post("/auth_by_cookie", response_model=TokenResponse)
+@app.post("/auth_by_cookie", response_model=TokenResponse, tags=["Authentication"])
 async def authentication_by_cookie(
     request: Request, response: Response, session: Optional[str] = Cookie(None)
 ):
@@ -300,7 +323,7 @@ def property_where(owner: str, k: str, v: str):
     return where, params
 
 
-@app.get("/products/stats", response_model=List[ProductStats])
+@app.get("/products/stats", response_model=List[ProductStats], tags=["Products"])
 async def product_stats(
     response: Response, owner="", k="", v="", user: User = Depends(get_current_user)
 ):
@@ -344,7 +367,7 @@ async def product_stats(
     )
 
 
-@app.get("/products", response_model=List[ProductList])
+@app.get("/products", response_model=List[ProductList], tags=["Products"])
 async def product_list(
     response: Response, owner="", k="", v="", user: User = Depends(get_current_user)
 ):
@@ -382,7 +405,7 @@ async def product_list(
     )
 
 
-@app.get("/product/{product}", response_model=List[ProductTag])
+@app.get("/product/{product}", response_model=List[ProductTag], tags=["Product Tags"])
 async def product_tags_list(
     response: Response,
     product: str,
@@ -423,7 +446,7 @@ async def product_tags_list(
     )
 
 
-@app.get("/product/{product}/{k}", response_model=ProductTag)
+@app.get("/product/{product}/{k}", response_model=ProductTag, tags=["Product Tags"])
 async def product_tag(
     response: Response,
     product: str,
@@ -471,7 +494,7 @@ async def product_tag(
     )
 
 
-@app.get("/product/{product}/{k}/versions", response_model=List[ProductTag])
+@app.get("/product/{product}/{k}/versions", response_model=List[ProductTag], tags=["Product Tags"])
 async def product_tag_list_versions(
     response: Response,
     product: str,
@@ -505,7 +528,7 @@ async def product_tag_list_versions(
     )
 
 
-@app.post("/product")
+@app.post("/product", tags=["Product Tags"])
 async def product_tag_add(
     response: Response, product_tag: ProductTag, user: User = Depends(get_current_user)
 ):
@@ -561,7 +584,7 @@ def _create_version_error(expected_version: int, received_version: int):
     )
 
 
-@app.put("/product")
+@app.put("/product", tags=["Product Tags"])
 async def product_tag_update(
     response: Response, product_tag: ProductTag, user: User = Depends(get_current_user)
 ):
@@ -615,7 +638,7 @@ async def product_tag_update(
         )
 
 
-@app.delete("/product/{product}/{k}")
+@app.delete("/product/{product}/{k}", tags=["Product Tags"])
 async def product_tag_delete(
     response: Response,
     product: str,
@@ -680,7 +703,7 @@ async def product_tag_delete(
             )
 
 
-@app.get("/keys", response_model=List[KeyStats])
+@app.get("/keys", response_model=List[KeyStats], tags=["Keys & Values"])
 async def keys_list(
     response: Response,
     q: Optional[str] = "",
@@ -722,7 +745,7 @@ async def keys_list(
     )
 
 
-@app.get("/values/{k}", response_model=List[ValueCount])
+@app.get("/values/{k}", response_model=List[ValueCount], tags=["Keys & Values"])
 async def get_unique_values(
     response: Response,
     k: str,
@@ -775,7 +798,7 @@ async def get_unique_values(
     return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
 
 
-@app.get("/ping", response_model=PingResponse)
+@app.get("/ping", response_model=PingResponse, tags=["System"])
 async def pong(response: Response):
     """
     Check server health
