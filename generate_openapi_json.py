@@ -2,16 +2,13 @@
 
 import json
 import sys
+import importlib.util
 
 # Mock the database dependencies for OpenAPI generation when DB is not available
-try:
-    import psycopg2
-except ImportError:
+if importlib.util.find_spec("psycopg2") is None:
     sys.modules["psycopg2"] = type(sys)("psycopg2")
 
-try:
-    import aiopg
-except ImportError:
+if importlib.util.find_spec("aiopg") is None:
     sys.modules["aiopg"] = type(sys)("aiopg")
 
 # Mock the database module to avoid connection errors during OpenAPI generation
@@ -23,6 +20,5 @@ if "folksonomy.db" not in sys.modules:
 
 from folksonomy.api import app
 
-# Generate and format the OpenAPI JSON with proper indentation
 openapi_spec = app.openapi()
 json.dump(openapi_spec, sys.stdout, indent=2, ensure_ascii=False)
