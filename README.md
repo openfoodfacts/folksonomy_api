@@ -150,6 +150,23 @@ If running inside Docker:
 docker compose exec api python generate_openapi_json.py
 ```
 
+## Testing Product Opener integration (with docker)
+
+To test with product opener, you just need to run the [openfoodfacts-server project]() and the folksonomy_api project using docker compose.
+
+Thanks to the use a common_net (a common docker network),
+the openfoodfacts server will be able to communicate with the folksonomy_api docker,
+and the nginx frontend of openfoodfacts-server will act as a proxy to your folksonomy_api server
+(see `conf/nginx-docker/nginx.conf`).
+
+After both projects are fully launched,
+you should be able to address http://api.folksonomy.openfoodfacts.localhost
+to access the folksonomy_api server (without using a specific port).
+
+In case you are not sure about network names and so on,
+using `docker inspect <containenr-name>` and
+`docker network inspect <network-name>` can help you.
+
 # Code Style
 
 This project uses [Ruff](https://github.com/astral-sh/ruff) for linting and code formatting.
