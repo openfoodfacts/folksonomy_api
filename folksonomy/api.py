@@ -137,48 +137,22 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         else:
             return User(user_id=None)
 
-async def _fetch_user_data(session_cookie: str, auth_base_url: str) -> dict:
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            auth_base_url, cookies={"session": session_cookie}, params={"body": "1"}
-        )
-
-    if response.status_code != 200:
-        await asyncio.sleep(2)
-        raise HTTPException(status_code=401, detail="Invalid session token")
-
-    return response.json().get("user", {})
-
-async def get_moderator_status_from_session(request: Request) -> Optional[bool]:
-    """
-    Get moderator status from session cookie only
-    """
-    print("Debug: Entering get_moderator_status_from_session function")
-    print(f"Debug: All cookies: {request.cookies}")
-    
-    session_cookie = request.cookies.get("session") #is this correct? (I get empty)
-    print(f"Debug: Session cookie value: {session_cookie}")
-    
-    if not session_cookie:
-        print("Debug: No session cookie found, returning None")
-        return None
-    
-    try:
-        print(f"Debug: Found session cookie: {session_cookie[:50]}..." if len(session_cookie) > 50 else f"Debug: Found session cookie: {session_cookie}")
-        auth_base_url = "https://world.openfoodfacts.org/cgi/auth.pl"
-        user_data = await _fetch_user_data(session_cookie, auth_base_url)
-        print(f"Debug: User data fetched: {user_data}")
-        return user_data.get("moderator", 0) == 1 if "id" in user_data else None
-    except HTTPException as e:
-        print(f"Debug: HTTPException in get_moderator_status_from_session: {e}")
-        return None
-
-
 def sanitize_data(k, v):
     """Some sanitization of data"""
     k = k.strip()
     v = v.strip() if v else v
     return k, v
+
+
+def extract_user_roles(auth_response_data):
+    """
+    Extract user role information from auth server response
+    """
+    user_info = auth_response_data.get('user', {})
+    is_admin = user_info.get('admin', 0) == 1
+    is_moderator = user_info.get('moderator', 0) == 1
+    is_user = not is_admin and not is_moderator  # true if both admin and moderator are 0
+    return is_admin, is_moderator, is_user
 
 
 def check_owner_user(user: User, owner, allow_anonymous=False):
@@ -232,7 +206,6 @@ async def authentication(
     request: Request,
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
-    session: Optional[str] = Cookie(None),
 ):
     """
     Authentication: provide user/password and get a bearer token in return
@@ -247,17 +220,24 @@ async def authentication(
     password = form_data.password
     token = user_id + "__U" + str(uuid.uuid4())
     auth_url = "https://world.openfoodfacts.org/cgi/auth.pl"
-    auth_data = {"user_id": user_id, "password": password}
+    auth_data = {"user_id": user_id, "password": password, "body": "1"}
     async with aiohttp.ClientSession() as http_session:
         async with http_session.post(auth_url, data=auth_data) as resp:
             status_code = resp.status
+            try:
+                response_data = await resp.json()
+            except:
+                response_data = {}
     if status_code == 200:
+        is_admin, is_moderator, is_user = extract_user_roles(response_data)
+        
         cur, timing = await db.db_exec(
             """
             DELETE FROM auth WHERE user_id = %s;
-            INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
+            INSERT INTO auth (user_id, token, last_use, admin, moderator, "user") 
+            VALUES (%s, %s, current_timestamp AT TIME ZONE 'GMT', %s, %s, %s);
         """,
-            (user_id, user_id, token),
+            (user_id, user_id, token, is_admin, is_moderator, is_user),
         )
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
@@ -300,16 +280,20 @@ async def authentication_by_cookie(
 
     auth_url = get_auth_server(request) + "/cgi/auth.pl"
     async with aiohttp.ClientSession() as http_session:
-        async with http_session.post(auth_url, cookies={"session": session}) as resp:
+        async with http_session.post(auth_url, cookies={"session": session}, data={"body": "1"}) as resp:
+            auth_data = await resp.json()
             status_code = resp.status
 
     if status_code == 200:
+        is_admin, is_moderator, is_user = extract_user_roles(auth_data)
+        
         cur, timing = await db.db_exec(
             """
             DELETE FROM auth WHERE user_id = %s;
-            INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
+            INSERT INTO auth (user_id, token, last_use, admin, moderator, "user") 
+            VALUES (%s, %s, current_timestamp AT TIME ZONE 'GMT', %s, %s, %s);
             """,
-            (user_id, user_id, token),
+            (user_id, user_id, token, is_admin, is_moderator, is_user),
         )
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
@@ -822,18 +806,41 @@ async def pong(response: Response):
     return {"ping": "pong @ %s" % pong[0]}
 
 
+async def get_user_roles_from_db(user_id: str):
+    """
+    Get user roles from the auth table
+    """
+    cur, timing = await db.db_exec(
+        "SELECT admin, moderator, \"user\" FROM auth WHERE user_id = %s",
+        (user_id,)
+    )
+    result = await cur.fetchone()
+    if result:
+        return {
+            "admin": result[0],
+            "moderator": result[1], 
+            "user": result[2]
+        }
+    return {"admin": False, "moderator": False, "user": True}
+
+
 @app.get("/user/me")  
-async def get_user_info(request: Request):
+async def get_user_info(user: User = Depends(get_current_user)):
     """
-    Get current user moderator status for testing
+    Get current user roles (admin, moderator, user)
     """
-    print("Debug: /user/me endpoint called")
-    print(f"Debug: Request URL: {request.url}")
-    print(f"Debug: Request cookies: {request.cookies}")
+    if not user or not user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
-    is_moderator = await get_moderator_status_from_session(request)
+    user_roles = await get_user_roles_from_db(user.user_id)
     
-    print(f"Debug: Final is_moderator result: {is_moderator}")
     return {
-        "is_moderator": is_moderator,
+        "user_id": user.user_id,
+        "admin": user_roles["admin"],
+        "moderator": user_roles["moderator"],
+        "user": user_roles["user"]
     }
