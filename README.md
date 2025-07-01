@@ -73,7 +73,7 @@ It requires minimal setup and ensures a consistent development environment.
 
 5. Initialize the database (necessary on the first run or after migrations):
    ```bash
-   docker exec -it folksonomy_api-folksonomy_api-1 python db-migration.py
+   docker compose run --rm folksonomy_api python db-migration.py
    ```
 
 6. Access the API:
@@ -154,8 +154,9 @@ docker compose exec api python generate_openapi_json.py
 
 This project uses [Ruff](https://github.com/astral-sh/ruff) for linting and code formatting.
 
-- We recommend using pre-commit hooks for automatic linting, but it's optional.
+- We recommend using pre-commit hooks for automatic linting, but it's optional (see [install](https://pre-commit.com/#install)).
 - See [CONTRIBUTING.md](CONTRIBUTING.md) for more details on code style and linting.
+
 
 # Deployment
 
