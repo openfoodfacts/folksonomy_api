@@ -219,7 +219,7 @@ async def authentication(
     user_id = form_data.username
     password = form_data.password
     token = user_id + "__U" + str(uuid.uuid4())
-    auth_url = "https://world.openfoodfacts.org/cgi/auth.pl"
+    auth_url = get_auth_server(request) + "/cgi/auth.pl"
     auth_data = {"user_id": user_id, "password": password, "body": "1"}
     async with aiohttp.ClientSession() as http_session:
         async with http_session.post(auth_url, data=auth_data) as resp:
