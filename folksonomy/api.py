@@ -9,7 +9,6 @@ import uuid
 from typing import List, Optional
 
 import aiohttp  # async requests to call OFF for login/password check
-import httpx
 import psycopg2  # interface with postgresql
 from fastapi import (
     Cookie,
@@ -137,6 +136,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         else:
             return User(user_id=None)
 
+
 def sanitize_data(k, v):
     """Some sanitization of data"""
     k = k.strip()
@@ -148,10 +148,12 @@ def extract_user_roles(auth_response_data):
     """
     Extract user role information from auth server response
     """
-    user_info = auth_response_data.get('user', {})
-    is_admin = user_info.get('admin', 0) == 1
-    is_moderator = user_info.get('moderator', 0) == 1
-    is_user = not is_admin and not is_moderator  # true if both admin and moderator are 0
+    user_info = auth_response_data.get("user", {})
+    is_admin = user_info.get("admin", 0) == 1
+    is_moderator = user_info.get("moderator", 0) == 1
+    is_user = (
+        not is_admin and not is_moderator
+    )  # true if both admin and moderator are 0
     return is_admin, is_moderator, is_user
 
 
@@ -226,15 +228,15 @@ async def authentication(
             status_code = resp.status
             try:
                 response_data = await resp.json()
-            except:
+            except (aiohttp.ContentTypeError, ValueError):
                 response_data = {}
     if status_code == 200:
         is_admin, is_moderator, is_user = extract_user_roles(response_data)
-        
+
         cur, timing = await db.db_exec(
             """
             DELETE FROM auth WHERE user_id = %s;
-            INSERT INTO auth (user_id, token, last_use, admin, moderator, "user") 
+            INSERT INTO auth (user_id, token, last_use, admin, moderator, "user")
             VALUES (%s, %s, current_timestamp AT TIME ZONE 'GMT', %s, %s, %s);
         """,
             (user_id, user_id, token, is_admin, is_moderator, is_user),
@@ -280,17 +282,19 @@ async def authentication_by_cookie(
 
     auth_url = get_auth_server(request) + "/cgi/auth.pl"
     async with aiohttp.ClientSession() as http_session:
-        async with http_session.post(auth_url, cookies={"session": session}, data={"body": "1"}) as resp:
+        async with http_session.post(
+            auth_url, cookies={"session": session}, data={"body": "1"}
+        ) as resp:
             auth_data = await resp.json()
             status_code = resp.status
 
     if status_code == 200:
         is_admin, is_moderator, is_user = extract_user_roles(auth_data)
-        
+
         cur, timing = await db.db_exec(
             """
             DELETE FROM auth WHERE user_id = %s;
-            INSERT INTO auth (user_id, token, last_use, admin, moderator, "user") 
+            INSERT INTO auth (user_id, token, last_use, admin, moderator, "user")
             VALUES (%s, %s, current_timestamp AT TIME ZONE 'GMT', %s, %s, %s);
             """,
             (user_id, user_id, token, is_admin, is_moderator, is_user),
@@ -811,20 +815,15 @@ async def get_user_roles_from_db(user_id: str):
     Get user roles from the auth table
     """
     cur, timing = await db.db_exec(
-        "SELECT admin, moderator, \"user\" FROM auth WHERE user_id = %s",
-        (user_id,)
+        'SELECT admin, moderator, "user" FROM auth WHERE user_id = %s', (user_id,)
     )
     result = await cur.fetchone()
     if result:
-        return {
-            "admin": result[0],
-            "moderator": result[1], 
-            "user": result[2]
-        }
+        return {"admin": result[0], "moderator": result[1], "user": result[2]}
     return {"admin": False, "moderator": False, "user": True}
 
 
-@app.get("/user/me")  
+@app.get("/user/me")
 async def get_user_info(user: User = Depends(get_current_user)):
     """
     Get current user roles (admin, moderator, user)
@@ -835,12 +834,12 @@ async def get_user_info(user: User = Depends(get_current_user)):
             detail="Authentication required",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     user_roles = await get_user_roles_from_db(user.user_id)
-    
+
     return {
         "user_id": user.user_id,
         "admin": user_roles["admin"],
         "moderator": user_roles["moderator"],
-        "user": user_roles["user"]
+        "user": user_roles["user"],
     }

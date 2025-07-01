@@ -11,6 +11,7 @@ re_key = re.compile(r"[a-z0-9_-]+(\:[a-z0-9_-]+)*")
 class User(BaseModel):
     user_id: Optional[str]
 
+
 class ProductTag(BaseModel):
     product: str
     k: str
