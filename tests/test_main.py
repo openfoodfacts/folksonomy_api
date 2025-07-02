@@ -181,6 +181,9 @@ class DummyResponse:
     async def __aexit__(self, *args, **kwargs):
         pass
 
+    async def json(self):
+        return {}
+
 
 def dummy_auth(self, auth_url, data=None, cookies=None):
     assert auth_url == "http://authserver/cgi/auth.pl", (
@@ -189,9 +192,14 @@ def dummy_auth(self, auth_url, data=None, cookies=None):
     success = False
     # reject or not based on password, which should always be "test" :-)
     if data is not None:
-        assert sorted(data.keys()) == ["password", "user_id"]
-        if data["password"] == "test":
-            success = True
+        if "password" in data and "user_id" in data:
+            assert sorted(data.keys()) == ["body", "password", "user_id"]
+            if data["password"] == "test":
+                success = True
+        elif cookies is not None:
+            assert sorted(cookies.keys()) == ["session"]
+            if "&test&" in cookies.get("session", ""):
+                success = True
     # session token must be test !
     else:
         assert sorted(cookies.keys()) == ["session"]
