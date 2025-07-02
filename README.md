@@ -154,6 +154,8 @@ docker compose exec api python generate_openapi_json.py
 
 To test with product opener, you just need to run the [openfoodfacts-server project]() and the folksonomy_api project using docker compose.
 
+If your on windows or mac, you also have to point the host api.folksonomy.openfoodfacts.localhost to 127.0.0.1 [^hosts file]
+
 Thanks to the use a common_net (a common docker network),
 the openfoodfacts server will be able to communicate with the folksonomy_api docker,
 and the nginx frontend of openfoodfacts-server will act as a proxy to your folksonomy_api server
@@ -166,6 +168,11 @@ to access the folksonomy_api server (without using a specific port).
 In case you are not sure about network names and so on,
 using `docker inspect <containenr-name>` and
 `docker network inspect <network-name>` can help you.
+
+[^hosts file]: As administrator, edit the hosts file (Windows: C:\Windows\System32\drivers\etc\hosts; Linux/MacOSX: /etc/hosts),
+  to add `127.0.0.1 api.folksonomy.openfoodfacts.localhost`.
+  
+  Normally, you already edit those file [when you setup openfoodfacts-server](https://openfoodfacts.github.io/openfoodfacts-server/dev/how-to-quick-start-guide/#3-build-your-dev-environment)
 
 # Code Style
 
