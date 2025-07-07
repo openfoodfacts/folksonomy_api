@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/openfoodfacts/folksonomy_api/compare/v1.2.1...v1.2.2) (2025-07-07)
+
+
+### Bug Fixes
+
+* Small fixes to documentation for easier setup ([#278](https://github.com/openfoodfacts/folksonomy_api/issues/278)) ([69bfad7](https://github.com/openfoodfacts/folksonomy_api/commit/69bfad7ff99f49e15c1126db1367004d60d8ab96)), closes [#271](https://github.com/openfoodfacts/folksonomy_api/issues/271)
+
 ## [1.2.1](https://github.com/openfoodfacts/folksonomy_api/compare/v1.2.0...v1.2.1) (2025-06-23)
 
 
