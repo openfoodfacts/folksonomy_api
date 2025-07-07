@@ -27,7 +27,7 @@ You should create unit tests for each new feature or API change (see [test_main.
 To run tests, simply launch:
 
 ```bash
-PYTHONASYNCIODEBUG=1 pytest tests/ folksonomy/
+PYTHONASYNCIODEBUG=1 poetry run pytest tests/ folksonomy/
 ```
 
 - The `PYTHONASYNCIODEBUG=1` environment variable is important to ensure there are no pending asyncio tasks (a sign of potential issues).
