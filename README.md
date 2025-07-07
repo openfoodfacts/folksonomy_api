@@ -171,7 +171,7 @@ using `docker inspect <containenr-name>` and
 
 [^hosts file]: As administrator, edit the hosts file (Windows: C:\Windows\System32\drivers\etc\hosts; Linux/MacOSX: /etc/hosts),
   to add `127.0.0.1 api.folksonomy.openfoodfacts.localhost`.
-  
+
   Normally, you already edit those file [when you setup openfoodfacts-server](https://openfoodfacts.github.io/openfoodfacts-server/dev/how-to-quick-start-guide/#3-build-your-dev-environment)
 
 # Code Style
