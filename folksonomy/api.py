@@ -841,9 +841,12 @@ async def get_user_roles_from_db(user_id: str):
         'SELECT admin, moderator, "user" FROM auth WHERE user_id = %s', (user_id,)
     )
     result = await cur.fetchone()
-    if result:
-        return {"admin": result[0], "moderator": result[1], "user": result[2]}
-    return {"admin": False, "moderator": False, "user": True}
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User roles not found"
+        )
+    return {"admin": result[0], "moderator": result[1], "user": result[2]}
 
 
 @app.get("/user/me")
