@@ -63,7 +63,7 @@ It requires minimal setup and ensures a consistent development environment.
 
 3. Eventually create the shared network (it might already exist if you develop with [openfoodfacts-server](https://github.com/openfoodfacts/openfoodfacts-server/pulls))
    ```bash
-   docker network create po_default
+   docker network create po_off_default
    ```
 
 4. Start the services:
