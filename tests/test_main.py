@@ -972,16 +972,16 @@ async def test_get_user_info_authenticated(client, auth_tokens):
     response = client.get("/user/me", headers=headers)
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check that all expected fields are present
     assert "user_id" in data
     assert "admin" in data
     assert "moderator" in data
     assert "user" in data
-    
+
     # Check that user_id matches the authenticated user
     assert data["user_id"] == "foo"
-    
+
     # Check that role fields are boolean values
     assert isinstance(data["admin"], bool)
     assert isinstance(data["moderator"], bool)
