@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.3](https://github.com/openfoodfacts/folksonomy_api/compare/v1.2.2...v1.2.3) (2025-07-17)
+
+
+### Bug Fixes
+
+* adds correct container name to readme setup ([12a1702](https://github.com/openfoodfacts/folksonomy_api/commit/12a17027e1499e18cb761ff0d7fab6171dfe364c))
+* adds correct container name to readme setup ([0b8ed92](https://github.com/openfoodfacts/folksonomy_api/commit/0b8ed928d48d9dc862cd754d55614921b0add6d5))
+
 ## [1.2.2](https://github.com/openfoodfacts/folksonomy_api/compare/v1.2.1...v1.2.2) (2025-07-07)
 
 
