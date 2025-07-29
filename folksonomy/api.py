@@ -843,7 +843,7 @@ async def get_user_roles_from_db(user_id: str):
     result = await cur.fetchone()
     if not result:
         raise HTTPException(
-            status_code=status. HTTP_401_UNAUTHORIZED, detail="User roles not found"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User roles not found"
         )
     return {"admin": result[0], "moderator": result[1], "user": result[2]}
 
