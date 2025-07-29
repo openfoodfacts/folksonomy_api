@@ -163,6 +163,19 @@ def sanitize_data(k, v):
     return k, v
 
 
+def extract_user_roles(auth_response_data):
+    """
+    Extract user role information from auth server response
+    """
+    user_info = auth_response_data.get("user", {})
+    is_admin = user_info.get("admin", 0) == 1
+    is_moderator = user_info.get("moderator", 0) == 1
+    is_user = (
+        not is_admin and not is_moderator
+    )  # true if both admin and moderator are 0
+    return is_admin, is_moderator, is_user
+
+
 def check_owner_user(user: User, owner, allow_anonymous=False):
     """
     Check authentication depending on current user and 'owner' of the data
@@ -214,7 +227,6 @@ async def authentication(
     request: Request,
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
-    session: Optional[str] = Cookie(None),
 ):
     """
     Authentication: provide user/password and get a bearer token in return
@@ -229,17 +241,24 @@ async def authentication(
     password = form_data.password
     token = user_id + "__U" + str(uuid.uuid4())
     auth_url = get_auth_server(request) + "/cgi/auth.pl"
-    auth_data = {"user_id": user_id, "password": password}
+    auth_data = {"user_id": user_id, "password": password, "body": "1"}
     async with aiohttp.ClientSession() as http_session:
         async with http_session.post(auth_url, data=auth_data) as resp:
             status_code = resp.status
+            try:
+                response_data = await resp.json()
+            except (aiohttp.ContentTypeError, ValueError):
+                response_data = {}
     if status_code == 200:
+        is_admin, is_moderator, is_user = extract_user_roles(response_data)
+
         cur, timing = await db.db_exec(
             """
             DELETE FROM auth WHERE user_id = %s;
-            INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
+            INSERT INTO auth (user_id, token, last_use, admin, moderator, "user")
+            VALUES (%s, %s, current_timestamp AT TIME ZONE 'GMT', %s, %s, %s);
         """,
-            (user_id, user_id, token),
+            (user_id, user_id, token, is_admin, is_moderator, is_user),
         )
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
@@ -282,16 +301,22 @@ async def authentication_by_cookie(
 
     auth_url = get_auth_server(request) + "/cgi/auth.pl"
     async with aiohttp.ClientSession() as http_session:
-        async with http_session.post(auth_url, cookies={"session": session}) as resp:
+        async with http_session.post(
+            auth_url, cookies={"session": session}, data={"body": "1"}
+        ) as resp:
+            auth_data = await resp.json()
             status_code = resp.status
 
     if status_code == 200:
+        is_admin, is_moderator, is_user = extract_user_roles(auth_data)
+
         cur, timing = await db.db_exec(
             """
             DELETE FROM auth WHERE user_id = %s;
-            INSERT INTO auth (user_id, token, last_use) VALUES (%s,%s,current_timestamp AT TIME ZONE 'GMT');
+            INSERT INTO auth (user_id, token, last_use, admin, moderator, "user")
+            VALUES (%s, %s, current_timestamp AT TIME ZONE 'GMT', %s, %s, %s);
             """,
-            (user_id, user_id, token),
+            (user_id, user_id, token, is_admin, is_moderator, is_user),
         )
         if cur.rowcount == 1:
             return {"access_token": token, "token_type": "bearer"}
@@ -806,3 +831,40 @@ async def pong(response: Response):
     cur, timing = await db.db_exec("SELECT current_timestamp AT TIME ZONE 'GMT'", ())
     pong = await cur.fetchone()
     return {"ping": "pong @ %s" % pong[0]}
+
+
+async def get_user_roles_from_db(user_id: str):
+    """
+    Get user roles from the auth table
+    """
+    cur, timing = await db.db_exec(
+        'SELECT admin, moderator, "user" FROM auth WHERE user_id = %s', (user_id,)
+    )
+    result = await cur.fetchone()
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User roles not found"
+        )
+    return {"admin": result[0], "moderator": result[1], "user": result[2]}
+
+
+@app.get("/user/me")
+async def get_user_info(user: User = Depends(get_current_user)):
+    """
+    Get current user roles (admin, moderator, user)
+    """
+    if not user or not user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user_roles = await get_user_roles_from_db(user.user_id)
+
+    return {
+        "user_id": user.user_id,
+        "admin": user_roles["admin"],
+        "moderator": user_roles["moderator"],
+        "user": user_roles["user"],
+    }
