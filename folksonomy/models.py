@@ -90,3 +90,86 @@ class ValueCount(BaseModel):
 
 class PingResponse(BaseModel):
     ping: str
+
+
+class PropertyRenameRequest(BaseModel):
+    old_property: str
+    new_property: str
+
+    @field_validator("old_property", "new_property")
+    def property_check(cls, v):
+        if not v:
+            raise ValueError("property cannot be empty")
+        # strip the property
+        v = v.strip()
+        if not re.fullmatch(re_key, v):
+            raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
+        return v
+
+
+class PropertyDeleteRequest(BaseModel):
+    property: str
+
+    @field_validator("property")
+    def property_check(cls, v):
+        if not v:
+            raise ValueError("property cannot be empty")
+        # strip the property
+        v = v.strip()
+        if not re.fullmatch(re_key, v):
+            raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
+        return v
+
+
+class ValueRenameRequest(BaseModel):
+    property: str
+    old_value: str
+    new_value: str
+
+    @field_validator("property")
+    def property_check(cls, v):
+        if not v:
+            raise ValueError("property cannot be empty")
+        # strip the property
+        v = v.strip()
+        if not re.fullmatch(re_key, v):
+            raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
+        return v
+
+    @field_validator("old_value", "new_value")
+    def value_check(cls, v):
+        if not v:
+            raise ValueError("value cannot be empty")
+        # strip values
+        v = v.strip()
+        return v
+
+
+class ValueDeleteRequest(BaseModel):
+    property: str
+    value: str
+
+    @field_validator("property")
+    def property_check(cls, v):
+        if not v:
+            raise ValueError("property cannot be empty")
+        # strip the property
+        v = v.strip()
+        if not re.fullmatch(re_key, v):
+            raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
+        return v
+
+    @field_validator("value")
+    def value_check(cls, v):
+        if not v:
+            raise ValueError("value cannot be empty")
+        # strip values
+        v = v.strip()
+        return v
+
+
+class PropertyClashCheck(BaseModel):
+    products_with_both: int
+    products_with_old_only: int
+    products_with_new_only: int
+    conflicting_products: list
