@@ -7,6 +7,11 @@ from pydantic import BaseModel, model_validator, field_validator
 re_barcode = re.compile(r"[0-9]{1,24}")
 re_key = re.compile(r"[a-z0-9_-]+(\:[a-z0-9_-]+)*")
 
+def strip(v: str) -> str:
+    v = v.strip()
+    if not v:
+        raise ValueError("value cannot be empty")
+    return v
 
 class User(BaseModel):
     user_id: Optional[str]
@@ -119,11 +124,10 @@ class PropertyClashCheckRequest(BaseModel):
         if self.old_property == self.new_property:
             raise ValueError("old_property and new_property should not be the same.")
         return self
+
+    @field_validator("old_property", "new_property")
     def property_check(cls, v):
-        if not v:
-            raise ValueError("property cannot be empty")
-        # strip the property
-        v = v.strip()
+        v = strip(v)
         if not re.fullmatch(re_key, v):
             raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
         return v
@@ -133,10 +137,7 @@ class PropertyDeleteRequest(BaseModel):
 
     @field_validator("property")
     def property_check(cls, v):
-        if not v:
-            raise ValueError("property cannot be empty")
-        # strip the property
-        v = v.strip()
+        v = strip(v)
         if not re.fullmatch(re_key, v):
             raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
         return v
@@ -149,20 +150,14 @@ class ValueRenameRequest(BaseModel):
 
     @field_validator("property")
     def property_check(cls, v):
-        if not v:
-            raise ValueError("property cannot be empty")
-        # strip the property
-        v = v.strip()
+        v = strip(v)
         if not re.fullmatch(re_key, v):
             raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
         return v
 
     @field_validator("old_value", "new_value")
     def value_check(cls, v):
-        if not v:
-            raise ValueError("value cannot be empty")
-        # strip values
-        v = v.strip()
+        v = strip(v)
         return v
 
 
@@ -172,20 +167,14 @@ class ValueDeleteRequest(BaseModel):
 
     @field_validator("property")
     def property_check(cls, v):
-        if not v:
-            raise ValueError("property cannot be empty")
-        # strip the property
-        v = v.strip()
+        v = strip(v)
         if not re.fullmatch(re_key, v):
             raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
         return v
 
     @field_validator("value")
     def value_check(cls, v):
-        if not v:
-            raise ValueError("value cannot be empty")
-        # strip values
-        v = v.strip()
+        v = strip(v)
         return v
 
 
