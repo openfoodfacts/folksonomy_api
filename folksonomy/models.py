@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, model_validator, field_validator
 
 re_barcode = re.compile(r"[0-9]{1,24}")
 re_key = re.compile(r"[a-z0-9_-]+(\:[a-z0-9_-]+)*")
@@ -96,7 +96,11 @@ class PropertyRenameRequest(BaseModel):
     old_property: str
     new_property: str
 
-    @field_validator("old_property", "new_property")
+    @model_validator(mode="after")
+    def check_not_same(self):
+        if self.old_property == self.new_property:
+            raise ValueError("old_property and new_property should not be the same.")
+        return self
     def property_check(cls, v):
         if not v:
             raise ValueError("property cannot be empty")
@@ -106,6 +110,23 @@ class PropertyRenameRequest(BaseModel):
             raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
         return v
 
+class PropertyClashCheckRequest(BaseModel):
+    old_property: str
+    new_property: str
+
+    @model_validator(mode="after")
+    def check_not_same(self):
+        if self.old_property == self.new_property:
+            raise ValueError("old_property and new_property should not be the same.")
+        return self
+    def property_check(cls, v):
+        if not v:
+            raise ValueError("property cannot be empty")
+        # strip the property
+        v = v.strip()
+        if not re.fullmatch(re_key, v):
+            raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
+        return v
 
 class PropertyDeleteRequest(BaseModel):
     property: str

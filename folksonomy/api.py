@@ -36,11 +36,10 @@ from .models import (
     PropertyClashCheck,
     PropertyDeleteRequest,
     PropertyRenameRequest,
+    PropertyClashCheckRequest,
     TokenResponse,
     User,
     ValueCount,
-    ValueDeleteRequest,
-    ValueRenameRequest,
 )
 
 
@@ -873,10 +872,9 @@ async def check_moderator_permission(user: User):
         )
     return True
 
-@app.get("/admin/property/check-clash/{old_property}/{new_property}", response_model=PropertyClashCheck, tags=["Admin - Property Management"])
+@app.post("/admin/property/check-clash", response_model=PropertyClashCheck, tags=["Admin - Property Management"])
 async def check_property_clash(
-    old_property: str,
-    new_property: str,
+    request: PropertyClashCheckRequest,
     user: User = Depends(get_current_user)
 ):
     """
@@ -889,12 +887,6 @@ async def check_property_clash(
     Returns counts and list of conflicting products where both properties exist
     """
     await check_moderator_permission(user)
-    
-    old_property, _ = sanitize_data(old_property, None)
-    new_property, _ = sanitize_data(new_property, None)
-    
-    if old_property == new_property:
-        raise HTTPException(status_code=422, detail="Old and new property names cannot be the same")
 
     # Check if old_property exists
     cur, timing = await db.db_exec(
@@ -902,13 +894,13 @@ async def check_property_clash(
         SELECT COUNT(*) FROM folksonomy 
         WHERE k = %s AND owner = ''
         """,
-        (old_property,)
+        (request.old_property,)
     )
     old_property_count = (await cur.fetchone())[0]
     if old_property_count == 0:
         raise HTTPException(
             status_code=404,
-            detail=f"Property '{old_property}' not found"
+            detail=f"Property '{request.old_property}' not found"
         )
 
     # Find products that have both properties
@@ -924,7 +916,7 @@ async def check_property_clash(
             (SELECT product, v FROM folksonomy WHERE k = %s AND owner = '') as new_prop
         ON old_prop.product = new_prop.product
         """,
-        (old_property, new_property)
+        (request.old_property, request.new_property)
     )
     conflicting_products = await cur.fetchall()
     
@@ -937,7 +929,7 @@ async def check_property_clash(
             SELECT product FROM folksonomy WHERE k = %s AND owner = ''
         )
         """,
-        (old_property, new_property)
+        (request.old_property, request.new_property)
     )
     old_only_count = (await cur.fetchone())[0]
     
@@ -950,19 +942,18 @@ async def check_property_clash(
             SELECT product FROM folksonomy WHERE k = %s AND owner = ''
         )
         """,
-        (new_property, old_property)
+        (request.new_property, request.old_property)
     )
     new_only_count = (await cur.fetchone())[0]
     
     # Format conflicting products list
     conflicts = []
     for conflict in conflicting_products:
-        conflicts.append({
-            "product": conflict[0],
-            "old_value": conflict[1],
-            "new_value": conflict[2],
-            "values_match": conflict[1] == conflict[2]
-        })
+            conflicts.append({
+                "product": conflict[0],
+                "old_value": conflict[1],
+                "new_value": conflict[2],
+            })
     
     return PropertyClashCheck(
         products_with_both=len(conflicting_products),
@@ -990,12 +981,6 @@ async def rename_property(
     """
     await check_moderator_permission(user)
     
-    old_property, _ = sanitize_data(request.old_property, None)
-    new_property, _ = sanitize_data(request.new_property, None)
-    
-    if old_property == new_property:
-        raise HTTPException(status_code=422, detail="Old and new property names cannot be the same")
-    
     try:
         # Check if old_property exists
         cur, timing = await db.db_exec(
@@ -1003,13 +988,13 @@ async def rename_property(
             SELECT COUNT(*) FROM folksonomy 
             WHERE k = %s AND owner = ''
             """,
-            (old_property,)
+            (request.old_property,)
         )
         old_property_count = (await cur.fetchone())[0]
         if old_property_count == 0:
             raise HTTPException(
                 status_code=404,
-                detail=f"Property '{old_property}' not found"
+                detail=f"Property '{request.old_property}' not found"
             )
 
         # Start transaction for all operations
@@ -1022,7 +1007,7 @@ async def rename_property(
                 SELECT product FROM folksonomy WHERE k = %s AND owner = ''
             )
             """,
-            (old_property, new_property)
+            (request.old_property, request.new_property)
         )
         deleted_conflicting = cur.rowcount
         
@@ -1034,7 +1019,7 @@ async def rename_property(
             SET k = %s, editor = %s, version = version + 1
             WHERE k = %s AND owner = ''
             """,
-            (new_property, user.user_id, old_property)
+            (request.new_property, user.user_id, request.old_property)
         )
         renamed_count = cur.rowcount
         
@@ -1042,7 +1027,7 @@ async def rename_property(
             "status": "success",
             "renamed_products": renamed_count,
             "conflicting_products_resolved": deleted_conflicting,
-            "message": f"Renamed property '{old_property}' to '{new_property}'",
+            "message": f"Renamed property '{request.old_property}' to '{request.new_property}'",
             "headers": {"x-pg-timing": timing},
         }
         
@@ -1050,7 +1035,7 @@ async def rename_property(
         raise HTTPException(
             status_code=500,
             detail=f"Database error during property rename: {str(e)}"
-        )
+        ) from e
 
 
 @app.delete("/admin/property", tags=["Admin - Property Management"])
@@ -1069,21 +1054,6 @@ async def delete_property(
     property_name, _ = sanitize_data(request.property, None)
     
     try:
-        # Check if property exists
-        cur, timing = await db.db_exec(
-            """
-            SELECT COUNT(*) FROM folksonomy 
-            WHERE k = %s AND owner = ''
-            """,
-            (property_name,)
-        )
-        property_count = (await cur.fetchone())[0]
-        if property_count == 0:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Property '{property_name}' not found"
-            )
-
         # Delete all instances of the property
         cur, timing = await db.db_exec(
             """
@@ -1108,7 +1078,7 @@ async def delete_property(
         raise HTTPException(
             status_code=500,
             detail=f"Database error during property deletion: {str(e)}"
-        )
+        ) from e
 
 @app.get("/user/me")
 async def get_user_info(user: User = Depends(get_current_user)):
