@@ -2,11 +2,16 @@ import re
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, model_validator, field_validator
 
 re_barcode = re.compile(r"[0-9]{1,24}")
 re_key = re.compile(r"[a-z0-9_-]+(\:[a-z0-9_-]+)*")
 
+def strip(v: str) -> str:
+    v = v.strip()
+    if not v:
+        raise ValueError("value cannot be empty")
+    return v
 
 class User(BaseModel):
     user_id: Optional[str]
@@ -90,3 +95,97 @@ class ValueCount(BaseModel):
 
 class PingResponse(BaseModel):
     ping: str
+
+
+class PropertyRenameRequest(BaseModel):
+    old_property: str
+    new_property: str
+
+    @model_validator(mode="after")
+    def check_not_same(self):
+        if self.old_property == self.new_property:
+            raise ValueError("old_property and new_property should not be the same.")
+        return self
+    def property_check(cls, v):
+        if not v:
+            raise ValueError("property cannot be empty")
+        # strip the property
+        v = v.strip()
+        if not re.fullmatch(re_key, v):
+            raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
+        return v
+
+class PropertyClashCheckRequest(BaseModel):
+    old_property: str
+    new_property: str
+
+    @model_validator(mode="after")
+    def check_not_same(self):
+        if self.old_property == self.new_property:
+            raise ValueError("old_property and new_property should not be the same.")
+        return self
+
+    @field_validator("old_property", "new_property")
+    def property_check(cls, v):
+        v = strip(v)
+        if not re.fullmatch(re_key, v):
+            raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
+        return v
+
+class PropertyDeleteRequest(BaseModel):
+    property: str
+
+    @field_validator("property")
+    def property_check(cls, v):
+        v = strip(v)
+        if not re.fullmatch(re_key, v):
+            raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
+        return v
+
+
+class ValueRenameRequest(BaseModel):
+    property: str
+    old_value: str
+    new_value: str
+
+    @model_validator(mode="after")
+    def check_not_same(self):
+        if self.old_value == self.new_value:
+            raise ValueError("old_value and new_value should not be the same.")
+        return self
+
+    @field_validator("property")
+    def property_check(cls, v):
+        v = strip(v)
+        if not re.fullmatch(re_key, v):
+            raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
+        return v
+
+    @field_validator("old_value", "new_value")
+    def value_check(cls, v):
+        v = strip(v)
+        return v
+
+
+class ValueDeleteRequest(BaseModel):
+    property: str
+    value: str
+
+    @field_validator("property")
+    def property_check(cls, v):
+        v = strip(v)
+        if not re.fullmatch(re_key, v):
+            raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
+        return v
+
+    @field_validator("value")
+    def value_check(cls, v):
+        v = strip(v)
+        return v
+
+
+class PropertyClashCheck(BaseModel):
+    products_with_both: int
+    products_with_old_only: int
+    products_with_new_only: int
+    conflicting_products: list
