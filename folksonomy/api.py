@@ -37,6 +37,8 @@ from .models import (
     PropertyDeleteRequest,
     PropertyRenameRequest,
     PropertyClashCheckRequest,
+    ValueDeleteRequest,
+    ValueRenameRequest,
     TokenResponse,
     User,
     ValueCount,
@@ -1100,3 +1102,104 @@ async def get_user_info(user: User = Depends(get_current_user)):
         "moderator": user_roles["moderator"],
         "user": user_roles["user"],
     }
+
+@app.post("/admin/value/rename", tags=["Admin - Value Management"])
+async def rename_value(
+    request: ValueRenameRequest,
+    user: User = Depends(get_current_user)
+):
+    """
+    Rename a value for a specific property across all products
+    
+    When renaming to a value that already exists for the same property:
+    - If a product has both values: keep the original value, delete the old one
+    
+    - **property**: The property name
+    - **old_value**: The current value
+    - **new_value**: The target value
+    """
+    await check_moderator_permission(user)
+    
+    try:
+        # First, delete entries where both old and new values exist for the same property on the same product
+        cur, timing = await db.db_exec(
+            """
+            DELETE FROM folksonomy 
+            WHERE k = %s AND v = %s AND owner = '' 
+            AND product IN (
+                SELECT product FROM folksonomy 
+                WHERE k = %s AND v = %s AND owner = ''
+            )
+            """,
+            (request.property, request.old_value, request.property, request.new_value)
+        )
+        deleted_conflicting = cur.rowcount
+        
+        # Now rename all remaining instances of old_value to new_value for this property
+        # Need to increment version as required by the trigger
+        cur, timing = await db.db_exec(
+            """
+            UPDATE folksonomy 
+            SET v = %s, editor = %s, version = version + 1
+            WHERE k = %s AND v = %s AND owner = ''
+            """,
+            (request.new_value, user.user_id, request.property, request.old_value)
+        )
+        renamed_count = cur.rowcount
+        
+        if renamed_count == 0 and deleted_conflicting == 0:
+            raise HTTPException(status_code=404, detail=f"Value '{request.old_value}' not found for property '{request.property}'")
+        
+        return {
+            "status": "success",
+            "renamed_products": renamed_count,
+            "conflicting_products_resolved": deleted_conflicting,
+            "message": f"Renamed value '{request.old_value}' to '{request.new_value}' for property '{request.property}'",
+            "headers": {"x-pg-timing": timing},
+        }
+        
+    except psycopg2.Error as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error during value rename: {str(e)}"
+        ) from e
+    
+@app.delete("/admin/value", tags=["Admin - Value Management"])
+async def delete_value(
+    request: ValueDeleteRequest,
+    user: User = Depends(get_current_user)
+):
+    """
+    Delete a specific value for a property from all products
+    
+    - **property**: The property name
+    - **value**: The value to delete
+    """
+    await check_moderator_permission(user)
+    
+    try:
+        # Delete all instances of the specific value for this property
+        cur, timing = await db.db_exec(
+            """
+            DELETE FROM folksonomy 
+            WHERE k = %s AND v = %s AND owner = ''
+            """,
+            (request.property, request.value)
+        )
+        deleted_count = cur.rowcount
+        
+        if deleted_count == 0:
+            raise HTTPException(status_code=404, detail=f"Value '{request.value}' not found for property '{request.property}'")
+        
+        return {
+            "status": "success",
+            "deleted_entries": deleted_count,
+            "message": f"Deleted value '{request.value}' for property '{request.property}' from {deleted_count} products",
+            "headers": {"x-pg-timing": timing},
+        }
+        
+    except psycopg2.Error as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error during value deletion: {str(e)}"
+        ) from e

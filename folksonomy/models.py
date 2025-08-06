@@ -148,6 +148,12 @@ class ValueRenameRequest(BaseModel):
     old_value: str
     new_value: str
 
+    @model_validator(mode="after")
+    def check_not_same(self):
+        if self.old_value == self.new_value:
+            raise ValueError("old_value and new_value should not be the same.")
+        return self
+
     @field_validator("property")
     def property_check(cls, v):
         v = strip(v)
