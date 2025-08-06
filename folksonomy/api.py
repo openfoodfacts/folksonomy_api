@@ -968,7 +968,8 @@ async def check_property_clash(
         products_with_both=len(conflicting_products),
         products_with_old_only=old_only_count,
         products_with_new_only=new_only_count,
-        conflicting_products=conflicts
+        conflicting_products=conflicts,
+        headers={"x-pg-timing": timing},
     )
 
 
@@ -1041,7 +1042,8 @@ async def rename_property(
             "status": "success",
             "renamed_products": renamed_count,
             "conflicting_products_resolved": deleted_conflicting,
-            "message": f"Renamed property '{old_property}' to '{new_property}'"
+            "message": f"Renamed property '{old_property}' to '{new_property}'",
+            "headers": {"x-pg-timing": timing},
         }
         
     except psycopg2.Error as e:
@@ -1098,7 +1100,8 @@ async def delete_property(
         return {
             "status": "success",
             "deleted_entries": deleted_count,
-            "message": f"Deleted property '{property_name}' from {deleted_count} products"
+            "message": f"Deleted property '{property_name}' from {deleted_count} products",
+            "headers": {"x-pg-timing": timing},
         }
         
     except psycopg2.Error as e:
