@@ -7,7 +7,7 @@ from pydantic import BaseModel, model_validator, field_validator
 re_barcode = re.compile(r"[0-9]{1,24}")
 re_key = re.compile(r"[a-z0-9_-]+(\:[a-z0-9_-]+)*")
 
-def strip(v: str) -> str:
+def strip_and_check(v: str) -> str:
     v = v.strip()
     if not v:
         raise ValueError("value cannot be empty")
@@ -40,7 +40,7 @@ class ProductTag(BaseModel):
         if not v:
             raise ValueError("k cannot be empty")
         # strip the key
-        v = v.strip()
+        v = strip_and_check(v)
         if not re.fullmatch(re_key, v):
             raise ValueError("k must be alpha-numeric [a-z0-9_-:]")
         return v
@@ -50,7 +50,7 @@ class ProductTag(BaseModel):
         if not v:
             raise ValueError("v cannot be empty")
         # strip values
-        v = v.strip()
+        v = strip_and_check(v)
         return v
 
     @field_validator("version")
@@ -110,7 +110,7 @@ class PropertyRenameRequest(BaseModel):
         if not v:
             raise ValueError("property cannot be empty")
         # strip the property
-        v = v.strip()
+        v = strip_and_check(v)
         if not re.fullmatch(re_key, v):
             raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
         return v
@@ -127,7 +127,7 @@ class PropertyClashCheckRequest(BaseModel):
 
     @field_validator("old_property", "new_property")
     def property_check(cls, v):
-        v = strip(v)
+        v = strip_and_check(v)
         if not re.fullmatch(re_key, v):
             raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
         return v
@@ -137,7 +137,7 @@ class PropertyDeleteRequest(BaseModel):
 
     @field_validator("property")
     def property_check(cls, v):
-        v = strip(v)
+        v = strip_and_check(v)
         if not re.fullmatch(re_key, v):
             raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
         return v
@@ -145,25 +145,18 @@ class PropertyDeleteRequest(BaseModel):
 
 class ValueRenameRequest(BaseModel):
     property: str
-    old_value: str
     new_value: str
-
-    @model_validator(mode="after")
-    def check_not_same(self):
-        if self.old_value == self.new_value:
-            raise ValueError("old_value and new_value should not be the same.")
-        return self
 
     @field_validator("property")
     def property_check(cls, v):
-        v = strip(v)
+        v = strip_and_check(v)
         if not re.fullmatch(re_key, v):
             raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
         return v
 
-    @field_validator("old_value", "new_value")
-    def value_check(cls, v):
-        v = strip(v)
+    @field_validator("new_value")
+    def new_value_check(cls, v):
+        v = strip_and_check(v)
         return v
 
 
@@ -173,14 +166,14 @@ class ValueDeleteRequest(BaseModel):
 
     @field_validator("property")
     def property_check(cls, v):
-        v = strip(v)
+        v = strip_and_check(v)
         if not re.fullmatch(re_key, v):
             raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
         return v
 
     @field_validator("value")
     def value_check(cls, v):
-        v = strip(v)
+        v = strip_and_check(v)
         return v
 
 
