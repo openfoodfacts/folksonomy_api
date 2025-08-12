@@ -7,11 +7,13 @@ from pydantic import BaseModel, model_validator, field_validator
 re_barcode = re.compile(r"[0-9]{1,24}")
 re_key = re.compile(r"[a-z0-9_-]+(\:[a-z0-9_-]+)*")
 
+
 def strip_and_check(v: str) -> str:
     v = v.strip()
     if not v:
         raise ValueError("value cannot be empty")
     return v
+
 
 class User(BaseModel):
     user_id: Optional[str]
@@ -106,6 +108,7 @@ class PropertyRenameRequest(BaseModel):
         if self.old_property == self.new_property:
             raise ValueError("old_property and new_property should not be the same.")
         return self
+
     def property_check(cls, v):
         if not v:
             raise ValueError("property cannot be empty")
@@ -114,6 +117,7 @@ class PropertyRenameRequest(BaseModel):
         if not re.fullmatch(re_key, v):
             raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
         return v
+
 
 class PropertyClashCheckRequest(BaseModel):
     old_property: str
@@ -131,6 +135,7 @@ class PropertyClashCheckRequest(BaseModel):
         if not re.fullmatch(re_key, v):
             raise ValueError("property must be alpha-numeric [a-z0-9_-:]")
         return v
+
 
 class PropertyDeleteRequest(BaseModel):
     property: str
