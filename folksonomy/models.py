@@ -150,6 +150,7 @@ class PropertyDeleteRequest(BaseModel):
 
 class ValueRenameRequest(BaseModel):
     property: str
+    old_value: str
     new_value: str
 
     @field_validator("property")

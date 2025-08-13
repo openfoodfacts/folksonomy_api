@@ -964,12 +964,12 @@ async def check_property_clash(
 
     return JSONResponse(
         status_code=200,
-        content={
-            "products_with_both": len(conflicting_products),
-            "products_with_old_only": old_only_count,
-            "products_with_new_only": new_only_count,
-            "conflicting_products": conflicts,
-        },
+        content=PropertyClashCheck(
+            products_with_both=len(conflicting_products),
+            products_with_old_only=old_only_count,
+            products_with_new_only=new_only_count,
+            conflicting_products=conflicts,
+        ).model_dump(),
         headers={"x-pg-timing": timing},
     )
 
@@ -1117,128 +1117,69 @@ async def get_user_info(user: User = Depends(get_current_user)):
     }
 
 
-@app.post(
-    "/admin/value/check-clash",
-    response_model=PropertyClashCheck,
-    tags=["Admin - Value Management"],
-)
-async def check_value_clash(
-    request: ValueRenameRequest,
-    user: User = Depends(get_current_user),
-):
-    """
-    Check for potential clashes when renaming a value for a specific property.
-
-    Returns counts and list of products where both values exist for the same property,
-    as well as counts of products that have only the old value or only the new value.
-    """
-    await check_moderator_permission(user)
-
-    # Ensure the property exists
-    cur, timing = await db.db_exec(
-        """
-        SELECT COUNT(*) FROM folksonomy
-        WHERE k = %s AND owner = ''
-        """,
-        (request.property,),
-    )
-    property_count = (await cur.fetchone())[0]
-    if property_count == 0:
-        raise HTTPException(
-            status_code=404, detail=f"Property '{request.property}' not found"
-        )
-
-    # For new default behavior (bulk set), clash is: how many products currently differ from new_value
-    # Count products whose value is different from new_value
-    cur, timing = await db.db_exec(
-        """
-        SELECT product, v
-        FROM folksonomy
-        WHERE k = %s AND owner = '' AND v <> %s
-        """,
-        (request.property, request.new_value),
-    )
-    differing_products = await cur.fetchall()
-
-    # Count products that already have the new_value
-    cur, timing = await db.db_exec(
-        """
-        SELECT COUNT(*) FROM folksonomy WHERE k = %s AND v = %s AND owner = ''
-        """,
-        (request.property, request.new_value),
-    )
-    already_new_count = (await cur.fetchone())[0]
-
-    # Total products for this property
-    cur, timing = await db.db_exec(
-        """
-        SELECT COUNT(*) FROM folksonomy WHERE k = %s AND owner = ''
-        """,
-        (request.property,),
-    )
-    total_count = (await cur.fetchone())[0]
-
-    conflicts = []
-    for row in differing_products:
-        conflicts.append(
-            {
-                "product": row[0],
-                "current_value": row[1],
-                "new_value": request.new_value,
-            }
-        )
-
-    return JSONResponse(
-        status_code=200,
-        content={
-            "products_to_change": len(differing_products),
-            "products_already_new_value": already_new_count,
-            "total_products": total_count,
-            "products_preview": conflicts,
-        },
-        headers={"x-pg-timing": timing},
-    )
-
-
 @app.post("/admin/value/rename", tags=["Admin - Value Management"])
 async def rename_value(
     request: ValueRenameRequest, user: User = Depends(get_current_user)
 ):
     """
-    Set ALL rows for a property to the new_value (default behavior as requested)
+    Rename a value for a specific property across all products
+
+    When renaming to a value that already exists for the same property:
+    - If a product has both values: keep the original value, delete the old one
+
+    - **property**: The property name
+    - **old_value**: The current value
+    - **new_value**: The target value
     """
     await check_moderator_permission(user)
 
     try:
-        # Bulk set: set all values for the property to new_value
+        # First, delete entries where both old and new values exist for the same property on the same product
+        cur, timing = await db.db_exec(
+            """
+            DELETE FROM folksonomy
+            WHERE k = %s AND v = %s AND owner = ''
+            AND product IN (
+                SELECT product FROM folksonomy
+                WHERE k = %s AND v = %s AND owner = ''
+            )
+            """,
+            (request.property, request.old_value, request.property, request.new_value),
+        )
+        deleted_conflicting = cur.rowcount
+
+        # Now rename all remaining instances of old_value to new_value for this property
+        # Need to increment version as required by the trigger
         cur, timing = await db.db_exec(
             """
             UPDATE folksonomy
             SET v = %s, editor = %s, version = version + 1
-            WHERE k = %s AND owner = ''
+            WHERE k = %s AND v = %s AND owner = ''
             """,
-            (request.new_value, user.user_id, request.property),
+            (request.new_value, user.user_id, request.property, request.old_value),
         )
-        updated_count = cur.rowcount
-        if updated_count == 0:
+        renamed_count = cur.rowcount
+
+        if renamed_count == 0 and deleted_conflicting == 0:
             raise HTTPException(
-                status_code=404, detail=f"Property '{request.property}' not found"
+                status_code=404,
+                detail=f"Value '{request.old_value}' not found for property '{request.property}'",
             )
 
         return JSONResponse(
             status_code=200,
             content={
                 "status": "success",
-                "updated_products": updated_count,
-                "message": f"Set all values of '{request.property}' to '{request.new_value}'",
+                "renamed_products": renamed_count,
+                "conflicting_products_resolved": deleted_conflicting,
+                "message": f"Renamed value '{request.old_value}' to '{request.new_value}' for property '{request.property}'",
             },
             headers={"x-pg-timing": timing},
         )
 
     except psycopg2.Error as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Database error during value rename: {str(e)}",
+            status_code=500, detail=f"Database error during value rename: {str(e)}"
         ) from e
 
 
