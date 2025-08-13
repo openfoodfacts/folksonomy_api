@@ -33,6 +33,12 @@ from .models import (
     ProductList,
     ProductStats,
     ProductTag,
+    PropertyClashCheck,
+    PropertyDeleteRequest,
+    PropertyRenameRequest,
+    PropertyClashCheckRequest,
+    ValueDeleteRequest,
+    ValueRenameRequest,
     TokenResponse,
     User,
     ValueCount,
@@ -241,6 +247,7 @@ async def authentication(
     password = form_data.password
     token = user_id + "__U" + str(uuid.uuid4())
     auth_url = get_auth_server(request) + "/cgi/auth.pl"
+    print(auth_url)
     auth_data = {"user_id": user_id, "password": password, "body": "1"}
     async with aiohttp.ClientSession() as http_session:
         async with http_session.post(auth_url, data=auth_data) as resp:
@@ -848,6 +855,246 @@ async def get_user_roles_from_db(user_id: str):
     return {"admin": result[0], "moderator": result[1], "user": result[2]}
 
 
+async def check_moderator_permission(user: User):
+    """
+    Check if the user has moderator or admin permissions
+    """
+    if not user or not user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user_roles = await get_user_roles_from_db(user.user_id)
+    if not (user_roles["admin"] or user_roles["moderator"]):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Moderator or admin privileges required",
+        )
+    return True
+
+
+@app.post(
+    "/admin/property/check-clash",
+    response_model=PropertyClashCheck,
+    tags=["Admin - Property Management"],
+)
+async def check_property_clash(
+    request: PropertyClashCheckRequest, user: User = Depends(get_current_user)
+):
+    """
+    Check for potential clashes when renaming a property
+
+    Returns information about products that would be affected by the rename:
+    - **old_property**: The current property name
+    - **new_property**: The target property name
+
+    Returns counts and list of conflicting products where both properties exist
+    """
+    await check_moderator_permission(user)
+
+    # Check if old_property exists
+    cur, timing = await db.db_exec(
+        """
+        SELECT COUNT(*) FROM folksonomy
+        WHERE k = %s AND owner = ''
+        """,
+        (request.old_property,),
+    )
+    old_property_count = (await cur.fetchone())[0]
+    if old_property_count == 0:
+        raise HTTPException(
+            status_code=404, detail=f"Property '{request.old_property}' not found"
+        )
+
+    # Find products that have both properties
+    cur, timing = await db.db_exec(
+        """
+        SELECT
+            old_prop.product,
+            old_prop.v as old_value,
+            new_prop.v as new_value
+        FROM
+            (SELECT product, v FROM folksonomy WHERE k = %s AND owner = '') as old_prop
+        INNER JOIN
+            (SELECT product, v FROM folksonomy WHERE k = %s AND owner = '') as new_prop
+        ON old_prop.product = new_prop.product
+        """,
+        (request.old_property, request.new_property),
+    )
+    conflicting_products = await cur.fetchall()
+
+    # Count products with only old property
+    cur, timing = await db.db_exec(
+        """
+        SELECT COUNT(*) FROM folksonomy
+        WHERE k = %s AND owner = ''
+        AND product NOT IN (
+            SELECT product FROM folksonomy WHERE k = %s AND owner = ''
+        )
+        """,
+        (request.old_property, request.new_property),
+    )
+    old_only_count = (await cur.fetchone())[0]
+
+    # Count products with only new property
+    cur, timing = await db.db_exec(
+        """
+        SELECT COUNT(*) FROM folksonomy
+        WHERE k = %s AND owner = ''
+        AND product NOT IN (
+            SELECT product FROM folksonomy WHERE k = %s AND owner = ''
+        )
+        """,
+        (request.new_property, request.old_property),
+    )
+    new_only_count = (await cur.fetchone())[0]
+
+    # Format conflicting products list
+    conflicts = []
+    for conflict in conflicting_products:
+        conflicts.append(
+            {
+                "product": conflict[0],
+                "old_value": conflict[1],
+                "new_value": conflict[2],
+            }
+        )
+
+    return JSONResponse(
+        status_code=200,
+        content=PropertyClashCheck(
+            products_with_both=len(conflicting_products),
+            products_with_old_only=old_only_count,
+            products_with_new_only=new_only_count,
+            conflicting_products=conflicts,
+        ).model_dump(),
+        headers={"x-pg-timing": timing},
+    )
+
+
+@app.post("/admin/property/rename", tags=["Admin - Property Management"])
+async def rename_property(
+    request: PropertyRenameRequest, user: User = Depends(get_current_user)
+):
+    """
+    Rename a property across all products
+
+    When renaming a property that already exists:
+    - If both properties have the same value: keep one entry
+    - If both properties have different values: keep the original property's value
+
+    - **old_property**: The current property name
+    - **new_property**: The target property name
+    """
+    await check_moderator_permission(user)
+
+    try:
+        # Check if old_property exists
+        cur, timing = await db.db_exec(
+            """
+            SELECT COUNT(*) FROM folksonomy
+            WHERE k = %s AND owner = ''
+            """,
+            (request.old_property,),
+        )
+        old_property_count = (await cur.fetchone())[0]
+        if old_property_count == 0:
+            raise HTTPException(
+                status_code=404, detail=f"Property '{request.old_property}' not found"
+            )
+
+        # Start transaction for all operations
+        # First, handle products that have both properties
+        cur, timing = await db.db_exec(
+            """
+            DELETE FROM folksonomy
+            WHERE k = %s AND owner = ''
+            AND product IN (
+                SELECT product FROM folksonomy WHERE k = %s AND owner = ''
+            )
+            """,
+            (request.old_property, request.new_property),
+        )
+        deleted_conflicting = cur.rowcount
+
+        # Now rename all remaining instances of old_property to new_property
+        # Need to increment version as required by the trigger
+        cur, timing = await db.db_exec(
+            """
+            UPDATE folksonomy
+            SET k = %s, editor = %s, version = version + 1
+            WHERE k = %s AND owner = ''
+            """,
+            (request.new_property, user.user_id, request.old_property),
+        )
+        renamed_count = cur.rowcount
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "renamed_products": renamed_count,
+                "conflicting_products_resolved": deleted_conflicting,
+                "message": f"Renamed property '{request.old_property}' to '{request.new_property}'",
+            },
+            headers={"x-pg-timing": timing},
+        )
+
+    except psycopg2.Error as e:
+        raise HTTPException(
+            status_code=500, detail=f"Database error during property rename: {str(e)}"
+        ) from e
+
+
+@app.delete("/admin/property", tags=["Admin - Property Management"])
+async def delete_property(
+    response: Response,
+    request: PropertyDeleteRequest,
+    user: User = Depends(get_current_user),
+):
+    """
+    Delete a property from all products
+
+    - **property**: The property name to delete
+    """
+    await check_moderator_permission(user)
+
+    property_name, _ = sanitize_data(request.property, None)
+
+    try:
+        # Delete all instances of the property
+        cur, timing = await db.db_exec(
+            """
+            DELETE FROM folksonomy
+            WHERE k = %s AND owner = ''
+            """,
+            (property_name,),
+        )
+        deleted_count = cur.rowcount
+
+        if deleted_count == 0:
+            raise HTTPException(
+                status_code=404, detail=f"Property '{property_name}' not found"
+            )
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "deleted_entries": deleted_count,
+                "message": f"Deleted property '{property_name}' from {deleted_count} products",
+            },
+            headers={"x-pg-timing": timing},
+        )
+
+    except psycopg2.Error as e:
+        raise HTTPException(
+            status_code=500, detail=f"Database error during property deletion: {str(e)}"
+        ) from e
+
+
 @app.get("/user/me")
 async def get_user_info(user: User = Depends(get_current_user)):
     """
@@ -868,3 +1115,94 @@ async def get_user_info(user: User = Depends(get_current_user)):
         "moderator": user_roles["moderator"],
         "user": user_roles["user"],
     }
+
+
+@app.post("/admin/value/replace", tags=["Admin - Value Management"])
+async def replace_value(
+    request: ValueRenameRequest, user: User = Depends(get_current_user)
+):
+    """
+    Replace a value for a specific property across all products
+
+    - **property**: The property name
+    - **old_value**: The value to replace
+    - **new_value**: The new value
+    """
+    await check_moderator_permission(user)
+
+    try:
+        cur, timing = await db.db_exec(
+            """
+            UPDATE folksonomy
+            SET v = %s, editor = %s, version = version + 1
+            WHERE k = %s AND v = %s AND owner = ''
+            """,
+            (request.new_value, user.user_id, request.property, request.old_value),
+        )
+        renamed_count = cur.rowcount
+
+        if renamed_count == 0:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Value '{request.old_value}' not found for property '{request.property}'",
+            )
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "renamed_products": renamed_count,
+                "message": f"Renamed value '{request.old_value}' to '{request.new_value}' for property '{request.property}' ({renamed_count} changes)",
+            },
+            headers={"x-pg-timing": timing},
+        )
+
+    except psycopg2.Error as e:
+        raise HTTPException(
+            status_code=500, detail=f"Database error during value rename: {str(e)}"
+        ) from e
+
+
+@app.delete("/admin/value", tags=["Admin - Value Management"])
+async def delete_value(
+    request: ValueDeleteRequest, user: User = Depends(get_current_user)
+):
+    """
+    Delete a specific value for a property from all products
+
+    - **property**: The property name
+    - **value**: The value to delete
+    """
+    await check_moderator_permission(user)
+
+    try:
+        # Delete all instances of the specific value for this property
+        cur, timing = await db.db_exec(
+            """
+            DELETE FROM folksonomy
+            WHERE k = %s AND v = %s AND owner = ''
+            """,
+            (request.property, request.value),
+        )
+        deleted_count = cur.rowcount
+
+        if deleted_count == 0:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Value '{request.value}' not found for property '{request.property}'",
+            )
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "deleted_entries": deleted_count,
+                "message": f"Deleted value '{request.value}' for property '{request.property}' from {deleted_count} products",
+            },
+            headers={"x-pg-timing": timing},
+        )
+
+    except psycopg2.Error as e:
+        raise HTTPException(
+            status_code=500, detail=f"Database error during value deletion: {str(e)}"
+        ) from e
