@@ -1117,39 +1117,20 @@ async def get_user_info(user: User = Depends(get_current_user)):
     }
 
 
-@app.post("/admin/value/rename", tags=["Admin - Value Management"])
-async def rename_value(
+@app.post("/admin/value/replace", tags=["Admin - Value Management"])
+async def replace_value(
     request: ValueRenameRequest, user: User = Depends(get_current_user)
 ):
     """
-    Rename a value for a specific property across all products
-
-    When renaming to a value that already exists for the same property:
-    - If a product has both values: keep the original value, delete the old one
+    Replace a value for a specific property across all products
 
     - **property**: The property name
-    - **old_value**: The current value
-    - **new_value**: The target value
+    - **old_value**: The value to replace
+    - **new_value**: The new value
     """
     await check_moderator_permission(user)
 
     try:
-        # First, delete entries where both old and new values exist for the same property on the same product
-        cur, timing = await db.db_exec(
-            """
-            DELETE FROM folksonomy
-            WHERE k = %s AND v = %s AND owner = ''
-            AND product IN (
-                SELECT product FROM folksonomy
-                WHERE k = %s AND v = %s AND owner = ''
-            )
-            """,
-            (request.property, request.old_value, request.property, request.new_value),
-        )
-        deleted_conflicting = cur.rowcount
-
-        # Now rename all remaining instances of old_value to new_value for this property
-        # Need to increment version as required by the trigger
         cur, timing = await db.db_exec(
             """
             UPDATE folksonomy
@@ -1160,7 +1141,7 @@ async def rename_value(
         )
         renamed_count = cur.rowcount
 
-        if renamed_count == 0 and deleted_conflicting == 0:
+        if renamed_count == 0:
             raise HTTPException(
                 status_code=404,
                 detail=f"Value '{request.old_value}' not found for property '{request.property}'",
@@ -1171,8 +1152,7 @@ async def rename_value(
             content={
                 "status": "success",
                 "renamed_products": renamed_count,
-                "conflicting_products_resolved": deleted_conflicting,
-                "message": f"Renamed value '{request.old_value}' to '{request.new_value}' for property '{request.property}'",
+                "message": f"Renamed value '{request.old_value}' to '{request.new_value}' for property '{request.property}' ({renamed_count} changes)",
             },
             headers={"x-pg-timing": timing},
         )
