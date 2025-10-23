@@ -624,11 +624,12 @@ async def product_knowledge_panel(
     
     # Add description text element if properties exist
     if properties:
+        property_word = "property" if len(properties) == 1 else "properties"
         elements.append(
             KnowledgePanelElement(
                 element_type="text",
                 text_element=KnowledgePanelTextElement(
-                    html=f"<p>This product has {len(properties)} user-contributed properties.</p>"
+                    html=f"<p>This product has {len(properties)} user-contributed {property_word}.</p>"
                 ),
             )
         )
