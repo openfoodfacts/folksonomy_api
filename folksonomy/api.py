@@ -861,7 +861,7 @@ async def get_key_suggestions(
     # For now, we'll return the most commonly used keys in the database
     # In the future, this could be enhanced to:
     # 1. Fetch category for the barcode from Open Food Facts API
-    # 2. Find products with the same category using Open Food Facts API
+    # 2. Find products with the same category using Open Food Facts API or Open Prices API
     # 3. Return keys most commonly used for those products
     
     sql = """
@@ -876,10 +876,13 @@ async def get_key_suggestions(
     """
     params = [owner]
     
-    # If barcode is provided, we could filter by excluding keys already used for this product
+    # If barcode is provided, exclude keys that are already used for this product
     if barcode:
-        sql += " AND product != %s"
-        params.append(barcode)
+        sql += """ AND k NOT IN (
+            SELECT k FROM folksonomy 
+            WHERE product = %s AND owner = %s
+        )"""
+        params.extend([barcode, owner])
     
     sql += """
             GROUP BY k

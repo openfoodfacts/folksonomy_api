@@ -607,8 +607,8 @@ async def test_get_key_suggestions_missing_parameters(with_sample, client):
 
 @pytest.mark.asyncio
 async def test_get_key_suggestions_with_barcode(with_sample, client):
-    # Test with barcode parameter
-    response = client.get(f"/keys/suggestions?barcode={BARCODE_1}")
+    # Test with BARCODE_3 which only has "color"
+    response = client.get(f"/keys/suggestions?barcode={BARCODE_3}")
     assert response.status_code == 200
     data = response.json()
     
@@ -616,14 +616,20 @@ async def test_get_key_suggestions_with_barcode(with_sample, client):
     assert isinstance(data, list)
     assert len(data) <= 10  # Default limit
     
-    # The suggestions should be based on most common keys
-    # Since BARCODE_1 has "color" and "size", we should get other common keys
-    # In our test data, "color" appears 3 times and "size" appears 2 times
-    # But we exclude BARCODE_1, so we should see these keys suggested
+    # BARCODE_3 only has "color", so "size" should be suggested
     keys_in_response = [item["k"] for item in data]
     
-    # Both color and size should be in suggestions since they're used by other products
-    assert "color" in keys_in_response or "size" in keys_in_response
+    # Verify that "color" is NOT in suggestions (already on product)
+    assert "color" not in keys_in_response
+    
+    # Verify that "size" IS in suggestions (not on product, but common in database)
+    assert "size" in keys_in_response
+    
+    # Size appears 2 times in the database
+    size_suggestion = next((item for item in data if item["k"] == "size"), None)
+    assert size_suggestion is not None
+    assert size_suggestion["count"] == 2
+
 
 
 @pytest.mark.asyncio
