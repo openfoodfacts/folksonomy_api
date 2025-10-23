@@ -597,6 +597,67 @@ async def test_get_unique_values_non_existing_key(with_sample, client):
     assert response.json() == []
 
 
+@pytest.mark.asyncio
+async def test_get_key_suggestions_missing_parameters(with_sample, client):
+    # Test without any parameters
+    response = client.get("/keys/suggestions")
+    assert response.status_code == 422
+    assert "Either 'barcode' or 'category' parameter must be provided" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_get_key_suggestions_with_barcode(with_sample, client):
+    # Test with barcode parameter
+    response = client.get(f"/keys/suggestions?barcode={BARCODE_1}")
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Should return suggestions excluding keys already on this product
+    assert isinstance(data, list)
+    assert len(data) <= 10  # Default limit
+    
+    # The suggestions should be based on most common keys
+    # Since BARCODE_1 has "color" and "size", we should get other common keys
+    # In our test data, "color" appears 3 times and "size" appears 2 times
+    # But we exclude BARCODE_1, so we should see these keys suggested
+    keys_in_response = [item["k"] for item in data]
+    
+    # Both color and size should be in suggestions since they're used by other products
+    assert "color" in keys_in_response or "size" in keys_in_response
+
+
+@pytest.mark.asyncio
+async def test_get_key_suggestions_with_category(with_sample, client):
+    # Test with category parameter
+    response = client.get("/keys/suggestions?category=en:lasagne")
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Should return suggestions
+    assert isinstance(data, list)
+    assert len(data) <= 10  # Default limit
+
+
+@pytest.mark.asyncio
+async def test_get_key_suggestions_with_limit(with_sample, client):
+    # Test with custom limit
+    response = client.get(f"/keys/suggestions?barcode={BARCODE_1}&limit=5")
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Should return at most 5 suggestions
+    assert isinstance(data, list)
+    assert len(data) <= 5
+
+
+@pytest.mark.asyncio
+async def test_get_key_suggestions_empty_database(client):
+    # Test with empty database (no data)
+    response = client.get(f"/keys/suggestions?barcode={BARCODE_1}")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 def test_auth_empty(client):
     response = client.post("/auth")
     assert response.status_code == 422

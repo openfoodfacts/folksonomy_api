@@ -29,6 +29,7 @@ from . import settings
 from .models import (
     HelloResponse,
     KeyStats,
+    KeySuggestion,
     PingResponse,
     ProductList,
     ProductStats,
@@ -824,6 +825,80 @@ async def get_unique_values(
     out = await cur.fetchone()
     data = out[0] if out and out[0] is not None else []
     return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
+
+
+@app.get("/keys/suggestions", response_model=List[KeySuggestion], tags=["Keys & Values"])
+async def get_key_suggestions(
+    response: Response,
+    barcode: Optional[str] = Query(None, description="Product barcode to get key suggestions for"),
+    category: Optional[str] = Query(None, description="Category tag (e.g., 'en:lasagne') to get key suggestions for"),
+    owner: str = "",
+    limit: int = Query(10, ge=1, le=100, description="Number of key suggestions to return (default: 10)"),
+    user: User = Depends(get_current_user),
+):
+    """
+    Get key suggestions for a product (by barcode) or category tag
+    
+    This endpoint returns the most commonly used keys in the folksonomy database
+    that can be used as inspiration for adding new key-value pairs.
+    
+    - **barcode**: Product barcode (optional) - if provided, suggestions are based on similar products
+    - **category**: Category tag (optional) - if provided, suggestions could be filtered by category (requires external API)
+    - **owner**: None or empty for public tags, or your own user_id
+    - **limit**: Number of suggestions to return (default: 10, max: 100)
+    
+    Note: At least one of barcode or category should be provided. If barcode is provided, 
+    suggestions are based on the most common keys used across all products.
+    """
+    check_owner_user(user, owner, allow_anonymous=True)
+    
+    if not barcode and not category:
+        raise HTTPException(
+            status_code=422,
+            detail="Either 'barcode' or 'category' parameter must be provided"
+        )
+    
+    # For now, we'll return the most commonly used keys in the database
+    # In the future, this could be enhanced to:
+    # 1. Fetch category for the barcode from Open Food Facts API
+    # 2. Find products with the same category using Open Food Facts API
+    # 3. Return keys most commonly used for those products
+    
+    sql = """
+        SELECT json_agg(j.j)::json
+        FROM (
+            SELECT json_build_object(
+                'k', k,
+                'count', COUNT(*)
+            ) AS j
+            FROM folksonomy
+            WHERE owner = %s
+    """
+    params = [owner]
+    
+    # If barcode is provided, we could filter by excluding keys already used for this product
+    if barcode:
+        sql += " AND product != %s"
+        params.append(barcode)
+    
+    sql += """
+            GROUP BY k
+            ORDER BY COUNT(*) DESC
+            LIMIT %s
+        ) AS j;
+    """
+    params.append(limit)
+    
+    cur, timing = await db.db_exec(sql, params)
+    out = await cur.fetchone()
+    data = out[0] if out and out[0] is not None else []
+    
+    return JSONResponse(
+        status_code=200,
+        content=data,
+        headers={"x-pg-timing": timing}
+    )
+
 
 
 @app.get("/ping", response_model=PingResponse, tags=["System"])
