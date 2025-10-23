@@ -986,3 +986,161 @@ async def test_get_user_info_authenticated(client, auth_tokens):
     assert isinstance(data["admin"], bool)
     assert isinstance(data["moderator"], bool)
     assert isinstance(data["user"], bool)
+
+
+@pytest.mark.asyncio
+async def test_product_knowledge_panel_with_properties(with_sample, client):
+    """Test Knowledge Panel endpoint with existing properties"""
+    response = client.get(f"/product/{BARCODE_1}/knowledge_panel")
+    assert response.status_code == 200
+    
+    data = response.json()
+    
+    # Check basic structure
+    assert "panel_id" in data
+    assert "title_element" in data
+    assert "elements" in data
+    
+    # Check panel_id
+    assert data["panel_id"] == f"folksonomy_properties_{BARCODE_1}"
+    
+    # Check title element
+    assert data["title_element"]["title"] == "Folksonomy Properties"
+    assert data["title_element"]["type"] == "h2"
+    
+    # Check elements
+    elements = data["elements"]
+    assert len(elements) == 2  # description text + table
+    
+    # First element should be text
+    assert elements[0]["element_type"] == "text"
+    assert "text_element" in elements[0]
+    assert "2 user-contributed properties" in elements[0]["text_element"]["html"]
+    
+    # Second element should be table
+    assert elements[1]["element_type"] == "table"
+    assert "table_element" in elements[1]
+    
+    table = elements[1]["table_element"]
+    assert "columns" in table
+    assert "rows" in table
+    
+    # Check columns
+    assert len(table["columns"]) == 2
+    assert table["columns"][0]["text"] == "Property"
+    assert table["columns"][1]["text"] == "Value"
+    
+    # Check rows (BARCODE_1 has 2 public properties: color and size)
+    assert len(table["rows"]) == 2
+    
+    # Extract property-value pairs
+    props = {row["values"][0]["text"]: row["values"][1]["text"] for row in table["rows"]}
+    assert props == {"color": "red", "size": "medium"}
+
+
+@pytest.mark.asyncio
+async def test_product_knowledge_panel_no_properties(with_sample, client):
+    """Test Knowledge Panel endpoint with no properties"""
+    response = client.get("/product/9999999999999/knowledge_panel")
+    assert response.status_code == 200
+    
+    data = response.json()
+    
+    # Check basic structure
+    assert "panel_id" in data
+    assert "title_element" in data
+    assert "elements" in data
+    
+    # Check that we have one text element saying no properties
+    elements = data["elements"]
+    assert len(elements) == 1
+    assert elements[0]["element_type"] == "text"
+    assert "No user-contributed properties" in elements[0]["text_element"]["html"]
+
+
+@pytest.mark.asyncio
+async def test_product_knowledge_panel_private_properties(with_sample, client, auth_tokens):
+    """Test Knowledge Panel endpoint with private properties"""
+    # Without authentication, should not see private properties
+    response = client.get(f"/product/{BARCODE_1}/knowledge_panel?owner=foo")
+    assert response.status_code == 401
+    
+    # With authentication
+    headers = {"Authorization": "Bearer foo__Utest-token"}
+    response = client.get(f"/product/{BARCODE_1}/knowledge_panel?owner=foo", headers=headers)
+    assert response.status_code == 200
+    
+    data = response.json()
+    elements = data["elements"]
+    
+    # Should have private property
+    assert len(elements) == 2  # text + table
+    table = elements[1]["table_element"]
+    assert len(table["rows"]) == 1
+    assert table["rows"][0]["values"][0]["text"] == "private"
+    assert table["rows"][0]["values"][1]["text"] == "private"
+
+
+@pytest.mark.asyncio
+async def test_product_knowledge_panel_structure(with_sample, client):
+    """Test that Knowledge Panel structure is valid"""
+    response = client.get(f"/product/{BARCODE_2}/knowledge_panel")
+    assert response.status_code == 200
+    
+    data = response.json()
+    
+    # Validate panel_id format
+    assert data["panel_id"].startswith("folksonomy_properties_")
+    
+    # Validate title_element
+    title_elem = data["title_element"]
+    assert "title" in title_elem
+    assert "type" in title_elem
+    
+    # Validate elements array
+    elements = data["elements"]
+    assert isinstance(elements, list)
+    
+    for element in elements:
+        assert "element_type" in element
+        element_type = element["element_type"]
+        
+        # Each element should have exactly one of: text_element or table_element
+        if element_type == "text":
+            assert "text_element" in element
+            assert "html" in element["text_element"]
+        elif element_type == "table":
+            assert "table_element" in element
+            table = element["table_element"]
+            assert "id" in table
+            assert "columns" in table
+            assert "rows" in table
+            
+            # Validate columns
+            for col in table["columns"]:
+                assert "text" in col
+                assert "type" in col
+            
+            # Validate rows
+            for row in table["rows"]:
+                assert "values" in row
+                for val in row["values"]:
+                    assert "text" in val
+                    assert "type" in val
+
+
+@pytest.mark.asyncio
+async def test_product_knowledge_panel_ordering(with_sample, client):
+    """Test that properties are ordered alphabetically by key"""
+    response = client.get(f"/product/{BARCODE_1}/knowledge_panel")
+    assert response.status_code == 200
+    
+    data = response.json()
+    table = data["elements"][1]["table_element"]
+    
+    # Extract property keys
+    keys = [row["values"][0]["text"] for row in table["rows"]]
+    
+    # Should be ordered alphabetically
+    assert keys == sorted(keys)
+    assert keys == ["color", "size"]

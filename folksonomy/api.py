@@ -29,6 +29,14 @@ from . import settings
 from .models import (
     HelloResponse,
     KeyStats,
+    KnowledgePanel,
+    KnowledgePanelElement,
+    KnowledgePanelTableColumn,
+    KnowledgePanelTableElement,
+    KnowledgePanelTableRow,
+    KnowledgePanelTableValue,
+    KnowledgePanelTextElement,
+    KnowledgePanelTitleElement,
     PingResponse,
     ProductList,
     ProductStats,
@@ -552,6 +560,118 @@ async def product_tag_list_versions(
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
+        headers={"x-pg-timing": timing},
+    )
+
+
+@app.get(
+    "/product/{product}/knowledge_panel",
+    response_model=KnowledgePanel,
+    tags=["Product Tags"],
+)
+async def product_knowledge_panel(
+    response: Response,
+    product: str,
+    owner: str = "",
+    user: User = Depends(get_current_user),
+):
+    """
+    Get a Knowledge Panel compliant representation of all properties for a product.
+    
+    This endpoint returns folksonomy properties in the Knowledge Panel format
+    used by Open Food Facts, allowing integration with ProductOpener and mobile apps.
+    
+    - **product**: the product barcode
+    - **owner**: optional owner filter (empty string for public properties)
+    
+    The response follows the Knowledge Panel specification with a table element
+    displaying all property/value pairs for the product.
+    """
+    check_owner_user(user, owner, allow_anonymous=True)
+    
+    # Fetch all properties for the product
+    cur, timing = await db.db_exec(
+        """
+        SELECT json_agg(j)::json FROM (
+            SELECT k, v, editor, last_edit, version
+            FROM folksonomy
+            WHERE product = %s AND owner = %s
+            ORDER BY k
+        ) as j;
+        """,
+        (product, owner),
+    )
+    out = await cur.fetchone()
+    properties = out[0] if out and out[0] is not None else []
+    
+    # Build the Knowledge Panel structure
+    panel_id = f"folksonomy_properties_{product}"
+    
+    # Create table rows from properties
+    rows = []
+    for prop in properties:
+        rows.append(
+            KnowledgePanelTableRow(
+                values=[
+                    KnowledgePanelTableValue(text=prop["k"], type="text"),
+                    KnowledgePanelTableValue(text=prop["v"], type="text"),
+                ]
+            )
+        )
+    
+    # Build elements list
+    elements = []
+    
+    # Add description text element if properties exist
+    if properties:
+        elements.append(
+            KnowledgePanelElement(
+                element_type="text",
+                text_element=KnowledgePanelTextElement(
+                    html=f"<p>This product has {len(properties)} user-contributed properties.</p>"
+                ),
+            )
+        )
+        
+        # Add table element with properties
+        elements.append(
+            KnowledgePanelElement(
+                element_type="table",
+                table_element=KnowledgePanelTableElement(
+                    id=f"properties_table_{product}",
+                    columns=[
+                        KnowledgePanelTableColumn(text="Property", type="text"),
+                        KnowledgePanelTableColumn(text="Value", type="text"),
+                    ],
+                    rows=rows,
+                ),
+            )
+        )
+    else:
+        # No properties found
+        elements.append(
+            KnowledgePanelElement(
+                element_type="text",
+                text_element=KnowledgePanelTextElement(
+                    html="<p>No user-contributed properties yet for this product.</p>"
+                ),
+            )
+        )
+    
+    # Build the knowledge panel
+    knowledge_panel = KnowledgePanel(
+        panel_id=panel_id,
+        title_element=KnowledgePanelTitleElement(
+            title="Folksonomy Properties",
+            type="h2",
+        ),
+        elements=elements,
+        topics=["folksonomy"],
+    )
+    
+    return JSONResponse(
+        status_code=200,
+        content=knowledge_panel.model_dump(),
         headers={"x-pg-timing": timing},
     )
 

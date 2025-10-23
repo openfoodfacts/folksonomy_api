@@ -188,3 +188,51 @@ class PropertyClashCheck(BaseModel):
     products_with_old_only: int
     products_with_new_only: int
     conflicting_products: list
+
+
+# Knowledge Panel models
+class KnowledgePanelTableColumn(BaseModel):
+    text: str
+    type: str = "text"
+
+
+class KnowledgePanelTableValue(BaseModel):
+    text: str
+    type: str = "text"
+
+
+class KnowledgePanelTableRow(BaseModel):
+    values: list[KnowledgePanelTableValue]
+
+
+class KnowledgePanelTableElement(BaseModel):
+    id: str
+    columns: list[KnowledgePanelTableColumn]
+    rows: list[KnowledgePanelTableRow]
+
+
+class KnowledgePanelTextElement(BaseModel):
+    html: str
+    source_text: Optional[str] = None
+    source_url: Optional[str] = None
+
+
+class KnowledgePanelElement(BaseModel):
+    element_type: str
+    text_element: Optional[KnowledgePanelTextElement] = None
+    table_element: Optional[KnowledgePanelTableElement] = None
+
+
+class KnowledgePanelTitleElement(BaseModel):
+    title: str
+    type: str = "h1"
+    icon_url: Optional[str] = None
+
+
+class KnowledgePanel(BaseModel):
+    panel_id: str
+    title_element: KnowledgePanelTitleElement
+    elements: list[KnowledgePanelElement]
+    topics: Optional[list[str]] = None
+    level: Optional[str] = None
+    size: Optional[str] = None
