@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Features
+
+* Add Knowledge Panel compliant route for Folksonomy Engine ([#xxx](https://github.com/openfoodfacts/folksonomy_api/issues/xxx))
+  - New endpoint: `GET /product/{barcode}/knowledge_panel`
+  - Returns folksonomy properties in Knowledge Panel format for integration with ProductOpener and mobile apps
+  - Supports authentication for private properties
+  - Properties displayed in structured table format
+  - Compatible with Open Food Facts Knowledge Panel specification
+
 ## [1.3.0](https://github.com/openfoodfacts/folksonomy_api/compare/v1.2.2...v1.3.0) (2025-08-13)
 
 
