@@ -188,3 +188,34 @@ class PropertyClashCheck(BaseModel):
     products_with_old_only: int
     products_with_new_only: int
     conflicting_products: list
+
+
+class PropertyDocumentation(BaseModel):
+    """Documentation for a property"""
+
+    key: str
+    name: dict  # Multilingual names
+    description: dict  # Multilingual descriptions
+    icon: Optional[str] = None
+    images: Optional[dict] = None  # Map of values to image URLs
+    wikidata_property: Optional[str] = None
+    wikidata_url: Optional[str] = None
+    open_food_facts_wiki: Optional[str] = None
+    value_type: Optional[str] = None
+    permitted_values: Optional[list] = None
+    unit: Optional[str] = None
+    format: Optional[str] = None
+    examples: Optional[list] = None
+    input_widget: Optional[dict] = None
+    categories: Optional[list] = None
+    tags: Optional[list] = None
+    knowledge_panel: Optional[dict] = None
+
+
+class PropertyList(BaseModel):
+    """List of properties with basic info"""
+
+    key: str
+    name: dict
+    icon: Optional[str] = None
+    value_type: Optional[str] = None

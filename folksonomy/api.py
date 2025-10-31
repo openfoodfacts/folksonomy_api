@@ -35,6 +35,8 @@ from .models import (
     ProductTag,
     PropertyClashCheck,
     PropertyDeleteRequest,
+    PropertyDocumentation,
+    PropertyList as PropertyListModel,
     PropertyRenameRequest,
     PropertyClashCheckRequest,
     ValueDeleteRequest,
@@ -43,6 +45,7 @@ from .models import (
     User,
     ValueCount,
 )
+from . import property_loader
 
 
 description = """
@@ -90,6 +93,10 @@ app = FastAPI(
         {
             "name": "Keys & Values",
             "description": "Browse available keys and their possible values",
+        },
+        {
+            "name": "Property Documentation",
+            "description": "Documentation and metadata for folksonomy properties",
         },
     ],
 )
@@ -1202,3 +1209,74 @@ async def delete_value(
         raise HTTPException(
             status_code=500, detail=f"Database error during value deletion: {str(e)}"
         ) from e
+
+
+@app.get(
+    "/properties",
+    response_model=List[PropertyListModel],
+    tags=["Property Documentation"],
+)
+async def list_properties(
+    q: Optional[str] = None, language: str = "en"
+) -> List[PropertyListModel]:
+    """
+    Get a list of all documented properties with basic information.
+
+    - **q**: Optional search query to filter properties
+    - **language**: Language code for search (default: en)
+
+    Returns a list of properties with their key, multilingual names, icon, and value type.
+    """
+    if q:
+        return property_loader.search_properties(q, language)
+    return property_loader.get_all_properties()
+
+
+@app.get(
+    "/properties/{key}",
+    response_model=PropertyDocumentation,
+    tags=["Property Documentation"],
+)
+async def get_property_documentation(key: str):
+    """
+    Get complete documentation for a specific property.
+
+    - **key**: The property key
+
+    Returns detailed documentation including:
+    - Multilingual names and descriptions
+    - Icons and images for values
+    - Wikidata and Open Food Facts wiki links
+    - Value type and permitted values
+    - Input widget configuration
+    - Knowledge panel settings
+    - Examples and usage guidelines
+    """
+    prop_doc = property_loader.get_property_doc(key)
+    if not prop_doc:
+        raise HTTPException(
+            status_code=404, detail=f"Property documentation not found for key: {key}"
+        )
+    return prop_doc
+
+
+@app.get(
+    "/properties/{key}/knowledge-panel",
+    tags=["Property Documentation"],
+)
+async def get_property_knowledge_panel(key: str):
+    """
+    Get knowledge panel configuration for a specific property.
+
+    - **key**: The property key
+
+    Returns the knowledge panel configuration for displaying this property
+    in knowledge panels, including display type, level, and visualization settings.
+    """
+    panel_config = property_loader.get_property_knowledge_panel(key)
+    if not panel_config:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Knowledge panel configuration not found for property: {key}",
+        )
+    return panel_config

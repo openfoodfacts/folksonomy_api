@@ -1,0 +1,103 @@
+key: caffeine_content
+name:
+  en: Caffeine Content
+  fr: Teneur en Caféine
+  es: Contenido de Cafeína
+  de: Koffeingehalt
+  it: Contenuto di Caffeina
+description:
+  en: Amount of caffeine in milligrams per serving or per 100ml
+  fr: Quantité de caféine en milligrammes par portion ou pour 100 ml
+  es: Cantidad de cafeína en miligramos por porción o por 100 ml
+  de: Koffeinmenge in Milligramm pro Portion oder pro 100 ml
+icon: ☕
+wikidata_property: P3489
+wikidata_url: https://www.wikidata.org/wiki/Property:P3489
+open_food_facts_wiki: https://wiki.openfoodfacts.org/Folksonomy/Property
+value_type: number
+unit: mg
+format: "^[0-9]+(\\.[0-9]+)?$"
+permitted_values:
+  - value: "0"
+    label:
+      en: Caffeine-Free
+      fr: Sans Caféine
+      es: Sin Cafeína
+      de: Koffeinfrei
+  - value: "1-50"
+    label:
+      en: Low Caffeine
+      fr: Faible Teneur en Caféine
+      es: Bajo en Cafeína
+      de: Niedriger Koffeingehalt
+  - value: "50-100"
+    label:
+      en: Moderate Caffeine
+      fr: Teneur Modérée en Caféine
+      es: Cafeína Moderada
+      de: Moderater Koffeingehalt
+  - value: "100-200"
+    label:
+      en: High Caffeine
+      fr: Haute Teneur en Caféine
+      es: Alto en Cafeína
+      de: Hoher Koffeingehalt
+  - value: "200+"
+    label:
+      en: Very High Caffeine
+      fr: Très Haute Teneur en Caféine
+      es: Muy Alto en Cafeína
+      de: Sehr Hoher Koffeingehalt
+examples:
+  - value: "0"
+    description:
+      en: Decaffeinated coffee or herbal tea
+      fr: Café décaféiné ou tisane
+  - value: "40"
+    description:
+      en: Green tea (per cup)
+      fr: Thé vert (par tasse)
+  - value: "95"
+    description:
+      en: Regular coffee (per cup)
+      fr: Café ordinaire (par tasse)
+  - value: "160"
+    description:
+      en: Energy drink (per can)
+      fr: Boisson énergétique (par canette)
+input_widget:
+  type: number
+  min: 0
+  max: 500
+  step: 1
+  unit_display: mg
+  helper_text:
+    en: Enter caffeine content in milligrams per serving
+    fr: Entrez la teneur en caféine en milligrammes par portion
+categories:
+  - en:beverages
+  - en:coffees
+  - en:teas
+  - en:energy-drinks
+  - en:soft-drinks
+tags:
+  - caffeine
+  - stimulant
+  - beverage
+knowledge_panel:
+  panel_id: caffeine_content
+  level: warning
+  display_type: value_with_threshold
+  thresholds:
+    - value: 0
+      color: green
+      label:
+        en: Caffeine-free
+    - value: 100
+      color: yellow
+      label:
+        en: Moderate caffeine
+    - value: 200
+      color: orange
+      label:
+        en: High caffeine
