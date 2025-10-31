@@ -173,6 +173,92 @@ def sanitize_data(k, v):
     return k, v
 
 
+def format_property_key(key: str) -> str:
+    """
+    Format property key for better display
+    Handles unit formatting and makes keys more readable
+    """
+    # Replace common units with formatted versions
+    unit_replacements = {
+        ':mm': ' (mm)',
+        ':cm': ' (cm)',
+        ':m': ' (m)',
+        ':g': ' (g)',
+        ':kg': ' (kg)',
+        ':ml': ' (ml)',
+        ':l': ' (L)',
+        ':inch': ' (inch)',
+        ':mpx': ' (MP)',
+        ':mah': ' (mAh)',
+        ':gb': ' (GB)',
+        ':mb': ' (MB)',
+        ':w': ' (W)',
+        ':w_kg': ' (W/kg)',
+        ':ghz': ' (GHz)',
+        ':mhz': ' (MHz)',
+        ':px': ' (px)',
+        ':hours': ' (hours)',
+        ':eur': ' (EUR)',
+        ':usd': ' (USD)',
+    }
+    
+    formatted = key
+    for unit_key, unit_display in unit_replacements.items():
+        if formatted.endswith(unit_key):
+            formatted = formatted[:-len(unit_key)] + unit_display
+            break
+    
+    # Replace colons and underscores with spaces for readability
+    formatted = formatted.replace(':', ' › ').replace('_', ' ')
+    
+    return formatted
+
+
+def format_property_value(value: str) -> str:
+    """
+    Format property value for better display
+    Handles URLs, yes/no values, color names, and other special cases
+    """
+    if not value:
+        return value
+    
+    value_lower = value.lower().strip()
+    
+    # Handle yes/no values
+    if value_lower == 'yes':
+        return '✅'
+    if value_lower == 'no':
+        return '❌'
+    
+    # Handle color names with emojis
+    color_emojis = {
+        'red': '🔴',
+        'orange': '🟠',
+        'yellow': '🟡',
+        'green': '🟢',
+        'blue': '🔵',
+        'purple': '🟣',
+        'brown': '🟤',
+        'black': '⚫',
+        'white': '⚪',
+        'pink': '💗',
+        'grey': '⚫',
+        'gray': '⚫',
+        'silver': '⚪',
+        'gold': '🟡',
+    }
+    
+    # Check if value is a color name
+    if value_lower in color_emojis:
+        return f"{color_emojis[value_lower]} {value}"
+    
+    # Handle URLs - convert to HTML links
+    if value.startswith('http://') or value.startswith('https://'):
+        return f'<a href="{value}" target="_blank">{value}</a>'
+    
+    return value
+
+
 def extract_user_roles(auth_response_data):
     """
     Extract user role information from auth server response
@@ -610,11 +696,13 @@ async def product_knowledge_panel(
     # Create table rows from properties
     rows = []
     for prop in properties:
+        formatted_key = format_property_key(prop["k"])
+        formatted_value = format_property_value(prop["v"])
         rows.append(
             KnowledgePanelTableRow(
                 values=[
-                    KnowledgePanelTableValue(text=prop["k"], type="text"),
-                    KnowledgePanelTableValue(text=prop["v"], type="text"),
+                    KnowledgePanelTableValue(text=formatted_key, type="text"),
+                    KnowledgePanelTableValue(text=formatted_value, type="text"),
                 ]
             )
         )
