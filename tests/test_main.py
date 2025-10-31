@@ -1156,7 +1156,7 @@ async def test_product_knowledge_panel_formatting(client):
     """Test that property values are formatted correctly"""
     # This would require setting up test data with specific values
     # Testing the formatting functions directly instead
-    from folksonomy.api import format_property_key, format_property_value
+    from folksonomy.api import format_property_key, format_property_value, get_property_wiki_url, get_property_products_url
     
     # Test key formatting
     assert format_property_key("height:mm") == "height (mm)"
@@ -1173,3 +1173,31 @@ async def test_product_knowledge_panel_formatting(client):
     assert format_property_value("green") == "🟢 green"
     assert "href" in format_property_value("https://example.com")
     assert "target=\"_blank\"" in format_property_value("https://example.com")
+    
+    # Test URL generation
+    assert get_property_wiki_url("same_product") == "https://wiki.openfoodfacts.org/Folksonomy/Property/same_product"
+    assert get_property_products_url("images:ingredients:dutch") == "https://world.openfoodfacts.org/property/images:ingredients:dutch"
+
+
+@pytest.mark.asyncio
+async def test_product_knowledge_panel_with_links(with_sample, client):
+    """Test that Knowledge Panel includes property documentation and product links"""
+    response = client.get(f"/product/{BARCODE_1}/knowledge_panel")
+    assert response.status_code == 200
+    
+    data = response.json()
+    table = data["elements"][1]["table_element"]
+    
+    # Check that property keys include documentation links
+    for row in table["rows"]:
+        key_text = row["values"][0]["text"]
+        # Should contain link to wiki documentation (📖 emoji)
+        assert "📖" in key_text
+        # Should contain link to product list (🔍 emoji)
+        assert "🔍" in key_text
+        # Should contain href attributes
+        assert "href=" in key_text
+        # Should link to wiki
+        assert "wiki.openfoodfacts.org/Folksonomy/Property/" in key_text
+        # Should link to product list
+        assert "world.openfoodfacts.org/property/" in key_text

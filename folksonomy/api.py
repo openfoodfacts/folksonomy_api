@@ -259,6 +259,20 @@ def format_property_value(value: str) -> str:
     return value
 
 
+def get_property_wiki_url(property_key: str) -> str:
+    """
+    Generate wiki documentation URL for a property
+    """
+    return f"https://wiki.openfoodfacts.org/Folksonomy/Property/{property_key}"
+
+
+def get_property_products_url(property_key: str) -> str:
+    """
+    Generate URL to view all products with this property
+    """
+    return f"https://world.openfoodfacts.org/property/{property_key}"
+
+
 def extract_user_roles(auth_response_data):
     """
     Extract user role information from auth server response
@@ -696,12 +710,21 @@ async def product_knowledge_panel(
     # Create table rows from properties
     rows = []
     for prop in properties:
-        formatted_key = format_property_key(prop["k"])
+        property_key = prop["k"]
+        formatted_key = format_property_key(property_key)
         formatted_value = format_property_value(prop["v"])
+        
+        # Add links to property key (wiki documentation and product list)
+        wiki_url = get_property_wiki_url(property_key)
+        products_url = get_property_products_url(property_key)
+        
+        # Create a linked version of the property key
+        linked_key = f'{formatted_key} <small>(<a href="{wiki_url}" target="_blank" title="View documentation">📖</a> <a href="{products_url}" target="_blank" title="View all products with this property">🔍</a>)</small>'
+        
         rows.append(
             KnowledgePanelTableRow(
                 values=[
-                    KnowledgePanelTableValue(text=formatted_key, type="text"),
+                    KnowledgePanelTableValue(text=linked_key, type="text"),
                     KnowledgePanelTableValue(text=formatted_value, type="text"),
                 ]
             )
@@ -713,11 +736,19 @@ async def product_knowledge_panel(
     # Add description text element if properties exist
     if properties:
         property_word = "property" if len(properties) == 1 else "properties"
+        # Create a helpful description with links to documentation
+        description_html = f"<p>This product has {len(properties)} user-contributed {property_word}.</p>"
+        description_html += "<p style='font-size: 0.9em; color: #666;'>"
+        description_html += "Tap any property name to view <a href='https://wiki.openfoodfacts.org/Folksonomy'>documentation</a> "
+        description_html += "or see <a href='https://world.openfoodfacts.org/properties'>all properties</a>."
+        description_html += "</p>"
+        
         elements.append(
             KnowledgePanelElement(
                 element_type="text",
                 text_element=KnowledgePanelTextElement(
-                    html=f"<p>This product has {len(properties)} user-contributed {property_word}.</p>"
+                    html=description_html,
+                    source_url="https://wiki.openfoodfacts.org/Folksonomy"
                 ),
             )
         )
