@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, model_validator, field_validator
 
@@ -194,28 +194,28 @@ class PropertyDocumentation(BaseModel):
     """Documentation for a property"""
 
     key: str
-    name: dict  # Multilingual names
-    description: dict  # Multilingual descriptions
+    name: Dict[str, str]  # Multilingual names (language code -> name)
+    description: Dict[str, str]  # Multilingual descriptions (language code -> description)
     icon: Optional[str] = None
-    images: Optional[dict] = None  # Map of values to image URLs
+    images: Optional[Dict[str, str]] = None  # Map of values to image URLs
     wikidata_property: Optional[str] = None
     wikidata_url: Optional[str] = None
     open_food_facts_wiki: Optional[str] = None
     value_type: Optional[str] = None
-    permitted_values: Optional[list] = None
+    permitted_values: Optional[List[Dict[str, Any]]] = None
     unit: Optional[str] = None
     format: Optional[str] = None
-    examples: Optional[list] = None
-    input_widget: Optional[dict] = None
-    categories: Optional[list] = None
-    tags: Optional[list] = None
-    knowledge_panel: Optional[dict] = None
+    examples: Optional[List[Dict[str, Any]]] = None
+    input_widget: Optional[Dict[str, Any]] = None
+    categories: Optional[List[str]] = None
+    tags: Optional[List[str]] = None
+    knowledge_panel: Optional[Dict[str, Any]] = None
 
 
 class PropertyList(BaseModel):
     """List of properties with basic info"""
 
     key: str
-    name: dict
+    name: Dict[str, str]  # Multilingual names (language code -> name)
     icon: Optional[str] = None
     value_type: Optional[str] = None

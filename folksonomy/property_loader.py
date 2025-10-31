@@ -1,5 +1,6 @@
 """Utilities for loading and managing property documentation from YAML files."""
 
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -10,12 +11,28 @@ from .models import PropertyDocumentation, PropertyList
 # Path to property documentation files
 PROPERTIES_DIR = Path(__file__).parent.parent / "data" / "properties"
 
+# Cache for property documentation
+_property_cache: Optional[Dict[str, PropertyDocumentation]] = None
+
+logger = logging.getLogger(__name__)
+
 
 def load_property_docs() -> Dict[str, PropertyDocumentation]:
-    """Load all property documentation files from the data/properties directory."""
-    properties = {}
+    """Load all property documentation files from the data/properties directory.
+
+    Results are cached in module-level variable to avoid repeated file I/O.
+    """
+    global _property_cache
+
+    # Return cached properties if available
+    if _property_cache is not None:
+        return _property_cache
+
+    properties: Dict[str, PropertyDocumentation] = {}
 
     if not PROPERTIES_DIR.exists():
+        logger.warning(f"Properties directory not found: {PROPERTIES_DIR}")
+        _property_cache = properties
         return properties
 
     for yaml_file in PROPERTIES_DIR.glob("*.yaml"):
@@ -27,10 +44,17 @@ def load_property_docs() -> Dict[str, PropertyDocumentation]:
                 data = yaml.safe_load(f)
                 if data and "key" in data:
                     properties[data["key"]] = PropertyDocumentation(**data)
+        except yaml.YAMLError as e:
+            logger.error(f"YAML parsing error in {yaml_file}: {e}")
+            continue
+        except (OSError, IOError) as e:
+            logger.error(f"File reading error for {yaml_file}: {e}")
+            continue
         except Exception as e:
-            print(f"Error loading {yaml_file}: {e}")
+            logger.error(f"Unexpected error loading {yaml_file}: {e}")
             continue
 
+    _property_cache = properties
     return properties
 
 
