@@ -31,9 +31,11 @@ if POSTGRES_USER:
 if AUTH_DATA:
     AUTH_DATA += "@"
 
-url = "postgres://{}{}/{}".format(AUTH_DATA, POSTGRES_HOST or "", POSTGRES_DATABASE)
+# Ensure host is properly formatted with explicit hostname
+host_part = POSTGRES_HOST if POSTGRES_HOST else "localhost"
+url = "postgres://{}{}:5432/{}".format(AUTH_DATA, host_part, POSTGRES_DATABASE)
 backend = get_backend(url)
-print(f"Going to connect to {POSTGRES_HOST} / {POSTGRES_DATABASE}")
+print(f"Going to connect to {host_part} / {POSTGRES_DATABASE}")
 
 # Add steps
 migrations = read_migrations("./db/migrations")

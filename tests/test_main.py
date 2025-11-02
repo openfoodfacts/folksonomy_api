@@ -986,3 +986,81 @@ async def test_get_user_info_authenticated(client, auth_tokens):
     assert isinstance(data["admin"], bool)
     assert isinstance(data["moderator"], bool)
     assert isinstance(data["user"], bool)
+
+
+@pytest.mark.asyncio
+async def test_get_key_suggestions(with_sample, client):
+    """Test /suggestions endpoint with a product barcode"""
+    response = client.get(f"/suggestions/{BARCODE_1}")
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should return suggestions (excluding keys already on BARCODE_1)
+    # BARCODE_1 has 'color' and 'size', so suggestions should not include these
+    assert isinstance(data, list)
+    for suggestion in data:
+        assert "k" in suggestion
+        assert "count" in suggestion
+        assert suggestion["k"] not in ["color", "size"]
+
+
+@pytest.mark.asyncio
+async def test_get_key_suggestions_for_new_product(with_sample, client):
+    """Test /suggestions endpoint for a product that doesn't exist yet"""
+    response = client.get("/suggestions/9999999999999")
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should return top keys from all products
+    assert isinstance(data, list)
+    assert len(data) <= 10
+
+    # Verify results are sorted by count in descending order
+    if len(data) > 1:
+        for i in range(len(data) - 1):
+            assert data[i]["count"] >= data[i + 1]["count"]
+
+
+@pytest.mark.asyncio
+async def test_get_key_suggestions_with_category(with_sample, client):
+    """Test /suggestions endpoint with a category tag"""
+    # Category tags like 'en:lasagne' should work the same way
+    response = client.get("/suggestions/en:lasagne")
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should return top keys
+    assert isinstance(data, list)
+    assert len(data) <= 10
+
+
+@pytest.mark.asyncio
+async def test_get_key_suggestions_empty_database(client):
+    """Test /suggestions endpoint when database is empty"""
+    response = client.get("/suggestions/0000000000000")
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should return empty list
+    assert data == []
+
+
+@pytest.mark.asyncio
+async def test_get_key_suggestions_private(with_sample, client, auth_tokens):
+    """Test /suggestions endpoint with private owner"""
+    headers = {"Authorization": "Bearer foo__Utest-token"}
+
+    # Without auth, should fail
+    response = client.get(f"/suggestions/{BARCODE_1}?owner=foo")
+    assert response.status_code == 401
+
+    # With auth, should succeed
+    response = client.get(f"/suggestions/{BARCODE_1}?owner=foo", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should return suggestions (excluding the 'private' key already on BARCODE_1 for owner=foo)
+    assert isinstance(data, list)
+    for suggestion in data:
+        assert "k" in suggestion
+        assert "count" in suggestion
