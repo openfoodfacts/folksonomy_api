@@ -393,18 +393,33 @@ async def product_stats(
 
 @app.get("/products", response_model=List[ProductList], tags=["Products"])
 async def product_list(
-    response: Response, owner="", k="", v="", user: User = Depends(get_current_user)
+    response: Response,
+    k: str,
+    owner: str = "",
+    v: str = "",
+    ids: str = Query(None, description="Comma-separated list of product IDs to filter by"),
+    user: User = Depends(get_current_user)
 ):
     """
-    Get the list of products matching k or k=v
+    Get the list of products matching k or k=v, optionally filtered by specific product IDs
+
+    - **k**: Property name (required)
+    - **owner**: Owner filter (optional, default empty for public)
+    - **v**: Property value filter (optional)
+    - **ids**: Comma-separated list of product IDs to filter by (optional)
     """
-    if k == "":
-        return JSONResponse(
-            status_code=422, content={"detail": {"msg": "missing value for k"}}
-        )
     check_owner_user(user, owner, allow_anonymous=True)
     k, v = sanitize_data(k, v)
     where, params = property_where(owner, k, v)
+
+    # Add product ID filter if ids is provided
+    if ids:
+        product_ids = [pid.strip() for pid in ids.split(",") if pid.strip()]
+        if product_ids:
+            placeholders = ", ".join(["%s"] * len(product_ids))
+            where += f" AND product IN ({placeholders})"
+            params.extend(product_ids)
+
     cur, timing = await db.db_exec(
         """
         SELECT coalesce(json_agg(j.j)::json, '[]'::json) FROM(
