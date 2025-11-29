@@ -397,8 +397,10 @@ async def product_list(
     k: str,
     owner: str = "",
     v: str = "",
-    ids: str = Query(None, description="Comma-separated list of product IDs to filter by"),
-    user: User = Depends(get_current_user)
+    ids: str = Query(
+        None, description="Comma-separated list of product IDs to filter by"
+    ),
+    user: User = Depends(get_current_user),
 ):
     """
     Get the list of products matching k or k=v, optionally filtered by specific product IDs
