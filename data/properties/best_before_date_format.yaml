@@ -1,0 +1,62 @@
+key: best_before_date_format
+name:
+  en: Best Before Date Format
+  fr: Format de Date de Péremption
+  es: Formato de Fecha de Caducidad
+  de: Mindesthaltbarkeitsdatum Format
+description:
+  en: The format used for the best before date on the product packaging
+  fr: Le format utilisé pour la date de péremption sur l'emballage du produit
+  es: El formato utilizado para la fecha de caducidad en el empaque del producto
+  de: Das für das Mindesthaltbarkeitsdatum auf der Produktverpackung verwendete Format
+icon: 📅
+wikidata_url: https://www.wikidata.org/wiki/Property:P582
+open_food_facts_wiki: https://wiki.openfoodfacts.org/Folksonomy/Property
+value_type: enum
+permitted_values:
+  - value: DD/MM/YYYY
+    label:
+      en: Day/Month/Year (European)
+      fr: Jour/Mois/Année (Européen)
+      es: Día/Mes/Año (Europeo)
+  - value: MM/DD/YYYY
+    label:
+      en: Month/Day/Year (US)
+      fr: Mois/Jour/Année (US)
+      es: Mes/Día/Año (US)
+  - value: YYYY-MM-DD
+    label:
+      en: Year-Month-Day (ISO)
+      fr: Année-Mois-Jour (ISO)
+      es: Año-Mes-Día (ISO)
+  - value: DD-MMM-YYYY
+    label:
+      en: Day-Month(Text)-Year
+      fr: Jour-Mois(Texte)-Année
+      es: Día-Mes(Texto)-Año
+examples:
+  - value: DD/MM/YYYY
+    description:
+      en: 31/12/2025 (31st December 2025)
+      fr: 31/12/2025 (31 décembre 2025)
+  - value: MM/DD/YYYY
+    description:
+      en: 12/31/2025 (December 31st 2025)
+      fr: 12/31/2025 (31 décembre 2025)
+input_widget:
+  type: select
+  variant: dropdown
+  helper_text:
+    en: Select the date format shown on the package
+    fr: Sélectionnez le format de date affiché sur l'emballage
+categories:
+  - en:plant-based-foods-and-beverages
+  - en:prepared-foods
+tags:
+  - date
+  - expiration
+  - packaging
+knowledge_panel:
+  panel_id: best_before_date_format
+  level: info
+  display_type: text

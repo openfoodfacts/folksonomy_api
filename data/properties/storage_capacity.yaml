@@ -1,0 +1,115 @@
+key: storage_capacity
+name:
+  en: Storage Capacity
+  fr: Capacité de stockage
+  es: Capacidad de almacenamiento
+  de: Speicherkapazität
+  it: Capacità di archiviazione
+description:
+  en: The storage capacity for digital storage devices (USB drives, memory cards, etc.)
+  fr: La capacité de stockage pour les dispositifs de stockage numérique (clés USB, cartes mémoire, etc.)
+  es: La capacidad de almacenamiento para dispositivos de almacenamiento digital (unidades USB, tarjetas de memoria, etc.)
+  de: Die Speicherkapazität für digitale Speichergeräte (USB-Sticks, Speicherkarten usw.)
+icon: 💾
+images:
+  "8GB": https://static.openfoodfacts.org/images/icons/storage/8gb.svg
+  "16GB": https://static.openfoodfacts.org/images/icons/storage/16gb.svg
+  "32GB": https://static.openfoodfacts.org/images/icons/storage/32gb.svg
+  "64GB": https://static.openfoodfacts.org/images/icons/storage/64gb.svg
+  "128GB": https://static.openfoodfacts.org/images/icons/storage/128gb.svg
+  "256GB": https://static.openfoodfacts.org/images/icons/storage/256gb.svg
+  "512GB": https://static.openfoodfacts.org/images/icons/storage/512gb.svg
+  "1TB": https://static.openfoodfacts.org/images/icons/storage/1tb.svg
+wikidata_property: P4526
+wikidata_url: https://www.wikidata.org/wiki/Property:P4526
+open_food_facts_wiki: https://wiki.openfoodfacts.org/Folksonomy/Property
+value_type: enum
+permitted_values:
+  - value: "8GB"
+    label:
+      en: 8 Gigabytes
+      fr: 8 Gigaoctets
+      es: 8 Gigabytes
+      de: 8 Gigabyte
+  - value: "16GB"
+    label:
+      en: 16 Gigabytes
+      fr: 16 Gigaoctets
+      es: 16 Gigabytes
+      de: 16 Gigabyte
+  - value: "32GB"
+    label:
+      en: 32 Gigabytes
+      fr: 32 Gigaoctets
+      es: 32 Gigabytes
+      de: 32 Gigabyte
+  - value: "64GB"
+    label:
+      en: 64 Gigabytes
+      fr: 64 Gigaoctets
+      es: 64 Gigabytes
+      de: 64 Gigabyte
+  - value: "128GB"
+    label:
+      en: 128 Gigabytes
+      fr: 128 Gigaoctets
+      es: 128 Gigabytes
+      de: 128 Gigabyte
+  - value: "256GB"
+    label:
+      en: 256 Gigabytes
+      fr: 256 Gigaoctets
+      es: 256 Gigabytes
+      de: 256 Gigabyte
+  - value: "512GB"
+    label:
+      en: 512 Gigabytes
+      fr: 512 Gigaoctets
+      es: 512 Gigabytes
+      de: 512 Gigabyte
+  - value: "1TB"
+    label:
+      en: 1 Terabyte
+      fr: 1 Téraoctet
+      es: 1 Terabyte
+      de: 1 Terabyte
+  - value: "2TB"
+    label:
+      en: 2 Terabytes
+      fr: 2 Téraoctets
+      es: 2 Terabytes
+      de: 2 Terabyte
+examples:
+  - value: "16GB"
+    description:
+      en: Standard USB flash drive
+      fr: Clé USB standard
+  - value: "64GB"
+    description:
+      en: Common SD card for cameras
+      fr: Carte SD courante pour appareils photo
+  - value: "512GB"
+    description:
+      en: High-capacity SSD
+      fr: SSD haute capacité
+input_widget:
+  type: select
+  variant: image_selector
+  display: grid
+  helper_text:
+    en: Select the storage capacity of your device
+    fr: Sélectionnez la capacité de stockage de votre appareil
+categories:
+  - en:electronics
+  - en:storage-devices
+  - en:usb-drives
+  - en:memory-cards
+tags:
+  - storage
+  - capacity
+  - digital
+knowledge_panel:
+  panel_id: storage_capacity
+  level: info
+  display_type: icon_with_value
+  show_icon: true
