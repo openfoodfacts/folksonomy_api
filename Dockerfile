@@ -1,4 +1,4 @@
-FROM python:3.9-slim AS builder
+FROM python:3.14-slim AS builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -34,7 +34,7 @@ RUN poetry install
 COPY . .
 
 # Final stage - Use a clean image
-FROM python:3.9-slim
+FROM python:3.14-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
