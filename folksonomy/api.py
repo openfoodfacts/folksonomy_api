@@ -29,6 +29,7 @@ from . import settings
 from .models import (
     HelloResponse,
     KeyStats,
+    KeySuggestion,
     PingResponse,
     ProductList,
     ProductStats,
@@ -824,6 +825,60 @@ async def get_unique_values(
     out = await cur.fetchone()
     data = out[0] if out and out[0] is not None else []
     return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
+
+
+@app.get(
+    "/suggestions/{identifier}",
+    response_model=List[KeySuggestion],
+    tags=["Keys & Values"],
+)
+async def get_key_suggestions(
+    response: Response,
+    identifier: str,
+    owner: str = "",
+    user: User = Depends(get_current_user),
+):
+    """
+    Get the top 10 suggested keys for a given barcode or category tag
+
+    Returns the most commonly used keys in the folksonomy database:
+    - For a specific product (barcode): returns keys commonly used for other products
+    - For any identifier: returns the most popular keys overall
+
+    - **identifier**: Product barcode (e.g., '3701027900001') or category tag (e.g., 'en:lasagne')
+    - **owner**: None or empty for public tags, or your own user_id for private suggestions
+    """
+    check_owner_user(user, owner, allow_anonymous=True)
+
+    # Get the top 10 most used keys from the folksonomy database
+    # excluding keys already set for this specific product
+    cur, timing = await db.db_exec(
+        """
+        SELECT json_agg(j)::json FROM (
+            SELECT json_build_object(
+                'k', k,
+                'count', COUNT(*)
+            ) AS j
+            FROM folksonomy
+            WHERE owner = %s
+            AND k NOT IN (
+                SELECT k FROM folksonomy
+                WHERE product = %s AND owner = %s
+            )
+            GROUP BY k
+            ORDER BY COUNT(*) DESC
+            LIMIT 10
+        ) AS j;
+        """,
+        (owner, identifier, owner),
+    )
+    out = await cur.fetchone()
+
+    return JSONResponse(
+        status_code=200,
+        content=out[0] if out and out[0] is not None else [],
+        headers={"x-pg-timing": timing},
+    )
 
 
 @app.get("/ping", response_model=PingResponse, tags=["System"])
