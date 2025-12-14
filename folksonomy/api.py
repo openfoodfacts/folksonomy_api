@@ -826,6 +826,78 @@ async def get_unique_values(
     return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
 
 
+@app.get("/values", tags=["Keys & Values"])
+async def get_values_by_codes_and_keys(
+    response: Response,
+    code: Optional[str] = Query(None, description="Comma-separated list of product codes (barcodes)"),
+    keys: Optional[str] = Query(None, description="Comma-separated list of property keys"),
+    owner: str = "",
+    user: User = Depends(get_current_user),
+):
+    """
+    Get values for specified products and/or keys
+
+    - **code**: Comma-separated list of product codes (barcodes) to filter by
+    - **keys**: Comma-separated list of property keys to filter by
+    - **owner**: None or empty for public tags, or your own user_id
+
+    At least one of 'code' or 'keys' must be provided. Maximum 1000 products.
+    """
+    check_owner_user(user, owner, allow_anonymous=True)
+
+    if not code and not keys:
+        raise HTTPException(
+            status_code=422,
+            detail="At least one of 'code' or 'keys' parameters must be provided"
+        )
+
+    codes_list = [c.strip() for c in code.split(",")] if code else None
+    keys_list = [k.strip() for k in keys.split(",")] if keys else None
+
+    if codes_list and len(codes_list) > 1000:
+        raise HTTPException(
+            status_code=422,
+            detail="Maximum 1000 products allowed"
+        )
+
+    sql = """
+        SELECT json_agg(j)::json FROM (
+            SELECT json_build_object(
+                'product', product,
+                'k', k,
+                'v', v,
+                'owner', owner,
+                'version', version,
+                'editor', editor,
+                'last_edit', last_edit
+            ) AS j
+            FROM folksonomy
+            WHERE owner = %s
+    """
+    params = [owner]
+
+    if codes_list:
+        placeholders = ", ".join(["%s"] * len(codes_list))
+        sql += f" AND product IN ({placeholders})"
+        params.extend(codes_list)
+
+    if keys_list:
+        placeholders = ", ".join(["%s"] * len(keys_list))
+        sql += f" AND k IN ({placeholders})"
+        params.extend(keys_list)
+
+    sql += " ORDER BY product, k) AS j;"
+
+    cur, timing = await db.db_exec(sql, tuple(params))
+    out = await cur.fetchone()
+
+    return JSONResponse(
+        status_code=200,
+        content=out[0] if out and out[0] is not None else [],
+        headers={"x-pg-timing": timing},
+    )
+
+
 @app.get("/ping", response_model=PingResponse, tags=["System"])
 async def pong(response: Response):
     """
