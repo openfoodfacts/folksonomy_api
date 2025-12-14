@@ -829,8 +829,12 @@ async def get_unique_values(
 @app.get("/values", tags=["Keys & Values"])
 async def get_values_by_codes_and_keys(
     response: Response,
-    code: Optional[str] = Query(None, description="Comma-separated list of product codes (barcodes)"),
-    keys: Optional[str] = Query(None, description="Comma-separated list of property keys"),
+    code: Optional[str] = Query(
+        None, description="Comma-separated list of product codes (barcodes)"
+    ),
+    keys: Optional[str] = Query(
+        None, description="Comma-separated list of property keys"
+    ),
     owner: str = "",
     user: User = Depends(get_current_user),
 ):
@@ -848,17 +852,14 @@ async def get_values_by_codes_and_keys(
     if not code and not keys:
         raise HTTPException(
             status_code=422,
-            detail="At least one of 'code' or 'keys' parameters must be provided"
+            detail="At least one of 'code' or 'keys' parameters must be provided",
         )
 
     codes_list = [c.strip() for c in code.split(",")] if code else None
     keys_list = [k.strip() for k in keys.split(",")] if keys else None
 
     if codes_list and len(codes_list) > 1000:
-        raise HTTPException(
-            status_code=422,
-            detail="Maximum 1000 products allowed"
-        )
+        raise HTTPException(status_code=422, detail="Maximum 1000 products allowed")
 
     sql = """
         SELECT json_agg(j)::json FROM (
