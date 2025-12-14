@@ -397,30 +397,30 @@ async def product_list(
     k: str,
     owner: str = "",
     v: str = "",
-    ids: str = Query(
-        None, description="Comma-separated list of product IDs to filter by"
+    code: str = Query(
+        None, description="Comma-separated list of product code to filter by"
     ),
     user: User = Depends(get_current_user),
 ):
     """
-    Get the list of products matching k or k=v, optionally filtered by specific product IDs
+    Get the list of products matching k or k=v, optionally filtered by specific product code
 
     - **k**: Property name (required)
     - **owner**: Owner filter (optional, default empty for public)
     - **v**: Property value filter (optional)
-    - **ids**: Comma-separated list of product IDs to filter by (optional)
+    - **code**: Comma-separated list of product code to filter by (optional)
     """
     check_owner_user(user, owner, allow_anonymous=True)
     k, v = sanitize_data(k, v)
     where, params = property_where(owner, k, v)
 
-    # Add product ID filter if ids is provided
-    if ids:
-        product_ids = [pid.strip() for pid in ids.split(",") if pid.strip()]
-        if product_ids:
-            placeholders = ", ".join(["%s"] * len(product_ids))
+    # Add product ID filter if code is provided
+    if code:
+        product_code = [pid.strip() for pid in code.split(",") if pid.strip()]
+        if product_code:
+            placeholders = ", ".join(["%s"] * len(product_code))
             where += f" AND product IN ({placeholders})"
-            params.extend(product_ids)
+            params.extend(product_code)
 
     cur, timing = await db.db_exec(
         """
