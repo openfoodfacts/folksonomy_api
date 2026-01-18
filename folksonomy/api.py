@@ -10,6 +10,9 @@ from typing import List, Optional
 
 import aiohttp  # async requests to call OFF for login/password check
 import psycopg2  # interface with postgresql
+
+from fastapi.openapi.utils import get_openapi  # NEW: Swagger UI Bearer auth support
+
 from fastapi import (
     Cookie,
     Depends,
@@ -94,6 +97,39 @@ app = FastAPI(
     ],
 )
 
+# -------------------------------------------------------------------
+# NEW: Swagger / OpenAPI configuration
+# This ONLY improves Swagger UI authentication experience.
+# It DOES NOT change API authentication logic.
+# -------------------------------------------------------------------
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    openapi_schema.setdefault("components", {})
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+        }
+    }
+
+    # Apply Bearer authentication globally in Swagger UI
+    openapi_schema["security"] = [{"BearerAuth": []}]
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+# NEW: override OpenAPI schema generation (Swagger UI only)
+app.openapi = custom_openapi
+
 # Allow anyone to call the API from their own apps
 app.add_middleware(
     CORSMiddleware,
@@ -129,6 +165,10 @@ async def app_logging():
 @app.middleware("http")
 async def initialize_transactions(request: Request, call_next):
     """middleware that enclose request processing in a transaction"""
+    # NEW: allow Swagger / OpenAPI endpoints without DB transaction
+    if request.url.path in ("/docs", "/openapi.json", "/redoc"):
+        return await call_next(request)
+
     # eventually log user
     async with db.transaction():
         response = await call_next(request)
@@ -154,8 +194,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         )
         if cur.rowcount == 1:
             return User(user_id=token.split("__U", 1)[0])
-        else:
-            return User(user_id=None)
+    return User(user_id=None)
 
 
 def sanitize_data(k, v):
