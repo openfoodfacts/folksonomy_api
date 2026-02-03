@@ -845,7 +845,7 @@ async def get_values_by_codes_and_keys(
     - **keys**: Comma-separated list of property keys to filter by
     - **owner**: None or empty for public tags, or your own user_id
 
-    At least one of 'code' or 'keys' must be provided. Maximum 1000 products.
+    At least one of 'code' or 'keys' must be provided. Maximum 1000 products and 1000 keys.
     """
     check_owner_user(user, owner, allow_anonymous=True)
 
@@ -860,6 +860,9 @@ async def get_values_by_codes_and_keys(
 
     if codes_list and len(codes_list) > 1000:
         raise HTTPException(status_code=422, detail="Maximum 1000 products allowed")
+
+    if keys_list and len(keys_list) > 1000:
+        raise HTTPException(status_code=422, detail="Maximum 1000 keys allowed")
 
     sql = """
         SELECT json_agg(j)::json FROM (
