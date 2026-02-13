@@ -188,3 +188,8 @@ class PropertyClashCheck(BaseModel):
     products_with_old_only: int
     products_with_new_only: int
     conflicting_products: list
+
+
+class KeySuggestion(BaseModel):
+    k: str
+    count: int
