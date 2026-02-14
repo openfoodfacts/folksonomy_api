@@ -9,8 +9,8 @@ import time
 import aiohttp
 from fastapi.testclient import TestClient
 
-from folksonomy import db, models, settings
-from folksonomy.api import app
+from off_folksonomy import db, models, settings
+from off_folksonomy.api import app
 
 test_client = TestClient(app)
 access_token = None

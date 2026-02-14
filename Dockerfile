@@ -1,3 +1,7 @@
+# --- uv image ---
+ARG UV_VERSION=0.10.2
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
+
 # --- Base Stage ---
 FROM python:3.11-slim AS base
 
@@ -9,15 +13,6 @@ ENV PYTHONUNBUFFERED=1 \
 # --- Builder Stage ---
 FROM base AS builder
 
-# Poetry installation variables
-ARG POETRY_VERSION=2.0.1
-ARG POETRY_HOME="/opt/poetry"
-
-# Build environment variables
-ENV PIP_NO_CACHE_DIR=1 \
-  POETRY_VIRTUALENVS_IN_PROJECT=true \
-  POETRY_NO_INTERACTION=1
-
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
   build-essential \
@@ -25,21 +20,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   curl \
   && rm -rf /var/lib/apt/lists/*
 
-# 1. Install Poetry in its own isolated venv via pip
-RUN python -m venv ${POETRY_HOME} && \
-  ${POETRY_HOME}/bin/pip install --upgrade pip && \
-  ${POETRY_HOME}/bin/pip install poetry==${POETRY_VERSION}
-
-# Add Poetry's isolated venv to the PATH for the builder stage
-ENV PATH="${POETRY_HOME}/bin:$PATH"
+COPY --from=uv /uv /uvx /bin/
 
 WORKDIR /app
 
 # Copy dependency files first for layer caching
-COPY pyproject.toml poetry.lock* ./
+COPY pyproject.toml uv.lock* ./
 
 # 2. Install app dependencies into /app/.venv
-RUN poetry install --no-root --only main
+RUN uv sync --locked --no-dev --no-install-project
+
+COPY README.md LICENSE ./
+COPY ./src ./src
+
+RUN uv sync --locked --no-dev
 
 # --- Runtime Stage ---
 FROM base AS runtime
@@ -48,34 +42,23 @@ FROM base AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
   libpq5 \
   netcat-openbsd \
+  curl \
   && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
 RUN useradd -m -U folksonomy
 
 WORKDIR /app
+ENV PATH="/app/.venv/bin:$PATH" \
+  POSTGRES_HOST=${POSTGRES_HOST}
 
-# Copy the app's virtual environment from builder
-COPY --from=builder /app/.venv /app/.venv
-
-# Copy the application source code
+# virtual environment
+COPY --from=builder /app/ /app/
+# application code
 COPY . .
-
-# --- GENERATE START SCRIPT ---
-RUN tee /app/start.sh <<-'EOF'
-#!/bin/bash
-while ! nc -z "$POSTGRES_HOST" 5432; do
-  echo "Waiting for PostgreSQL at $POSTGRES_HOST..."
-  sleep 1
-done
-echo "PostgreSQL is ready!"
-
-echo "Starting Folksonomy API server..."
-gunicorn folksonomy.api:app \
-    --workers 4 \
-    --worker-class uvicorn.workers.UvicornWorker \
-    --bind 0.0.0.0:8000
-EOF
+# entrypoint and healthcheck scripts
+COPY ./docker/entrypoint.sh /app/start.sh
+COPY ./docker/healthcheck.sh /app/healthcheck.sh
 
 # Fix permissions
 RUN mkdir -p /app/logs && \
@@ -85,5 +68,5 @@ RUN mkdir -p /app/logs && \
 USER folksonomy
 
 EXPOSE 8000
-
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD ["/app/healthcheck.sh"]
 CMD ["/app/start.sh"]

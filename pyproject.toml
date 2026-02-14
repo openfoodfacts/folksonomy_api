@@ -1,5 +1,5 @@
 [project]
-name = "folksonomy_api"
+name = "off_folksonomy"
 version = "1.1.0"
 description = "A Folksonomy Engine for Open Food Facts"
 readme = "README.md"
@@ -11,17 +11,17 @@ dependencies = [
   "aiohttp (>=3.11.18,<4.0.0)",
   "aiopg (>=1.4.0,<2.0.0)",
   "fastapi (>=0.115.11,<0.116.0)",
+  "gunicorn (>=25.1.0,<26.0.0)",
   "psycopg2-binary (>=2.9.10,<3.0.0)",
   "python-multipart (>=0.0.20,<0.0.21)",
   "requests (>=2.32.3,<3.0.0)",
   "uvicorn (>=0.34.0,<0.35.0)",
-  "yoyo-migrations (>=9.0.0,<10.0.0)",
-  "gunicorn (>=25.1.0,<26.0.0)"
+  "yoyo-migrations (>=9.0.0,<10.0.0)"
 ]
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.10.2,<0.11.0"]
+build-backend = "uv_build"
 
 [tool.poetry]
 package-mode = false
