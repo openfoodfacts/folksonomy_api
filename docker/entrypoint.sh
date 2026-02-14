@@ -15,9 +15,9 @@ echo "Running migrations..."
 DATABASE_URL="postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB"
 yoyo apply -vv --batch --database $DATABASE_URL ./db/migrations/
 
-echo "Starting Gunicorn..."
+echo "Starting application..."
 # 3. Start the application
-exec gunicorn off_folksonomy.api:app \
+exec uvicorn off_folksonomy.api:app \
   --workers 4 \
-  --worker-class uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:8000
+  --host 0.0.0.0 \
+  --port 8000

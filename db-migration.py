@@ -14,13 +14,13 @@ yoyo -c yoyo.ini --database postgres://you_database_url mark
 
 import time
 
-from yoyo import read_migrations, get_backend
+from yoyo import get_backend, read_migrations
 
-from folksonomy.settings import (
-    POSTGRES_USER,
-    POSTGRES_PASSWORD,
-    POSTGRES_HOST,
+from off_folksonomy.settings import (
     POSTGRES_DATABASE,
+    POSTGRES_HOST,
+    POSTGRES_PASSWORD,
+    POSTGRES_USER,
 )
 
 AUTH_DATA = ""
