@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/openfoodfacts/folksonomy_api/compare/v1.3.0...v1.3.1) (2026-02-14)
+
+
+### Bug Fixes
+
+* allow_methods must be explicit with allow_credentials ([#303](https://github.com/openfoodfacts/folksonomy_api/issues/303)) ([88de97e](https://github.com/openfoodfacts/folksonomy_api/commit/88de97e2d7ffb1117bfe09824812886f1d62477a))
+
 ## [1.3.0](https://github.com/openfoodfacts/folksonomy_api/compare/v1.2.2...v1.3.0) (2025-08-13)
 
 
