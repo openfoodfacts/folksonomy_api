@@ -62,8 +62,7 @@ COPY ./docker/healthcheck.sh /app/healthcheck.sh
 
 # Fix permissions
 RUN mkdir -p /app/logs && \
-  chown -R folksonomy:folksonomy /app && \
-  chmod +x /app/start.sh
+  chown -R folksonomy:folksonomy /app
 
 USER folksonomy
 
