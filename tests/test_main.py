@@ -3,14 +3,14 @@
 **Important:** you should run tests with PYTHONASYNCIODEBUG=1
 """
 
-import pytest
 import time
 
 import aiohttp
+import pytest
 from fastapi.testclient import TestClient
 
-from folksonomy import db, models, settings
-from folksonomy.api import app
+from off_folksonomy import db, models, settings
+from off_folksonomy.api import app
 
 test_client = TestClient(app)
 access_token = None
@@ -202,6 +202,7 @@ def dummy_auth(self, auth_url, data=None, cookies=None):
                 success = True
     # session token must be test !
     else:
+        assert cookies is not None
         assert sorted(cookies.keys()) == ["session"]
         if "&test&" in cookies.get("session", ""):
             success = True
