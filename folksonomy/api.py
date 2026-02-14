@@ -29,6 +29,14 @@ from . import settings
 from .models import (
     HelloResponse,
     KeyStats,
+    KnowledgePanel,
+    KnowledgePanelElement,
+    KnowledgePanelTableColumn,
+    KnowledgePanelTableElement,
+    KnowledgePanelTableRow,
+    KnowledgePanelTableValue,
+    KnowledgePanelTextElement,
+    KnowledgePanelTitleElement,
     PingResponse,
     ProductList,
     ProductStats,
@@ -163,6 +171,106 @@ def sanitize_data(k, v):
     k = k.strip()
     v = v.strip() if v else v
     return k, v
+
+
+def format_property_key(key: str) -> str:
+    """
+    Format property key for better display
+    Handles unit formatting and makes keys more readable
+    """
+    # Replace common units with formatted versions
+    unit_replacements = {
+        ':mm': ' (mm)',
+        ':cm': ' (cm)',
+        ':m': ' (m)',
+        ':g': ' (g)',
+        ':kg': ' (kg)',
+        ':ml': ' (ml)',
+        ':l': ' (L)',
+        ':inch': ' (inch)',
+        ':mpx': ' (MP)',
+        ':mah': ' (mAh)',
+        ':gb': ' (GB)',
+        ':mb': ' (MB)',
+        ':w': ' (W)',
+        ':w_kg': ' (W/kg)',
+        ':ghz': ' (GHz)',
+        ':mhz': ' (MHz)',
+        ':px': ' (px)',
+        ':hours': ' (hours)',
+        ':eur': ' (EUR)',
+        ':usd': ' (USD)',
+    }
+    
+    formatted = key
+    for unit_key, unit_display in unit_replacements.items():
+        if formatted.endswith(unit_key):
+            formatted = formatted[:-len(unit_key)] + unit_display
+            break
+    
+    # Replace colons and underscores with spaces for readability
+    formatted = formatted.replace(':', ' › ').replace('_', ' ')
+    
+    return formatted
+
+
+def format_property_value(value: str) -> str:
+    """
+    Format property value for better display
+    Handles URLs, yes/no values, color names, and other special cases
+    """
+    if not value:
+        return value
+    
+    value_lower = value.lower().strip()
+    
+    # Handle yes/no values
+    if value_lower == 'yes':
+        return '✅'
+    if value_lower == 'no':
+        return '❌'
+    
+    # Handle color names with emojis
+    color_emojis = {
+        'red': '🔴',
+        'orange': '🟠',
+        'yellow': '🟡',
+        'green': '🟢',
+        'blue': '🔵',
+        'purple': '🟣',
+        'brown': '🟤',
+        'black': '⚫',
+        'white': '⚪',
+        'pink': '💗',
+        'grey': '⚫',
+        'gray': '⚫',
+        'silver': '⚪',
+        'gold': '🟡',
+    }
+    
+    # Check if value is a color name
+    if value_lower in color_emojis:
+        return f"{color_emojis[value_lower]} {value}"
+    
+    # Handle URLs - convert to HTML links
+    if value.startswith('http://') or value.startswith('https://'):
+        return f'<a href="{value}" target="_blank">{value}</a>'
+    
+    return value
+
+
+def get_property_wiki_url(property_key: str) -> str:
+    """
+    Generate wiki documentation URL for a property
+    """
+    return f"https://wiki.openfoodfacts.org/Folksonomy/Property/{property_key}"
+
+
+def get_property_products_url(property_key: str) -> str:
+    """
+    Generate URL to view all products with this property
+    """
+    return f"https://world.openfoodfacts.org/property/{property_key}"
 
 
 def extract_user_roles(auth_response_data):
@@ -552,6 +660,138 @@ async def product_tag_list_versions(
     return JSONResponse(
         status_code=200,
         content=out[0] if out and out[0] is not None else [],
+        headers={"x-pg-timing": timing},
+    )
+
+
+@app.get(
+    "/product/{product}/knowledge_panel",
+    response_model=KnowledgePanel,
+    tags=["Product Tags"],
+)
+async def product_knowledge_panel(
+    response: Response,
+    product: str,
+    owner: str = "",
+    user: User = Depends(get_current_user),
+):
+    """
+    Get a Knowledge Panel compliant representation of all properties for a product.
+    
+    This endpoint returns folksonomy properties in the Knowledge Panel format
+    used by Open Food Facts, allowing integration with ProductOpener and mobile apps.
+    
+    - **product**: the product barcode
+    - **owner**: optional owner filter (empty string for public properties)
+    
+    The response follows the Knowledge Panel specification with a table element
+    displaying all property/value pairs for the product.
+    """
+    check_owner_user(user, owner, allow_anonymous=True)
+    
+    # Fetch all properties for the product
+    cur, timing = await db.db_exec(
+        """
+        SELECT json_agg(j)::json FROM (
+            SELECT k, v, editor, last_edit, version
+            FROM folksonomy
+            WHERE product = %s AND owner = %s
+            ORDER BY k
+        ) as j;
+        """,
+        (product, owner),
+    )
+    out = await cur.fetchone()
+    properties = out[0] if out and out[0] is not None else []
+    
+    # Build the Knowledge Panel structure
+    panel_id = f"folksonomy_properties_{product}"
+    
+    # Create table rows from properties
+    rows = []
+    for prop in properties:
+        property_key = prop["k"]
+        formatted_key = format_property_key(property_key)
+        formatted_value = format_property_value(prop["v"])
+        
+        # Add links to property key (wiki documentation and product list)
+        wiki_url = get_property_wiki_url(property_key)
+        products_url = get_property_products_url(property_key)
+        
+        # Create a linked version of the property key
+        linked_key = f'{formatted_key} <small>(<a href="{wiki_url}" target="_blank" title="View documentation">📖</a> <a href="{products_url}" target="_blank" title="View all products with this property">🔍</a>)</small>'
+        
+        rows.append(
+            KnowledgePanelTableRow(
+                values=[
+                    KnowledgePanelTableValue(text=linked_key, type="text"),
+                    KnowledgePanelTableValue(text=formatted_value, type="text"),
+                ]
+            )
+        )
+    
+    # Build elements list
+    elements = []
+    
+    # Add description text element if properties exist
+    if properties:
+        property_word = "property" if len(properties) == 1 else "properties"
+        # Create a helpful description with links to documentation
+        description_html = f"<p>This product has {len(properties)} user-contributed {property_word}.</p>"
+        description_html += "<p style='font-size: 0.9em; color: #666;'>"
+        description_html += "Tap any property name to view <a href='https://wiki.openfoodfacts.org/Folksonomy'>documentation</a> "
+        description_html += "or see <a href='https://world.openfoodfacts.org/properties'>all properties</a>."
+        description_html += "</p>"
+        
+        elements.append(
+            KnowledgePanelElement(
+                element_type="text",
+                text_element=KnowledgePanelTextElement(
+                    html=description_html,
+                    source_url="https://wiki.openfoodfacts.org/Folksonomy"
+                ),
+            )
+        )
+        
+        # Add table element with properties
+        elements.append(
+            KnowledgePanelElement(
+                element_type="table",
+                table_element=KnowledgePanelTableElement(
+                    id=f"properties_table_{product}",
+                    columns=[
+                        KnowledgePanelTableColumn(text="Property", type="text"),
+                        KnowledgePanelTableColumn(text="Value", type="text"),
+                    ],
+                    rows=rows,
+                ),
+            )
+        )
+    else:
+        # No properties found
+        elements.append(
+            KnowledgePanelElement(
+                element_type="text",
+                text_element=KnowledgePanelTextElement(
+                    html="<p>No user-contributed properties yet for this product.</p>"
+                ),
+            )
+        )
+    
+    # Build the knowledge panel
+    knowledge_panel = KnowledgePanel(
+        panel_id=panel_id,
+        title_element=KnowledgePanelTitleElement(
+            title="Folksonomy Properties",
+            type="h2",
+        ),
+        elements=elements,
+        topics=["folksonomy"],
+    )
+    
+    return JSONResponse(
+        status_code=200,
+        content=knowledge_panel.model_dump(),
         headers={"x-pg-timing": timing},
     )
 
