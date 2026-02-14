@@ -17,7 +17,7 @@ yoyo apply -vv --batch --database $DATABASE_URL ./db/migrations/
 
 echo "Starting Gunicorn..."
 # 3. Start the application
-exec gunicorn folksonomy_api.api:app \
+exec gunicorn off_folksonomy.api:app \
   --workers 4 \
   --worker-class uvicorn.workers.UvicornWorker \
   --bind 0.0.0.0:8000
