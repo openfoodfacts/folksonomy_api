@@ -5,14 +5,10 @@ import logging
 import time
 import weakref
 
-
 import aiopg  # interface with postgresql
 
 # import psycopg2     # interface with postgresql
-
-from . import models
-from . import settings
-
+from . import models, settings
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +41,7 @@ async def get_conn():
             user=settings.POSTGRES_USER,
             password=settings.POSTGRES_PASSWORD,
             host=settings.POSTGRES_HOST,
+            port=settings.POSTGRES_PORT,
             async_=True,
         )
         conn[loop] = _conn
