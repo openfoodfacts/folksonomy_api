@@ -1,5 +1,5 @@
 [project]
-name = "folksonomy_api"
+name = "off_folksonomy"
 version = "1.1.0"
 description = "A Folksonomy Engine for Open Food Facts"
 readme = "README.md"
@@ -16,22 +16,20 @@ dependencies = [
   "requests (>=2.32.3,<3.0.0)",
   "uvicorn (>=0.34.0,<0.35.0)",
   "yoyo-migrations (>=9.0.0,<10.0.0)",
-  "gunicorn (>=25.1.0,<26.0.0)"
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28.1,<0.29.0",
+  "pre-commit>=4.2.0,<5.0.0",
+  "pytest>=8.3.5,<9.0.0",
+  "pytest-asyncio>=0.25.3,<0.26.0",
+  "pytest-cov>=6.0.0,<7.0.0",
 ]
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
-package-mode = false
-
-[tool.poetry.group.dev.dependencies]
-httpx = "^0.28.1"
-pre-commit = "^4.2.0"
-pytest = "^8.3.5"
-pytest-asyncio = "^0.25.3"
-pytest-cov = "^6.0.0"
+requires = ["uv_build>=0.10.2,<0.11.0"]
+build-backend = "uv_build"
 
 [tool.pytest]
 asyncio_mode = "strict"

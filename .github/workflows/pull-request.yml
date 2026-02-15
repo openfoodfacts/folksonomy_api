@@ -17,51 +17,56 @@ jobs:
       # Important: "localhost" does not work on GitHub CI, only 127.0.0.1
       POSTGRES_HOST: "127.0.0.1"
       POSTGRES_DATABASE: folksonomy
+      POSTGRES_PORT: 5432
 
     steps:
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
       - name: Checkout Project
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
-      - name: Create pgdata Directory
-        run: mkdir -p /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
 
-      - name: Change Permissions for pgdata Directory
-        run: sudo chmod -R 777 /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
 
-      - name: Install Python
+      - name: Set up Python
         uses: actions/setup-python@v5.3.0
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: false
+      - name: Create pgdata Directory
+        run: |
+          mkdir -p ~/folksonomy_api/folksonomy_api/data/pg/pgdata
+          sudo chmod -R 777 ~/folksonomy_api/folksonomy_api/data/pg/pgdata
 
       - name: Start PostgreSQL Docker Container
         run: ./start_postgres.sh &
 
       - name: Install Dependencies
-        run: poetry install --no-interaction
+        run: uv sync
 
       - name: Wait for PostgreSQL to be Ready
         timeout-minutes: 10
         run: |
-          while ! (nc -vz 127.0.0.1 5432); do
+          while ! pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER -d $POSTGRES_DATABASE; do
             echo "Waiting for PostgreSQL"
             sleep 1
           done
 
       - name: Initialize Database
-        run: poetry run python db-migration.py
+        run: uv run python db-migration.py
 
       - name: Run Tests
         # Use PYTHONASYNCIODEBUG to ensure all asyncio tasks are closed
-        run: |
-          PYTHONASYNCIODEBUG=1 poetry run pytest -v --cov=folksonomy --cov-report xml tests/ folksonomy/
+        env:
+          PYTHONASYNCIODEBUG: 1
+        run: uv run pytest -v --cov=off_folksonomy --cov-report xml tests/ src/
 
       - name: Upload Coverage Reports
         uses: codecov/codecov-action@v5
