@@ -829,7 +829,7 @@ async def get_unique_values(
 @app.get("/values", tags=["Keys & Values"])
 async def get_values_by_codes_and_keys(
     response: Response,
-    code: Optional[str] = Query(
+    codes: Optional[str] = Query(
         None, description="Comma-separated list of product codes (barcodes)"
     ),
     keys: Optional[str] = Query(
@@ -841,7 +841,7 @@ async def get_values_by_codes_and_keys(
     """
     Get values for specified products and/or keys
 
-    - **code**: Comma-separated list of product codes (barcodes) to filter by
+    - **codes**: Comma-separated list of product codes (barcodes) to filter by
     - **keys**: Comma-separated list of property keys to filter by
     - **owner**: None or empty for public tags, or your own user_id
 
@@ -849,13 +849,13 @@ async def get_values_by_codes_and_keys(
     """
     check_owner_user(user, owner, allow_anonymous=True)
 
-    if not code and not keys:
+    if not codes and not keys:
         raise HTTPException(
             status_code=422,
             detail="At least one of 'code' or 'keys' parameters must be provided",
         )
 
-    codes_list = [c.strip() for c in code.split(",")] if code else None
+    codes_list = [c.strip() for c in codes.split(",")] if codes else None
     keys_list = [k.strip() for k in keys.split(",")] if keys else None
 
     if codes_list and len(codes_list) > 1000:
