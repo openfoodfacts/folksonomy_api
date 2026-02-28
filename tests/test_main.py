@@ -335,10 +335,16 @@ def get_product(client):
 async def test_products_list(with_sample, client):
     response = client.get("/products")
     assert response.status_code == 422
-    assert "missing value for k" in response.json()["detail"]["msg"]
+    data = response.json()
+    assert "detail" in data
+    assert data["detail"][0]["loc"] == ["query", "k"]
+    assert data["detail"][0]["msg"] == "Field required"
     response = client.get("/products?v=red")
     assert response.status_code == 422
-    assert "missing value for k" in response.json()["detail"]["msg"]
+    data = response.json()
+    assert "detail" in data
+    assert data["detail"][0]["loc"] == ["query", "k"]
+    assert data["detail"][0]["msg"] == "Field required"
     response = client.get("/products?k=color")
     assert response.status_code == 200
     data = response.json()
