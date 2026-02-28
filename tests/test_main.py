@@ -374,6 +374,34 @@ async def test_products_list(with_sample, client):
 
 
 @pytest.mark.asyncio
+async def test_products_list_filter_code_no_match(with_sample, client):
+    response = client.get("/products?k=color&code=3701027900000")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_products_list_filter_code(with_sample, client):
+    response = client.get("/products?k=color&code=3701027900001,3701027900002")
+    assert response.status_code == 200
+    data = response.json()
+    assert sorted(data, key=lambda d: d["product"]) == [
+        {"product": BARCODE_1, "k": "color", "v": "red"},
+        {"product": BARCODE_2, "k": "color", "v": "green"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_products_list_filter_duplicate_code(with_sample, client):
+    response = client.get("/products?k=color&code=3701027900001,3701027900001")
+    assert response.status_code == 200
+    data = response.json()
+    assert sorted(data, key=lambda d: d["product"]) == [
+        {"product": BARCODE_1, "k": "color", "v": "red"},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_products_list_private(with_sample, client, auth_tokens):
     response = client.get("/products?owner=foo&k=private")
     assert response.status_code == 401
