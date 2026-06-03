@@ -8,7 +8,7 @@ license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
 authors = [{ name = "Open Food Facts", email = "contact@openfoodfacts.org" }]
 dependencies = [
-  "aiohttp (>=3.11.18,<4.0.0)",
+  "aiohttp (>=3.14.0,<4.0.0)",
   "aiopg (>=1.4.0,<2.0.0)",
   "fastapi (>=0.115.11,<0.116.0)",
   "psycopg2-binary (>=2.9.10,<3.0.0)",
