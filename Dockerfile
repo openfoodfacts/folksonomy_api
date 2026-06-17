@@ -1,84 +1,89 @@
-FROM python:3.9-slim AS builder
+# --- Base Stage ---
+FROM python:3.11-slim AS base
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONFAULTHANDLER=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_CREATE=false
+ENV PYTHONUNBUFFERED=1 \
+  PYTHONDONTWRITEBYTECODE=1 \
+  VIRTUAL_ENV=/app/.venv \
+  PATH="/app/.venv/bin:$PATH"
 
-# Create and set working directory
+# --- Builder Stage ---
+FROM base AS builder
+
+# Poetry installation variables
+ARG POETRY_VERSION=2.0.1
+ARG POETRY_HOME="/opt/poetry"
+
+# Build environment variables
+ENV PIP_NO_CACHE_DIR=1 \
+  POETRY_VIRTUALENVS_IN_PROJECT=true \
+  POETRY_NO_INTERACTION=1
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  build-essential \
+  libpq-dev \
+  curl \
+  && rm -rf /var/lib/apt/lists/*
+
+# 1. Install Poetry in its own isolated venv via pip
+RUN python -m venv ${POETRY_HOME} && \
+  ${POETRY_HOME}/bin/pip install --upgrade pip && \
+  ${POETRY_HOME}/bin/pip install poetry==${POETRY_VERSION}
+
+# Add Poetry's isolated venv to the PATH for the builder stage
+ENV PATH="${POETRY_HOME}/bin:$PATH"
+
 WORKDIR /app
 
-# Install build dependencies and Poetry
+# Copy dependency files first for layer caching
+COPY pyproject.toml poetry.lock* ./
+
+# 2. Install app dependencies into /app/.venv
+RUN poetry install --no-root --only main
+
+# --- Runtime Stage ---
+FROM base AS runtime
+
+# Install runtime-only dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && curl -sSL https://install.python-poetry.org | python3 -
-
-# Add Poetry to PATH
-ENV PATH="/root/.local/bin:$PATH"
-
-# Copy pyproject.toml and poetry.lock (if exists)
-COPY pyproject.toml ./
-COPY poetry.lock* ./
-
-# Install dependencies
-RUN poetry install
-
-# Copy application code
-COPY . .
-
-# Final stage - Use a clean image
-FROM python:3.9-slim
-
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+  libpq5 \
+  netcat-openbsd \
+  && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
 RUN useradd -m -U folksonomy
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
-    netcat-openbsd \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create and set working directory
 WORKDIR /app
 
-# Copy from builder stage
-COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /app /app
+# Copy the app's virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
 
-# Create logs directory and give permissions
+# Copy the application source code
+COPY . .
+
+# --- GENERATE START SCRIPT ---
+RUN tee /app/start.sh <<-'EOF'
+#!/bin/bash
+while ! nc -z "$POSTGRES_HOST" 5432; do
+  echo "Waiting for PostgreSQL at $POSTGRES_HOST..."
+  sleep 1
+done
+echo "PostgreSQL is ready!"
+
+echo "Starting Folksonomy API server..."
+gunicorn folksonomy.api:app \
+    --workers 4 \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --bind 0.0.0.0:8000
+EOF
+
+# Fix permissions
 RUN mkdir -p /app/logs && \
-    chown -R folksonomy:folksonomy /app
+  chown -R folksonomy:folksonomy /app && \
+  chmod +x /app/start.sh
 
-# Create a startup script
-RUN echo '#!/bin/bash\n\
-echo "Waiting for PostgreSQL to be ready..."\n\
-while ! nc -z $POSTGRES_HOST 5432; do\n\
-  sleep 1\n\
-done\n\
-echo "PostgreSQL is ready!"\n\
-\n\
-echo "Starting Folksonomy API server..."\n\
-uvicorn folksonomy.api:app --host 0.0.0.0 --port 8000 --proxy-headers $UVICORN_OPTS\n\
-' > /app/start.sh && \
-    chmod +x /app/start.sh
-
-# Switch to non-root user
 USER folksonomy
 
-# Expose port
 EXPOSE 8000
 
-# Start the application
 CMD ["/app/start.sh"]
