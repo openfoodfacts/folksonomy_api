@@ -1,0 +1,14 @@
+services:
+  folksonomy_api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: ${RESTART_POLICY:-no}
+    volumes:
+      # Mount source code for development (hot reload)
+      - ./folksonomy:/app/folksonomy:ro
+      - ./tests:/app/tests:ro
+      - ./db:/app/db:ro
+    # enable hot reload
+    environment:
+      UVICORN_OPTS: "--reload --reload-dir folksonomy"

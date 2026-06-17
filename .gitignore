@@ -3,11 +3,15 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# pg data
+data/pg/
+
 # C extensions
 *.so
 
 # Distribution / packaging
 .Python
+bin/
 build/
 develop-eggs/
 dist/
@@ -16,6 +20,7 @@ eggs/
 .eggs/
 lib/
 lib64/
+*/lib64
 parts/
 sdist/
 var/
@@ -58,6 +63,7 @@ coverage.xml
 # Django stuff:
 *.log
 local_settings.py
+local_settings_docker.py
 db.sqlite3
 db.sqlite3-journal
 
@@ -109,6 +115,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+pyvenv.cfg
 
 # Spyder project settings
 .spyderproject

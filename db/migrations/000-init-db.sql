@@ -1,7 +1,8 @@
-
+-- database initialization
+-- depends:
 -- folksonomy main table, with public/private partitionning
 CREATE TABLE folksonomy (
-    product     varchar(13)   NOT NULL,
+    product     varchar(24)   NOT NULL,
     k           varchar       NOT NULL,
     v           varchar       NOT NULL,
     owner       varchar       NOT NULL,
@@ -12,11 +13,11 @@ CREATE TABLE folksonomy (
 ) PARTITION BY LIST (owner);
 
 -- public partition
-CREATE TABLE folksonomy_public PARTITION OF folksonomy 
+CREATE TABLE folksonomy_public PARTITION OF folksonomy
     FOR VALUES IN ('');
 
 -- private partition
-CREATE TABLE folksonomy_private PARTITION OF folksonomy 
+CREATE TABLE folksonomy_private PARTITION OF folksonomy
     DEFAULT;
 
 -- automatic timestamp + version check
@@ -51,7 +52,7 @@ CREATE INDEX ON folksonomy_private (owner,k,v);
 
 -- folksonomy versionned table
 CREATE TABLE folksonomy_versions (
-    product     varchar(13)   NOT NULL,
+    product     varchar(24)   NOT NULL,
     k           varchar       NOT NULL,
     v           varchar       NOT NULL,
     owner       varchar       NOT NULL,
