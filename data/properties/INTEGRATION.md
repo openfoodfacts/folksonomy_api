@@ -91,7 +91,7 @@ Returns knowledge panel configuration for displaying a property.
 async function createPropertyInput(propertyKey, language = 'en') {
   const response = await fetch(`/properties/${propertyKey}`);
   const property = await response.json();
-  
+
   // Create input based on widget type
   switch (property.input_widget.type) {
     case 'slider':
@@ -111,17 +111,17 @@ function createSliderInput(property, language) {
   const widget = property.input_widget;
   const label = property.name[language] || property.name.en;
   const helpText = widget.helper_text?.[language] || widget.helper_text?.en || '';
-  
+
   return `
     <div class="property-input">
       <label>
         ${property.icon} ${label}
         <span class="help-text">${helpText}</span>
       </label>
-      <input 
-        type="range" 
-        min="${widget.min}" 
-        max="${widget.max}" 
+      <input
+        type="range"
+        min="${widget.min}"
+        max="${widget.max}"
         step="${widget.step}"
         data-property="${property.key}"
         data-unit="${widget.unit_display || property.unit || ''}"
@@ -136,13 +136,13 @@ function createSelectInput(property, language) {
   const options = property.permitted_values.map(pv => {
     const optionLabel = pv.label[language] || pv.label.en;
     const image = property.images?.[pv.value];
-    
+
     if (image) {
       return `<option value="${pv.value}" data-image="${image}">${optionLabel}</option>`;
     }
     return `<option value="${pv.value}">${optionLabel}</option>`;
   });
-  
+
   return `
     <div class="property-input">
       <label>
@@ -163,10 +163,10 @@ async function displayPropertyInKnowledgePanel(propertyKey, value, language = 'e
   const response = await fetch(`/properties/${propertyKey}/knowledge-panel`);
   const panel = await response.json();
   const property = await (await fetch(`/properties/${propertyKey}`)).json();
-  
+
   const name = property.name[language] || property.name.en;
   const displayValue = formatPropertyValue(property, value, language);
-  
+
   return `
     <div class="knowledge-panel-item level-${panel.level}">
       <span class="icon">${property.icon}</span>
@@ -184,12 +184,12 @@ function formatPropertyValue(property, value, language) {
   if (permittedValue) {
     return permittedValue.label[language] || permittedValue.label.en;
   }
-  
+
   // Add unit if present
   if (property.unit) {
     return `${value} ${property.unit}`;
   }
-  
+
   return value;
 }
 ```
@@ -204,7 +204,7 @@ import 'package:flutter/material.dart';
 class PropertyInputBuilder {
   Future<Widget> buildInput(String propertyKey, {String language = 'en'}) async {
     final property = await fetchProperty(propertyKey);
-    
+
     switch (property.inputWidget.type) {
       case 'slider':
         return _buildSliderInput(property, language);
@@ -218,11 +218,11 @@ class PropertyInputBuilder {
         return _buildTextInput(property, language);
     }
   }
-  
+
   Widget _buildSliderInput(Property property, String language) {
     final label = property.name[language] ?? property.name['en']!;
     final widget = property.inputWidget;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -250,7 +250,7 @@ class PropertyInputBuilder {
       ],
     );
   }
-  
+
   Widget _buildSelectInput(Property property, String language) {
     final label = property.name[language] ?? property.name['en']!;
     final items = property.permittedValues.map((pv) {
@@ -267,7 +267,7 @@ class PropertyInputBuilder {
         ),
       );
     }).toList();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -300,18 +300,18 @@ import { View, Text, Slider, Picker } from 'react-native';
 
 const PropertyInput = ({ propertyKey, value, onChange, language = 'en' }) => {
   const [property, setProperty] = React.useState(null);
-  
+
   React.useEffect(() => {
     fetch(`/properties/${propertyKey}`)
       .then(res => res.json())
       .then(setProperty);
   }, [propertyKey]);
-  
+
   if (!property) return null;
-  
+
   const label = property.name[language] || property.name.en;
   const widget = property.input_widget;
-  
+
   switch (widget.type) {
     case 'slider':
       return (
@@ -327,7 +327,7 @@ const PropertyInput = ({ propertyKey, value, onChange, language = 'en' }) => {
           <Text>{value} {widget.unit_display || property.unit || ''}</Text>
         </View>
       );
-      
+
     case 'select':
       return (
         <View>
@@ -346,7 +346,7 @@ const PropertyInput = ({ propertyKey, value, onChange, language = 'en' }) => {
           </Picker>
         </View>
       );
-      
+
     default:
       return <Text>Unsupported widget type: {widget.type}</Text>;
   }
@@ -373,29 +373,29 @@ class FolksonomyPropertyForm extends HTMLElement {
   async connectedCallback() {
     const properties = await this.fetchRelevantProperties();
     const language = this.getAttribute('language') || 'en';
-    
+
     this.innerHTML = `
       <form class="folksonomy-form">
         ${properties.map(prop => this.renderPropertyInput(prop, language)).join('')}
         <button type="submit">Save Properties</button>
       </form>
     `;
-    
+
     this.setupEventListeners();
   }
-  
+
   async fetchRelevantProperties() {
     // Fetch properties relevant to the product
     const category = this.getAttribute('category');
     const response = await fetch(`/properties?q=${category}`);
     return response.json();
   }
-  
+
   renderPropertyInput(property, language) {
     // Render appropriate input based on property configuration
     // Implementation from examples above
   }
-  
+
   setupEventListeners() {
     this.querySelector('form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -415,7 +415,7 @@ customElements.define('folksonomy-property-form', FolksonomyPropertyForm);
 test('fetch property documentation', async () => {
   const response = await fetch('/properties/scoville_scale');
   const property = await response.json();
-  
+
   expect(property.key).toBe('scoville_scale');
   expect(property.input_widget.type).toBe('slider');
   expect(property.name.en).toBe('Scoville Scale');
@@ -429,7 +429,7 @@ test('render slider widget', () => {
     icon: '🌶️',
     input_widget: { type: 'slider', min: 0, max: 100000, step: 100 }
   };
-  
+
   const widget = createSliderInput(property, 'en');
   expect(widget).toContain('type="range"');
   expect(widget).toContain('min="0"');

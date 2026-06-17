@@ -195,7 +195,9 @@ class PropertyDocumentation(BaseModel):
 
     key: str
     name: Dict[str, str]  # Multilingual names (language code -> name)
-    description: Dict[str, str]  # Multilingual descriptions (language code -> description)
+    description: Dict[
+        str, str
+    ]  # Multilingual descriptions (language code -> description)
     icon: Optional[str] = None
     images: Optional[Dict[str, str]] = None  # Map of values to image URLs
     wikidata_property: Optional[str] = None

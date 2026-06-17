@@ -1,6 +1,5 @@
 """Tests for property documentation system."""
 
-
 from folksonomy import property_loader
 from folksonomy.models import PropertyDocumentation, PropertyList
 
