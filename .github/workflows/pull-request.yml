@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout Project
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
       - name: Create pgdata Directory
@@ -30,9 +30,9 @@ jobs:
         run: sudo chmod -R 777 /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
 
       - name: Install Python
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.9'
+          python-version: '3.11'
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
@@ -64,7 +64,7 @@ jobs:
           PYTHONASYNCIODEBUG=1 poetry run pytest -v --cov=folksonomy --cov-report xml tests/ folksonomy/
 
       - name: Upload Coverage Reports
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true

@@ -335,10 +335,16 @@ def get_product(client):
 async def test_products_list(with_sample, client):
     response = client.get("/products")
     assert response.status_code == 422
-    assert "missing value for k" in response.json()["detail"]["msg"]
+    data = response.json()
+    assert "detail" in data
+    assert data["detail"][0]["loc"] == ["query", "k"]
+    assert data["detail"][0]["msg"] == "Field required"
     response = client.get("/products?v=red")
     assert response.status_code == 422
-    assert "missing value for k" in response.json()["detail"]["msg"]
+    data = response.json()
+    assert "detail" in data
+    assert data["detail"][0]["loc"] == ["query", "k"]
+    assert data["detail"][0]["msg"] == "Field required"
     response = client.get("/products?k=color")
     assert response.status_code == 200
     data = response.json()
@@ -365,6 +371,34 @@ async def test_products_list(with_sample, client):
     response = client.get("/products?k=doesnotexists")
     assert response.status_code == 200
     assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_products_list_filter_code_no_match(with_sample, client):
+    response = client.get("/products?k=color&code=3701027900000")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_products_list_filter_code(with_sample, client):
+    response = client.get("/products?k=color&code=3701027900001,3701027900002")
+    assert response.status_code == 200
+    data = response.json()
+    assert sorted(data, key=lambda d: d["product"]) == [
+        {"product": BARCODE_1, "k": "color", "v": "red"},
+        {"product": BARCODE_2, "k": "color", "v": "green"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_products_list_filter_duplicate_code(with_sample, client):
+    response = client.get("/products?k=color&code=3701027900001,3701027900001")
+    assert response.status_code == 200
+    data = response.json()
+    assert sorted(data, key=lambda d: d["product"]) == [
+        {"product": BARCODE_1, "k": "color", "v": "red"},
+    ]
 
 
 @pytest.mark.asyncio
@@ -595,6 +629,113 @@ async def test_get_unique_values_non_existing_key(with_sample, client):
     response = client.get("/values/non_existing_key")
     assert response.status_code == 200
     assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_get_values_empty_params(with_sample, client):
+    response = client.get("/values")
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_get_values_limit_codes_exceeded(with_sample, client):
+    too_many_codes = ",".join(str(i) for i in range(1001))
+    response = client.get(f"/values?codes={too_many_codes}")
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Maximum 1000 products allowed"
+
+
+@pytest.mark.asyncio
+async def test_get_values_limit_codes_at_threshold(with_sample, client):
+    exact_limit_codes = ",".join(str(i) for i in range(1000))
+    response = client.get(f"/values?codes={exact_limit_codes}")
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_get_values_limit_keys_exceeded(with_sample, client):
+    too_many_keys = ",".join(f"key_{i}" for i in range(1001))
+    response = client.get(f"/values?keys={too_many_keys}")
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Maximum 1000 keys allowed"
+
+
+@pytest.mark.asyncio
+async def test_get_values_limit_keys_at_threshold(with_sample, client):
+    exact_limit_keys = ",".join(str(i) for i in range(1000))
+    response = client.get(f"/values?keys={exact_limit_keys}")
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_get_values_only_keys(with_sample, client):
+    response = client.get("/values?keys=color")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 3
+    assert all(d["k"] == "color" for d in data)
+
+
+@pytest.mark.asyncio
+async def test_get_values_only_codes(with_sample, client):
+    response = client.get(f"/values?codes={BARCODE_1}")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+    assert all(d["product"] == BARCODE_1 for d in data)
+
+
+@pytest.mark.asyncio
+async def test_get_values_filter_codes_and_keys(with_sample, client):
+    url = f"/values?codes={BARCODE_1}&keys=color"
+    response = client.get(url)
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["product"] == BARCODE_1
+    assert data[0]["k"] == "color"
+    assert data[0]["v"] == "red"
+
+
+@pytest.mark.asyncio
+async def test_get_values_multi_filter(with_sample, client):
+    url = f"/values?codes={BARCODE_1},{BARCODE_2}&keys=size"
+    response = client.get(url)
+    assert response.status_code == 200
+    data = sorted(response.json(), key=lambda x: x["product"])
+    assert len(data) == 2
+    assert data[0]["product"] == BARCODE_1 and data[0]["v"] == "medium"
+    assert data[1]["product"] == BARCODE_2 and data[1]["v"] == "small"
+
+
+@pytest.mark.asyncio
+async def test_get_values_wrong_owner(with_sample, client, auth_tokens):
+    headers = {"Authorization": "Bearer foo__Utest-token"}
+    response = client.get(f"/values?codes={BARCODE_1}&owner=bar", headers=headers)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_get_values_authenticated(with_sample, client, auth_tokens):
+    headers = {"Authorization": "Bearer bar__Utest-token"}
+    response = client.get(f"/values?codes={BARCODE_1}&owner=bar", headers=headers)
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_get_values_unauthenticated(with_sample, client):
+    response = client.get(f"/values?codes={BARCODE_1}&owner=bar")
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_get_values_malformed_csv(with_sample, client):
+    # Added spaces and extra commas
+    url = f"/values?codes= {BARCODE_1} , {BARCODE_2} ,,&keys= color "
+    response = client.get(url)
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) >= 2
 
 
 def test_auth_empty(client):

@@ -501,18 +501,35 @@ async def product_stats(
 
 @app.get("/products", response_model=List[ProductList], tags=["Products"])
 async def product_list(
-    response: Response, owner="", k="", v="", user: User = Depends(get_current_user)
+    response: Response,
+    k: str,
+    owner: str = "",
+    v: str = "",
+    code: str = Query(
+        None, description="Comma-separated list of product code to filter by"
+    ),
+    user: User = Depends(get_current_user),
 ):
     """
-    Get the list of products matching k or k=v
+    Get the list of products matching k or k=v, optionally filtered by specific product code
+
+    - **k**: Property name (required)
+    - **owner**: Owner filter (optional, default empty for public)
+    - **v**: Property value filter (optional)
+    - **code**: Comma-separated list of product code to filter by (optional)
     """
-    if k == "":
-        return JSONResponse(
-            status_code=422, content={"detail": {"msg": "missing value for k"}}
-        )
     check_owner_user(user, owner, allow_anonymous=True)
     k, v = sanitize_data(k, v)
     where, params = property_where(owner, k, v)
+
+    # Add product ID filter if code is provided
+    if code:
+        product_code = [pid.strip() for pid in code.split(",") if pid.strip()]
+        if product_code:
+            placeholders = ", ".join(["%s"] * len(product_code))
+            where += f" AND product IN ({placeholders})"
+            params.extend(product_code)
+
     cur, timing = await db.db_exec(
         """
         SELECT coalesce(json_agg(j.j)::json, '[]'::json) FROM(
@@ -1064,6 +1081,82 @@ async def get_unique_values(
     out = await cur.fetchone()
     data = out[0] if out and out[0] is not None else []
     return JSONResponse(status_code=200, content=data, headers={"x-pg-timing": timing})
+
+
+@app.get("/values", tags=["Keys & Values"])
+async def get_values_by_codes_and_keys(
+    response: Response,
+    codes: Optional[str] = Query(
+        None, description="Comma-separated list of product codes (barcodes)"
+    ),
+    keys: Optional[str] = Query(
+        None, description="Comma-separated list of property keys"
+    ),
+    owner: str = "",
+    user: User = Depends(get_current_user),
+):
+    """
+    Get values for specified products and/or keys
+
+    - **codes**: Comma-separated list of product codes (barcodes) to filter by
+    - **keys**: Comma-separated list of property keys to filter by
+    - **owner**: None or empty for public tags, or your own user_id
+
+    At least one of 'code' or 'keys' must be provided. Maximum 1000 products and 1000 keys.
+    """
+    check_owner_user(user, owner, allow_anonymous=True)
+
+    if not codes and not keys:
+        raise HTTPException(
+            status_code=422,
+            detail="At least one of 'code' or 'keys' parameters must be provided",
+        )
+
+    codes_list = [c.strip() for c in codes.split(",")] if codes else None
+    keys_list = [k.strip() for k in keys.split(",")] if keys else None
+
+    if codes_list and len(codes_list) > 1000:
+        raise HTTPException(status_code=422, detail="Maximum 1000 products allowed")
+
+    if keys_list and len(keys_list) > 1000:
+        raise HTTPException(status_code=422, detail="Maximum 1000 keys allowed")
+
+    sql = """
+        SELECT json_agg(j)::json FROM (
+            SELECT json_build_object(
+                'product', product,
+                'k', k,
+                'v', v,
+                'owner', owner,
+                'version', version,
+                'editor', editor,
+                'last_edit', last_edit
+            ) AS j
+            FROM folksonomy
+            WHERE owner = %s
+    """
+    params = [owner]
+
+    if codes_list:
+        placeholders = ", ".join(["%s"] * len(codes_list))
+        sql += f" AND product IN ({placeholders})"
+        params.extend(codes_list)
+
+    if keys_list:
+        placeholders = ", ".join(["%s"] * len(keys_list))
+        sql += f" AND k IN ({placeholders})"
+        params.extend(keys_list)
+
+    sql += " ORDER BY product, k) AS j;"
+
+    cur, timing = await db.db_exec(sql, tuple(params))
+    out = await cur.fetchone()
+
+    return JSONResponse(
+        status_code=200,
+        content=out[0] if out and out[0] is not None else [],
+        headers={"x-pg-timing": timing},
+    )
 
 
 @app.get("/ping", response_model=PingResponse, tags=["System"])
