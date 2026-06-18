@@ -1,0 +1,99 @@
+key: serving_temperature
+name:
+  en: Serving Temperature
+  fr: Température de Service
+  es: Temperatura de Servicio
+  de: Serviertemperatur
+  it: Temperatura di Servizio
+description:
+  en: Recommended temperature for serving the product (in Celsius)
+  fr: Température recommandée pour servir le produit (en Celsius)
+  es: Temperatura recomendada para servir el producto (en Celsius)
+  de: Empfohlene Temperatur zum Servieren des Produkts (in Celsius)
+icon: 🌡️
+open_food_facts_wiki: https://wiki.openfoodfacts.org/Folksonomy/Property
+value_type: enum
+unit: "°C"
+permitted_values:
+  - value: frozen
+    label:
+      en: Frozen (-18°C or below)
+      fr: Congelé (-18°C ou moins)
+      es: Congelado (-18°C o menos)
+      de: Gefroren (-18°C oder niedriger)
+    temperature: -18
+  - value: very_cold
+    label:
+      en: Very Cold (0-5°C)
+      fr: Très froid (0-5°C)
+      es: Muy frío (0-5°C)
+      de: Sehr kalt (0-5°C)
+    temperature: 3
+  - value: chilled
+    label:
+      en: Chilled (5-10°C)
+      fr: Réfrigéré (5-10°C)
+      es: Refrigerado (5-10°C)
+      de: Gekühlt (5-10°C)
+    temperature: 7
+  - value: cool
+    label:
+      en: Cool (10-15°C)
+      fr: Frais (10-15°C)
+      es: Fresco (10-15°C)
+      de: Kühl (10-15°C)
+    temperature: 12
+  - value: room_temp
+    label:
+      en: Room Temperature (18-22°C)
+      fr: Température ambiante (18-22°C)
+      es: Temperatura ambiente (18-22°C)
+      de: Raumtemperatur (18-22°C)
+    temperature: 20
+  - value: warm
+    label:
+      en: Warm (40-50°C)
+      fr: Chaud (40-50°C)
+      es: Caliente (40-50°C)
+      de: Warm (40-50°C)
+    temperature: 45
+  - value: hot
+    label:
+      en: Hot (60-80°C)
+      fr: Très chaud (60-80°C)
+      es: Muy caliente (60-80°C)
+      de: Heiß (60-80°C)
+    temperature: 70
+examples:
+  - value: "chilled"
+    description:
+      en: White wine or soft drinks
+      fr: Vin blanc ou boissons gazeuses
+  - value: "hot"
+    description:
+      en: Coffee or tea
+      fr: Café ou thé
+  - value: "room_temp"
+    description:
+      en: Red wine or bread
+      fr: Vin rouge ou pain
+input_widget:
+  type: select
+  variant: radio
+  helper_text:
+    en: Select the optimal serving temperature
+    fr: Sélectionnez la température de service optimale
+categories:
+  - en:beverages
+  - en:wines
+  - en:prepared-foods
+  - en:soups
+tags:
+  - temperature
+  - serving
+  - consumption
+knowledge_panel:
+  panel_id: serving_temperature
+  level: info
+  display_type: value_with_icon
+  show_unit: true
