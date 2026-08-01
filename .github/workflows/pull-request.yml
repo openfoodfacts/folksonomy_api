@@ -30,7 +30,7 @@ jobs:
         run: sudo chmod -R 777 /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
 
       - name: Install Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
