@@ -1,0 +1,75 @@
+key: maturity_level
+name:
+  en: Maturity Level
+  fr: Niveau de Maturité
+  es: Nivel de Madurez
+  de: Reifegrad
+  it: Livello di Maturità
+description:
+  en: Indicates the ripeness or maturity level of fresh produce (fruits, vegetables)
+  fr: Indique le niveau de mûrissement ou de maturité des produits frais (fruits, légumes)
+  es: Indica el nivel de madurez de los productos frescos (frutas, verduras)
+  de: Gibt den Reifegrad von frischen Produkten (Obst, Gemüse) an
+icon: 🍌
+wikidata_url: https://www.wikidata.org/wiki/Property:P4952
+open_food_facts_wiki: https://wiki.openfoodfacts.org/Folksonomy/Property
+value_type: enum
+permitted_values:
+  - value: unripe
+    label:
+      en: Unripe
+      fr: Pas mûr
+      es: No maduro
+      de: Unreif
+  - value: slightly_ripe
+    label:
+      en: Slightly Ripe
+      fr: Légèrement mûr
+      es: Ligeramente maduro
+      de: Leicht reif
+  - value: ripe
+    label:
+      en: Ripe
+      fr: Mûr
+      es: Maduro
+      de: Reif
+  - value: very_ripe
+    label:
+      en: Very Ripe
+      fr: Très mûr
+      es: Muy maduro
+      de: Sehr reif
+  - value: overripe
+    label:
+      en: Overripe
+      fr: Trop mûr
+      es: Pasado
+      de: Überreif
+examples:
+  - value: "ripe"
+    description:
+      en: Ready to eat immediately
+      fr: Prêt à consommer immédiatement
+  - value: "slightly_ripe"
+    description:
+      en: Will be ready in 2-3 days
+      fr: Sera prêt dans 2-3 jours
+input_widget:
+  type: select
+  variant: image_selector
+  display: horizontal
+  helper_text:
+    en: Select the current ripeness level
+    fr: Sélectionnez le niveau de mûrissement actuel
+categories:
+  - en:fruits
+  - en:vegetables
+  - en:fresh-foods
+tags:
+  - ripeness
+  - maturity
+  - freshness
+knowledge_panel:
+  panel_id: maturity_level
+  level: info
+  display_type: value_with_icon
