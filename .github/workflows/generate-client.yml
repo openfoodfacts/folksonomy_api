@@ -1,0 +1,64 @@
+name: Generate Client
+
+# Runs this action whenever there are any changes to the master branch.
+on:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  client:
+    runs-on: ubuntu-latest
+
+    # Checks out the entire repo.
+    steps:
+    - name: Checks out repo
+      uses: actions/checkout@v1
+
+    # Generates a openapi.yaml file based on the FastAPI project.
+    - name: Generate OpenAPI file
+      uses: column-street/fastapi-openapi-specs-action@v1.0.0
+      with:
+        moduleDir: .
+        fileName: generate_openapi_json.py
+        appName: app
+
+    # Uses an external tool, openapitools-generator-action, to generate the client code.
+    # The 'openapirc.json' file is the following: { "packageName": "fast", "projectName": "fast" }
+    # and it lives inside the master branch of the repository. Comamnd outputs a new folder called 
+    # 'python-client' with the relevant client code.
+    - name: Generate Python Client
+      uses: triaxtec/openapitools-generator-action@v1.0.0
+      with:
+        generator: python
+        openapi-file: openapi.yaml
+        config-file: openapirc.yaml
+
+    # Deletes every file in the folder, except '.git' and the new generated 'python-client' folder.
+    # Moves all content of the 'python-client' folder to the root directory.
+    - name: Cleans the branch up.
+      run: |
+        # Removes all files except the .git and python-client folder.
+        shopt -s extglob
+        sudo rm -rf !(.|..|.git|python-client)
+        # Moves all of the content of the python-client folder out, 
+        # and deletes the folder.
+        mv python-client/* .
+        rm -rf python-client
+
+    # Commits the new changes into a new branch called 'client'.
+    - name: Commit changes.
+      run: |
+        git checkout -b client 
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "Generated client." -a || true 
+
+    # Pushes all of these changes into the GitHub repository.
+    - name: Push changes to client branch
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: client
+        force: True
