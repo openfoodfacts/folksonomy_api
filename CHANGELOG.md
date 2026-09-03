@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.4.0](https://github.com/openfoodfacts/folksonomy_api/compare/v1.3.0...v1.4.0) (2026-09-03)
+
+
+### Features
+
+* adds ids as query param for getting specific product with key ([#330](https://github.com/openfoodfacts/folksonomy_api/issues/330)) ([5aedfb9](https://github.com/openfoodfacts/folksonomy_api/commit/5aedfb9b74d63cc26e1c847099435dba570a5f94))
+* different keys product ids ([#333](https://github.com/openfoodfacts/folksonomy_api/issues/333)) ([d0ff72a](https://github.com/openfoodfacts/folksonomy_api/commit/d0ff72af504a9bce025d4ba90dab4a71c2b7dd09))
+
+
+### Bug Fixes
+
+* allow_methods must be explicit with allow_credentials ([#303](https://github.com/openfoodfacts/folksonomy_api/issues/303)) ([88de97e](https://github.com/openfoodfacts/folksonomy_api/commit/88de97e2d7ffb1117bfe09824812886f1d62477a))
+* Update merge conflict auto-labeling action and config ([9cf9540](https://github.com/openfoodfacts/folksonomy_api/commit/9cf9540f3cb9f670adff241468c8ed31a6775ef2))
+
 ## [1.3.0](https://github.com/openfoodfacts/folksonomy_api/compare/v1.2.2...v1.3.0) (2025-08-13)
 
 
