@@ -45,6 +45,7 @@ async def get_conn():
             user=settings.POSTGRES_USER,
             password=settings.POSTGRES_PASSWORD,
             host=settings.POSTGRES_HOST,
+            port=settings.POSTGRES_PORT,
             async_=True,
         )
         conn[loop] = _conn
