@@ -1,0 +1,72 @@
+key: organic
+name:
+  en: Organic
+  fr: Biologique
+  es: Orgánico
+  de: Bio
+  it: Biologico
+  nl: Biologisch
+  pt: Orgânico
+description:
+  en: Indicates whether the product is certified organic according to recognized standards
+  fr: Indique si le produit est certifié biologique selon des normes reconnues
+  es: Indica si el producto está certificado como orgánico según estándares reconocidos
+  de: Gibt an, ob das Produkt nach anerkannten Standards als biologisch zertifiziert ist
+  it: Indica se il prodotto è certificato biologico secondo standard riconosciuti
+icon: 🌱
+wikidata_property: P1552
+wikidata_url: https://www.wikidata.org/wiki/Property:P1552
+open_food_facts_wiki: https://wiki.openfoodfacts.org/Folksonomy/Property
+value_type: boolean
+permitted_values:
+  - value: "yes"
+    label:
+      en: Certified Organic
+      fr: Certifié Biologique
+      es: Certificado Orgánico
+      de: Bio-Zertifiziert
+      it: Certificato Biologico
+  - value: "no"
+    label:
+      en: Not Organic
+      fr: Non Biologique
+      es: No Orgánico
+      de: Nicht Bio
+      it: Non Biologico
+  - value: "partially"
+    label:
+      en: Partially Organic (contains organic ingredients)
+      fr: Partiellement Biologique (contient des ingrédients biologiques)
+      es: Parcialmente Orgánico (contiene ingredientes orgánicos)
+      de: Teilweise Bio (enthält Bio-Zutaten)
+examples:
+  - value: "yes"
+    description:
+      en: Product with organic certification (EU, USDA, etc.)
+      fr: Produit avec certification biologique (UE, USDA, etc.)
+  - value: "partially"
+    description:
+      en: Product with some organic ingredients but not fully certified
+      fr: Produit avec certains ingrédients biologiques mais pas entièrement certifié
+input_widget:
+  type: select
+  variant: radio
+  helper_text:
+    en: Is this product certified organic?
+    fr: Ce produit est-il certifié biologique ?
+categories:
+  - en:plant-based-foods
+  - en:plant-based-foods-and-beverages
+  - en:fruits-and-vegetables
+  - en:cereals-and-their-products
+  - en:beverages
+tags:
+  - organic
+  - bio
+  - certification
+  - sustainability
+knowledge_panel:
+  panel_id: organic
+  level: positive
+  display_type: badge
+  badge_color: green

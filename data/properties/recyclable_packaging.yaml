@@ -1,0 +1,84 @@
+key: recyclable_packaging
+name:
+  en: Recyclable Packaging
+  fr: Emballage Recyclable
+  es: Envase Reciclable
+  de: Recycelbare Verpackung
+  it: Imballaggio Riciclabile
+description:
+  en: Indicates whether the product packaging is recyclable and which materials can be recycled
+  fr: Indique si l'emballage du produit est recyclable et quels matériaux peuvent être recyclés
+  es: Indica si el envase del producto es reciclable y qué materiales se pueden reciclar
+  de: Gibt an, ob die Produktverpackung recycelbar ist und welche Materialien recycelt werden können
+icon: ♻️
+wikidata_property: P2698
+wikidata_url: https://www.wikidata.org/wiki/Property:P2698
+open_food_facts_wiki: https://wiki.openfoodfacts.org/Folksonomy/Property
+value_type: multiselect
+permitted_values:
+  - value: plastic
+    label:
+      en: Plastic
+      fr: Plastique
+      es: Plástico
+      de: Kunststoff
+  - value: paper
+    label:
+      en: Paper/Cardboard
+      fr: Papier/Carton
+      es: Papel/Cartón
+      de: Papier/Karton
+  - value: glass
+    label:
+      en: Glass
+      fr: Verre
+      es: Vidrio
+      de: Glas
+  - value: metal
+    label:
+      en: Metal
+      fr: Métal
+      es: Metal
+      de: Metall
+  - value: aluminum
+    label:
+      en: Aluminum
+      fr: Aluminium
+      es: Aluminio
+      de: Aluminium
+  - value: compostable
+    label:
+      en: Compostable
+      fr: Compostable
+      es: Compostable
+      de: Kompostierbar
+examples:
+  - value: "plastic,paper"
+    description:
+      en: Product with both plastic and paper recyclable components
+      fr: Produit avec des composants recyclables en plastique et en papier
+  - value: "glass"
+    description:
+      en: Glass container fully recyclable
+      fr: Contenant en verre entièrement recyclable
+input_widget:
+  type: multiselect
+  variant: checkbox
+  helper_text:
+    en: Select all recyclable materials in the product packaging
+    fr: Sélectionnez tous les matériaux recyclables dans l'emballage du produit
+categories:
+  - en:plant-based-foods-and-beverages
+  - en:beverages
+  - en:prepared-foods
+tags:
+  - sustainability
+  - environment
+  - recycling
+  - packaging
+knowledge_panel:
+  panel_id: recyclable_packaging
+  level: positive
+  display_type: list_with_icons
+  icon_type: recycling
+  badge_color: green

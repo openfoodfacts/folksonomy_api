@@ -1,0 +1,119 @@
+key: allergen_free
+name:
+  en: Allergen Free
+  fr: Sans Allergène
+  es: Sin Alérgenos
+  de: Allergenfrei
+  it: Senza Allergeni
+description:
+  en: Indicates which common allergens are not present in the product
+  fr: Indique quels allergènes courants ne sont pas présents dans le produit
+  es: Indica qué alérgenos comunes no están presentes en el producto
+  de: Gibt an, welche häufigen Allergene nicht im Produkt enthalten sind
+icon: 🚫
+wikidata_property: P2805
+wikidata_url: https://www.wikidata.org/wiki/Property:P2805
+open_food_facts_wiki: https://wiki.openfoodfacts.org/Folksonomy/Property
+value_type: multiselect
+permitted_values:
+  - value: gluten
+    label:
+      en: Gluten
+      fr: Gluten
+      es: Gluten
+      de: Gluten
+  - value: milk
+    label:
+      en: Milk/Lactose
+      fr: Lait/Lactose
+      es: Leche/Lactosa
+      de: Milch/Laktose
+  - value: eggs
+    label:
+      en: Eggs
+      fr: Œufs
+      es: Huevos
+      de: Eier
+  - value: nuts
+    label:
+      en: Tree Nuts
+      fr: Fruits à Coque
+      es: Frutos Secos
+      de: Nüsse
+  - value: peanuts
+    label:
+      en: Peanuts
+      fr: Arachides
+      es: Cacahuetes
+      de: Erdnüsse
+  - value: soy
+    label:
+      en: Soy
+      fr: Soja
+      es: Soja
+      de: Soja
+  - value: fish
+    label:
+      en: Fish
+      fr: Poisson
+      es: Pescado
+      de: Fisch
+  - value: shellfish
+    label:
+      en: Shellfish
+      fr: Crustacés
+      es: Mariscos
+      de: Schalentiere
+  - value: sesame
+    label:
+      en: Sesame
+      fr: Sésame
+      es: Sésamo
+      de: Sesam
+  - value: mustard
+    label:
+      en: Mustard
+      fr: Moutarde
+      es: Mostaza
+      de: Senf
+  - value: celery
+    label:
+      en: Celery
+      fr: Céleri
+      es: Apio
+      de: Sellerie
+  - value: sulfites
+    label:
+      en: Sulfites
+      fr: Sulfites
+      es: Sulfitos
+      de: Sulfite
+examples:
+  - value: "gluten,milk"
+    description:
+      en: Product is free from gluten and milk
+      fr: Produit sans gluten et sans lait
+  - value: "nuts,peanuts"
+    description:
+      en: Product is free from all nuts including peanuts
+      fr: Produit sans fruits à coque ni arachides
+input_widget:
+  type: multiselect
+  variant: checkbox
+  searchable: true
+  helper_text:
+    en: Select all allergens that are NOT present in this product
+    fr: Sélectionnez tous les allergènes qui ne sont PAS présents dans ce produit
+categories:
+  - en:plant-based-foods-and-beverages
+  - en:prepared-foods
+  - en:snacks
+tags:
+  - allergen
+  - allergy
+  - dietary-restriction
+knowledge_panel:
+  panel_id: allergen_free
+  level: info
+  display_type: list_with_icons
+  icon_type: crossed_out

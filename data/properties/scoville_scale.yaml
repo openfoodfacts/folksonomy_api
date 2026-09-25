@@ -1,0 +1,103 @@
+key: scoville_scale
+name:
+  en: Scoville Scale
+  fr: Échelle de Scoville
+  es: Escala Scoville
+  de: Scoville-Skala
+  it: Scala Scoville
+description:
+  en: Measures the spiciness or heat of chili peppers and spicy foods in Scoville Heat Units (SHU)
+  fr: Mesure le piquant des piments et des aliments épicés en unités de chaleur Scoville (SHU)
+  es: Mide el picante de los chiles y alimentos picantes en Unidades de Calor Scoville (SHU)
+  de: Misst die Schärfe von Chilischoten und scharfen Lebensmitteln in Scoville-Schärfeeinheiten (SHU)
+  it: Misura la piccantezza dei peperoncini e cibi piccanti in unità di calore Scoville (SHU)
+icon: 🌶️
+wikidata_property: P5196
+wikidata_url: https://www.wikidata.org/wiki/Property:P5196
+open_food_facts_wiki: https://wiki.openfoodfacts.org/Folksonomy/Property
+value_type: number
+unit: SHU
+format: "^[0-9]+$"
+permitted_values:
+  - value: "0-100"
+    label:
+      en: Mild (Bell Pepper)
+      fr: Doux (Poivron)
+      es: Suave (Pimiento)
+      de: Mild (Paprika)
+  - value: "100-1000"
+    label:
+      en: Warm (Pepperoncini)
+      fr: Tiède (Pepperoncini)
+      es: Tibio (Pepperoncini)
+      de: Warm (Pepperoncini)
+  - value: "1000-10000"
+    label:
+      en: Medium (Jalapeño)
+      fr: Moyen (Jalapeño)
+      es: Medio (Jalapeño)
+      de: Mittel (Jalapeño)
+  - value: "10000-100000"
+    label:
+      en: Hot (Cayenne)
+      fr: Piquant (Cayenne)
+      es: Picante (Cayenne)
+      de: Scharf (Cayenne)
+  - value: "100000-350000"
+    label:
+      en: Very Hot (Habanero)
+      fr: Très Piquant (Habanero)
+      es: Muy Picante (Habanero)
+      de: Sehr Scharf (Habanero)
+  - value: "350000+"
+    label:
+      en: Extremely Hot (Carolina Reaper)
+      fr: Extrêmement Piquant (Carolina Reaper)
+      es: Extremadamente Picante (Carolina Reaper)
+      de: Extrem Scharf (Carolina Reaper)
+examples:
+  - value: "0"
+    description:
+      en: Bell pepper (sweet pepper)
+      fr: Poivron (piment doux)
+  - value: "2500"
+    description:
+      en: Jalapeño pepper
+      fr: Piment jalapeño
+  - value: "5000"
+    description:
+      en: Tabasco sauce
+      fr: Sauce Tabasco
+  - value: "50000"
+    description:
+      en: Thai chili pepper
+      fr: Piment thaï
+  - value: "2200000"
+    description:
+      en: Carolina Reaper (world's hottest pepper)
+      fr: Carolina Reaper (piment le plus fort du monde)
+input_widget:
+  type: slider
+  min: 0
+  max: 100000
+  step: 100
+  unit_display: SHU
+  logarithmic: true
+  helper_text:
+    en: Slide to indicate the spiciness level. Most hot sauces range from 1,000 to 50,000 SHU.
+    fr: Faites glisser pour indiquer le niveau de piquant. La plupart des sauces piquantes varient de 1 000 à 50 000 SHU.
+categories:
+  - en:spices
+  - en:sauces
+  - en:condiments
+  - en:hot-sauces
+  - en:chili-peppers
+tags:
+  - spicy
+  - heat
+  - capsaicin
+knowledge_panel:
+  panel_id: scoville_scale
+  level: info
+  display_type: value_with_scale
+  visualization: heat_gauge
