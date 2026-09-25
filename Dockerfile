@@ -64,7 +64,7 @@ COPY . .
 # --- GENERATE START SCRIPT ---
 RUN tee /app/start.sh <<-'EOF'
 #!/bin/bash
-while ! nc -z "$POSTGRES_HOST" 5432; do
+while ! nc -z "$POSTGRES_HOST" "${POSTGRES_PORT:-5432}"; do
   echo "Waiting for PostgreSQL at $POSTGRES_HOST..."
   sleep 1
 done
