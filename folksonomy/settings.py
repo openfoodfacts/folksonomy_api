@@ -9,6 +9,7 @@ POSTGRES_PASSWORD = os.environ.get(
 )  # Leave empty if no password exists for user
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", None)  # Change if necessary
 POSTGRES_DATABASE = os.environ.get("POSTGRES_DATABASE", "folksonomy")
+POSTGRES_PORT = os.environ.get("POSTGRES_PORT", 5432)
 
 
 # we deduce the URL to which to authenticate from the base url,
