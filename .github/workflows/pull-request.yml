@@ -44,7 +44,7 @@ jobs:
         run: ./start_postgres.sh &
 
       - name: Install Dependencies
-        run: uv sync
+        run: uv sync --locked
 
       - name: Wait for PostgreSQL to be Ready
         timeout-minutes: 10
@@ -55,13 +55,13 @@ jobs:
           done
 
       - name: Initialize Database
-        run: uv run python db-migration.py
+        run: uv run --locked python db-migration.py
 
       - name: Run Tests
         # Use PYTHONASYNCIODEBUG to ensure all asyncio tasks are closed
         env:
           PYTHONASYNCIODEBUG: 1
-        run: uv run pytest -v --cov=folksonomy --cov-report xml tests/ folksonomy/
+        run: uv run --locked pytest -v --cov=folksonomy --cov-report xml tests/ folksonomy/
 
       - name: Upload Coverage Reports
         if: ${{ github.actor != 'dependabot[bot]' }}
