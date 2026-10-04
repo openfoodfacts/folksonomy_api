@@ -9,12 +9,12 @@ from fastapi.responses import JSONResponse
 from .. import db
 from ..dependencies import CurrentUser, check_owner_user
 from ..models import ProductList, ProductStats, ProductTag
-from ..utils import sanitize_data
+from ..utils import strip_property_kv
 
 router = APIRouter()
 
 
-def property_where(owner: str, k: str, v: str):
+def _property_where(owner: str, k: str, v: str):
     """Build a SQL condition on a property, filtering by owner and eventually key and value"""
     conditions = ["owner=%s"]
     params = [owner]
@@ -36,8 +36,8 @@ async def product_stats(user: CurrentUser, response: Response, owner="", k="", v
     The products list can be limited to some tags (k or k=v)
     """
     check_owner_user(user, owner, allow_anonymous=True)
-    k, v = sanitize_data(k, v)
-    where, params = property_where(owner, k, v)
+    k, v = strip_property_kv(k, v)
+    where, params = _property_where(owner, k, v)
     cur, timing = await db.db_exec(
         f"""
         SELECT json_agg(j.j)::json FROM(
@@ -89,8 +89,8 @@ async def product_list(
     - **code**: Comma-separated list of product code to filter by (optional)
     """
     check_owner_user(user, owner, allow_anonymous=True)
-    k, v = sanitize_data(k, v)
-    where, params = property_where(owner, k, v)
+    k, v = strip_property_kv(k, v)
+    where, params = _property_where(owner, k, v)
 
     # Add product ID filter if code is provided
     if code:
@@ -180,7 +180,7 @@ async def product_tag(
     - /product/xxx/key returns only the requested key
     - /product/xxx/key* returns the key and subkeys (key:subkey)
     """
-    k, _v = sanitize_data(k, None)
+    k, _v = strip_property_kv(k, None)
     key = re.sub(r"[^a-z0-9_\:]", "", k)
     check_owner_user(user, owner, allow_anonymous=True)
     if k[-1:] == "*":
@@ -231,7 +231,7 @@ async def product_tag_list_versions(
     """
 
     check_owner_user(user, owner, allow_anonymous=True)
-    k, _v = sanitize_data(k, None)
+    k, _v = strip_property_kv(k, None)
     cur, timing = await db.db_exec(
         """
         SELECT json_agg(j)::json FROM(
@@ -375,7 +375,7 @@ async def product_tag_delete(
     Delete a product tag
     """
     check_owner_user(user, owner, allow_anonymous=False)
-    k, _v = sanitize_data(k, None)
+    k, _v = strip_property_kv(k, None)
     try:
         # Setting version to 0, this is seen as a reset,
         # while maintaining history in folksonomy_versions
