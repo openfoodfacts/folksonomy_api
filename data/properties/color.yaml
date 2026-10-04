@@ -1,0 +1,137 @@
+key: color
+name:
+  en: Color
+  fr: Couleur
+  es: Color
+  de: Farbe
+  it: Colore
+  nl: Kleur
+  pt: Cor
+description:
+  en: The primary color of the product or its packaging
+  fr: La couleur principale du produit ou de son emballage
+  es: El color principal del producto o su envase
+  de: Die Hauptfarbe des Produkts oder seiner Verpackung
+  it: Il colore principale del prodotto o della sua confezione
+icon: 🎨
+open_food_facts_wiki: https://wiki.openfoodfacts.org/Folksonomy/Property
+value_type: string
+format: "^#[0-9A-Fa-f]{6}$|^[a-z]+$"
+permitted_values:
+  - value: red
+    label:
+      en: Red
+      fr: Rouge
+      es: Rojo
+      de: Rot
+      it: Rosso
+    color: "#FF0000"
+  - value: blue
+    label:
+      en: Blue
+      fr: Bleu
+      es: Azul
+      de: Blau
+      it: Blu
+    color: "#0000FF"
+  - value: green
+    label:
+      en: Green
+      fr: Vert
+      es: Verde
+      de: Grün
+      it: Verde
+    color: "#00FF00"
+  - value: yellow
+    label:
+      en: Yellow
+      fr: Jaune
+      es: Amarillo
+      de: Gelb
+      it: Giallo
+    color: "#FFFF00"
+  - value: orange
+    label:
+      en: Orange
+      fr: Orange
+      es: Naranja
+      de: Orange
+      it: Arancione
+    color: "#FFA500"
+  - value: purple
+    label:
+      en: Purple
+      fr: Violet
+      es: Morado
+      de: Lila
+      it: Viola
+    color: "#800080"
+  - value: pink
+    label:
+      en: Pink
+      fr: Rose
+      es: Rosa
+      de: Rosa
+      it: Rosa
+    color: "#FFC0CB"
+  - value: brown
+    label:
+      en: Brown
+      fr: Marron
+      es: Marrón
+      de: Braun
+      it: Marrone
+    color: "#A52A2A"
+  - value: black
+    label:
+      en: Black
+      fr: Noir
+      es: Negro
+      de: Schwarz
+      it: Nero
+    color: "#000000"
+  - value: white
+    label:
+      en: White
+      fr: Blanc
+      es: Blanco
+      de: Weiß
+      it: Bianco
+    color: "#FFFFFF"
+  - value: gray
+    label:
+      en: Gray
+      fr: Gris
+      es: Gris
+      de: Grau
+      it: Grigio
+    color: "#808080"
+examples:
+  - value: "red"
+    description:
+      en: Red apple or tomato
+      fr: Pomme rouge ou tomate
+  - value: "#FF6B35"
+    description:
+      en: Custom orange shade (hex color code)
+      fr: Nuance d'orange personnalisée (code couleur hexadécimal)
+input_widget:
+  type: color
+  variant: palette_with_custom
+  allow_custom: true
+  helper_text:
+    en: Select a preset color or choose a custom color
+    fr: Sélectionnez une couleur prédéfinie ou choisissez une couleur personnalisée
+categories:
+  - en:plant-based-foods-and-beverages
+  - en:fruits-and-vegetables
+  - en:beverages
+  - en:clothing
+tags:
+  - color
+  - appearance
+  - visual
+knowledge_panel:
+  panel_id: color
+  level: info
+  display_type: color_swatch
