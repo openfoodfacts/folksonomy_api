@@ -49,7 +49,7 @@ jobs:
       - name: Wait for PostgreSQL to be Ready
         timeout-minutes: 10
         run: |
-          while ! (nc -vz 127.0.0.1 5432); do
+          while ! docker exec fe_postgres pg_isready -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DATABASE"; do
             echo "Waiting for PostgreSQL"
             sleep 1
           done
