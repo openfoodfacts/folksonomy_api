@@ -7,66 +7,11 @@ from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import JSONResponse
 
 from .. import db
-from ..dependencies import CurrentUser, check_owner_user
-from ..models import ProductList, ProductStats, ProductTag
-from ..utils import strip_property_kv
+from ..models import ProductList, ProductTag
+from ..utils.auth import CurrentUser, check_owner_user
+from ..utils.query import build_property_filter, strip_property_kv
 
 router = APIRouter()
-
-
-def _property_where(owner: str, k: str, v: str):
-    """Build a SQL condition on a property, filtering by owner and eventually key and value"""
-    conditions = ["owner=%s"]
-    params = [owner]
-    if k != "":
-        conditions.append("k=%s")
-        params.append(k)
-        if v != "":
-            conditions.append("v=%s")
-            params.append(v)
-    where = " AND ".join(conditions)
-    return where, params
-
-
-@router.get("/products/stats", response_model=list[ProductStats], tags=["Products"])
-async def product_stats(user: CurrentUser, response: Response, owner="", k="", v=""):
-    """
-    Get the list of products with tags statistics
-
-    The products list can be limited to some tags (k or k=v)
-    """
-    check_owner_user(user, owner, allow_anonymous=True)
-    k, v = strip_property_kv(k, v)
-    where, params = _property_where(owner, k, v)
-    cur, timing = await db.db_exec(
-        f"""
-        SELECT json_agg(j.j)::json FROM(
-            SELECT json_build_object(
-                'product',product,
-                'keys',count(*),
-                'last_edit',max(last_edit),
-                'editors',count(distinct(editor))
-                ) as j
-            FROM folksonomy
-            WHERE {where}
-            GROUP BY product) as j;
-        """,
-        params,
-    )
-    out = await cur.fetchone()
-    # cur, timing = await db.db_exec("""
-    #     SELECT count(*)
-    #         FROM folksonomy;
-    #     """
-    # )
-    # out2 = await cur.fetchone()
-    # import pdb;pdb.set_trace()
-
-    return JSONResponse(
-        status_code=200,
-        content=out[0] if out and out[0] is not None else [],
-        headers={"x-pg-timing": timing},
-    )
 
 
 @router.get("/products", response_model=list[ProductList], tags=["Products"])
@@ -90,7 +35,7 @@ async def product_list(
     """
     check_owner_user(user, owner, allow_anonymous=True)
     k, v = strip_property_kv(k, v)
-    where, params = _property_where(owner, k, v)
+    where, params = build_property_filter(owner, k, v)
 
     # Add product ID filter if code is provided
     if code:
