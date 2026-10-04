@@ -42,7 +42,7 @@ from .models import (
     ValueRenameRequest,
 )
 from .routes import products
-from .utils import sanitize_data
+from .utils import strip_property_kv
 
 description = """
 Folksonomy Engine API allows you to add free property/value pairs to Open Food Facts products.
@@ -346,7 +346,7 @@ async def get_unique_values(
     - **limit**: Maximum number of values to return (default: 50; max: 1000)
     """
     check_owner_user(user, owner, allow_anonymous=True)
-    k, _ = sanitize_data(k, None)
+    k, _ = strip_property_kv(k, None)
 
     limit = min(limit, 1000)
 
@@ -646,7 +646,7 @@ async def delete_property(
     """
     await check_moderator_permission(user)
 
-    property_name, _ = sanitize_data(request.property, None)
+    property_name, _ = strip_property_kv(request.property, None)
 
     try:
         # Delete all instances of the property
