@@ -9,8 +9,8 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 
 from .. import db, settings
-from ..dependencies import CurrentUser, get_user_roles_from_db
 from ..models import TokenResponse
+from ..utils.auth import CurrentUser, get_user_roles_from_db
 
 router = APIRouter()
 
