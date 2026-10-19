@@ -1,23 +1,29 @@
 name: Generate Client
 
-# Runs this action whenever there are any changes to the master branch.
+# Runs this action whenever there are any changes to the main branch.
 on:
   push:
     branches:
-      - '*'
+      - main
+
+concurrency:
+  group: generate-client-publication
+  cancel-in-progress: true
 
 jobs:
   client:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
 
     # Checks out the entire repo.
     steps:
     - name: Checks out repo
-      uses: actions/checkout@v1
+      uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1
 
     # Generates a openapi.yaml file based on the FastAPI project.
     - name: Generate OpenAPI file
-      uses: column-street/fastapi-openapi-specs-action@v1.0.0
+      uses: column-street/fastapi-openapi-specs-action@0f66b1b139a1c97adfe3c04861135198cd792916 # v1.0.0
       with:
         moduleDir: .
         fileName: generate_openapi_json.py
@@ -25,10 +31,10 @@ jobs:
 
     # Uses an external tool, openapitools-generator-action, to generate the client code.
     # The 'openapirc.json' file is the following: { "packageName": "fast", "projectName": "fast" }
-    # and it lives inside the master branch of the repository. Comamnd outputs a new folder called 
+    # and it lives inside the main branch of the repository. Command outputs a new folder called
     # 'python-client' with the relevant client code.
     - name: Generate Python Client
-      uses: triaxtec/openapitools-generator-action@v1.0.0
+      uses: triaxtec/openapitools-generator-action@14848119a73e51bd7fe6c806b0da5af4338e0f6e # v1.0.0
       with:
         generator: python
         openapi-file: openapi.yaml
@@ -41,7 +47,7 @@ jobs:
         # Removes all files except the .git and python-client folder.
         shopt -s extglob
         sudo rm -rf !(.|..|.git|python-client)
-        # Moves all of the content of the python-client folder out, 
+        # Moves all of the content of the python-client folder out,
         # and deletes the folder.
         mv python-client/* .
         rm -rf python-client
@@ -49,15 +55,15 @@ jobs:
     # Commits the new changes into a new branch called 'client'.
     - name: Commit changes.
       run: |
-        git checkout -b client 
+        git checkout -b client
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add .
-        git commit -m "Generated client." -a || true 
+        git commit -m "Generated client." -a || true
 
     # Pushes all of these changes into the GitHub repository.
     - name: Push changes to client branch
-      uses: ad-m/github-push-action@master
+      uses: ad-m/github-push-action@881a6320fdb16eb5318c5054f31c218aec2b324c # master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: client
