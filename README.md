@@ -10,6 +10,34 @@ A lightweight REST API designed for the Open Food Facts Folksonomy Engine.
 - **Note**: Moderators can access the folksonomy engine directly on Open Food Facts without any extension.
   The UI has not yet been deployed on Open Products Facts, Open Pet Food Facts, or Open Beauty Facts, but it has been proven to work via the extension.
 
+## Property Documentation System
+
+The Folksonomy API includes a comprehensive YAML-based property documentation system that provides:
+
+- **Multilingual support** for property names, descriptions, and values
+- **Standardized icons and images** for visual representation
+- **Input widget configurations** for web components and mobile apps
+- **Knowledge panel integration** for rich property display
+- **Wikidata linking** for semantic web integration
+- **Value validation** through permitted values and formats
+
+### Using Property Documentation
+
+Property documentation is available through API endpoints:
+
+- `GET /properties` - List all documented properties
+- `GET /properties/{key}` - Get detailed documentation for a specific property
+- `GET /properties/{key}/knowledge-panel` - Get knowledge panel configuration
+
+Examples of documented properties include:
+- `scoville_scale` - Measures spiciness of peppers and hot sauces
+- `storage_capacity` - Storage capacity for digital devices (8GB, 16GB, etc.)
+- `organic` - Organic certification status
+- `caffeine_content` - Caffeine content in beverages
+- And many more...
+
+See [data/properties/README.md](./data/properties/README.md) for details on the YAML schema and how to add new properties.
+
 # Contributor's Guide
 
 Check out our [Contributor's Guide](./CONTRIBUTING.md).
