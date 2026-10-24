@@ -618,6 +618,33 @@ async def test_get_unique_values_with_limit(with_sample, client):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("limit", [-1, -100])
+async def test_get_unique_values_rejects_negative_limit(with_sample, client, limit):
+    response = client.get(f"/values/color?limit={limit}")
+    assert response.status_code == 422
+    error = response.json()["detail"][0]
+    assert error["loc"] == ["query", "limit"]
+    assert error["type"] == "greater_than_equal"
+
+
+@pytest.mark.asyncio
+async def test_get_unique_values_with_zero_limit(with_sample, client):
+    response = client.get("/values/color?limit=0")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_get_unique_values_accepts_limit_above_maximum(with_sample, client):
+    response = client.get("/values/color?limit=1001")
+    assert response.status_code == 200
+    assert response.json() == [
+        {"v": "red", "product_count": 2},
+        {"v": "green", "product_count": 1},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_get_unique_values_with_filter(with_sample, client):
     response = client.get("/values/color?q=ed")
     assert response.status_code == 200
