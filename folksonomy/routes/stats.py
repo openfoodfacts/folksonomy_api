@@ -101,7 +101,7 @@ async def get_unique_values(
     k: str,
     owner: str = "",
     q: str = "",
-    limit: int = 50,
+    limit: int = Query(50, ge=0),
 ):
     """
     Get the unique values of a given property and the corresponding number of products
@@ -109,7 +109,7 @@ async def get_unique_values(
     - **k**: The property key to get unique values for
     - **owner**: None or empty for public tags, or your own user_id
     - **q**: Filter values by a query string
-    - **limit**: Maximum number of values to return (default: 50; max: 1000)
+    - **limit**: Maximum number of values to return (min: 0; default: 50; max: 1000)
     """
     check_owner_user(user, owner, allow_anonymous=True)
     k, _ = strip_property_kv(k, None)
