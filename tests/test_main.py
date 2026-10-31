@@ -1229,3 +1229,50 @@ async def test_property_rename_rejects_same_normalized_name(
     )
     assert response.status_code == 422, response.text
     assert await property_rows() == before
+
+
+@pytest.mark.asyncio
+async def test_property_rename_normalizes_names_before_resolving_conflicts(
+    with_sample, client, moderator_headers
+):
+    old, new = "color", "material-type:main_1"
+    async with db.transaction():
+        await create_data(
+            [
+                {
+                    "product": BARCODE_1,
+                    "k": new,
+                    "v": "blue",
+                    "owner": "",
+                    "version": 1,
+                    "editor": "bar",
+                    "comment": "",
+                },
+                {
+                    "product": BARCODE_1,
+                    "k": old,
+                    "v": "private color",
+                    "owner": "foo",
+                    "version": 1,
+                    "editor": "foo",
+                    "comment": "",
+                },
+            ]
+        )
+    before = await property_rows()
+    response = client.post(
+        "/admin/property/rename",
+        json={"old_property": f" {old} ", "new_property": f" {new} "},
+        headers=moderator_headers,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["renamed_products"] == 2
+    assert response.json()["conflicting_products_resolved"] == 1
+    expected = sorted(
+        (product, new, value, version + 1, owner, "foo")
+        if key == old and owner == ""
+        else (product, key, value, version, owner, editor)
+        for product, key, value, version, owner, editor in before
+        if not (product == BARCODE_1 and key == old and owner == "")
+    )
+    assert sorted(await property_rows()) == expected
