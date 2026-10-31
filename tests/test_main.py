@@ -1154,3 +1154,78 @@ async def test_get_user_info_authenticated(client, auth_tokens):
     assert isinstance(data["admin"], bool)
     assert isinstance(data["moderator"], bool)
     assert isinstance(data["user"], bool)
+
+
+@pytest.fixture
+def moderator_headers(auth_tokens, event_loop):
+    async def set_moderator():
+        async with db.transaction():
+            await db.db_exec(
+                "UPDATE auth SET moderator = true WHERE user_id = %s", ("foo",)
+            )
+
+    event_loop.run_until_complete(set_moderator())
+    return {"Authorization": "Bearer foo__Utest-token"}
+
+
+async def property_rows():
+    async with db.transaction():
+        cur, _ = await db.db_exec(
+            "SELECT product, k, v, version, owner, editor FROM folksonomy ORDER BY product, k, owner"
+        )
+        return await cur.fetchall()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field", ["old_property", "new_property"])
+@pytest.mark.parametrize("invalid", ["", "   ", "INVALID KEY!", "bad::key", "bad/key"])
+async def test_property_rename_rejects_invalid_names_without_changes(
+    with_sample, client, moderator_headers, field, invalid
+):
+    before = await property_rows()
+    payload = {"old_property": "color", "new_property": "colour"}
+    payload[field] = invalid
+    response = client.post(
+        "/admin/property/rename", json=payload, headers=moderator_headers
+    )
+    assert response.status_code == 422, response.text
+    assert await property_rows() == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("padded", [False, True])
+async def test_property_rename_normalizes_names_and_preserves_valid_syntax(
+    with_sample, client, moderator_headers, padded
+):
+    before = await property_rows()
+    old, new = "color", "material-type:main_1"
+    payload = {"old_property": old, "new_property": new}
+    if padded:
+        payload = {key: f" {value} " for key, value in payload.items()}
+    response = client.post(
+        "/admin/property/rename", json=payload, headers=moderator_headers
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["renamed_products"] == 3
+    assert response.json()["conflicting_products_resolved"] == 0
+    expected = sorted(
+        (product, new, value, version + 1, owner, "foo")
+        if key == old and owner == ""
+        else (product, key, value, version, owner, editor)
+        for product, key, value, version, owner, editor in before
+    )
+    assert sorted(await property_rows()) == expected
+
+
+@pytest.mark.asyncio
+async def test_property_rename_rejects_same_normalized_name(
+    with_sample, client, moderator_headers
+):
+    before = await property_rows()
+    response = client.post(
+        "/admin/property/rename",
+        json={"old_property": " color ", "new_property": "color"},
+        headers=moderator_headers,
+    )
+    assert response.status_code == 422, response.text
+    assert await property_rows() == before
