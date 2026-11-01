@@ -126,7 +126,7 @@ async def product_tag(
     - /product/xxx/key* returns the key and subkeys (key:subkey)
     """
     k, _v = strip_property_kv(k, None)
-    key = re.sub(r"[^a-z0-9_\:]", "", k)
+    key = re.sub(r"[^a-z0-9_\:-]", "", k)
     check_owner_user(user, owner, allow_anonymous=True)
     if k[-1:] == "*":
         cur, timing = await db.db_exec(

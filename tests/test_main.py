@@ -459,6 +459,38 @@ async def test_product_key(with_sample, client):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("hierarchy", [False, True], ids=["exact", "hierarchy"])
+@pytest.mark.parametrize(
+    "plain_key_exists", [False, True], ids=["only-hyphenated", "distinct-keys"]
+)
+async def test_product_key_preserves_hyphens(
+    client, auth_tokens, hierarchy, plain_key_exists
+):
+    tags = {"material-type": "hyphenated", "material-type:source": "hyphen-child"}
+    if plain_key_exists:
+        tags.update({"materialtype": "plain", "materialtype:source": "plain-child"})
+    for key, value in tags.items():
+        response = client.post(
+            "/product",
+            headers={"Authorization": "Bearer foo__Utest-token"},
+            json={"product": BARCODE_1, "k": key, "v": value},
+        )
+        assert response.status_code == 200
+
+    key = "material-type*" if hierarchy else "material-type"
+    response = client.get(f"/product/{BARCODE_1}/{key}")
+    assert response.status_code == 200
+    data = response.json()
+    if hierarchy:
+        assert [(tag["k"], tag["v"]) for tag in data] == [
+            ("material-type", "hyphenated"),
+            ("material-type:source", "hyphen-child"),
+        ]
+    else:
+        assert (data["k"], data["v"]) == ("material-type", "hyphenated")
+
+
+@pytest.mark.asyncio
 async def test_key_stripped_on_get(with_sample, client):
     response = client.get(f"/product/{BARCODE_1}/ color  ")
     assert response.status_code == 200
