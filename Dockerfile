@@ -2,7 +2,7 @@ ARG UV_VERSION=0.12.23
 FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
 
 # --- Base Stage ---
-FROM python:3.14-slim AS base
+FROM python:3.15-slim AS base
 
 ENV PYTHONUNBUFFERED=1 \
   PYTHONDONTWRITEBYTECODE=1 \
