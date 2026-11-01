@@ -3,7 +3,7 @@
 ## Requirements
 
 - PostgreSQL 13 or newer
-- Python 3.9 or newer
+- Python 3.11 or newer
 - Poetry (for dependency management)
 
 ## Setup on Debian 12 (Recommended Method)
