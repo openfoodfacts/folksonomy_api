@@ -124,7 +124,7 @@ docker compose exec db psql -U folksonomy -d folksonomy
 
 If you prefer installing everything directly on your machine (without Docker):
 
-1. Install Python 3.9+
+1. Install Python 3.11+
 2. Install Poetry
 3. Install PostgreSQL 13+
 4. Follow the instructions in [INSTALL.md](https://github.com/openfoodfacts/folksonomy_api/blob/main/INSTALL.md) to install the requirements and create a database user.
