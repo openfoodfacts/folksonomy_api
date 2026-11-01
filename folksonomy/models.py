@@ -109,6 +109,7 @@ class PropertyRenameRequest(BaseModel):
             raise ValueError("old_property and new_property should not be the same.")
         return self
 
+    @field_validator("old_property", "new_property")
     def property_check(cls, v):
         if not v:
             raise ValueError("property cannot be empty")
