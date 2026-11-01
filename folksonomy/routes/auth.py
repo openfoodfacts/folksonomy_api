@@ -5,7 +5,7 @@ import uuid
 from typing import Annotated
 
 import aiohttp
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from .. import db, settings
@@ -28,29 +28,25 @@ def _extract_user_roles(auth_response_data):
     return is_admin, is_moderator, is_user
 
 
-def _get_auth_server(request: Request):
+def _get_auth_server():
     """
-    Get auth server URL from request
+    Get the authentication server URL
 
-    We deduce it by changing part of the request base URL
-    according to FOLKSONOMY_PREFIX and AUTH_PREFIX settings
+    It comes from server-side configuration only, never from the request:
+    deriving it from the request base URL (Host header) would let any
+    caller redirect credentials to a server they control and have the
+    roles that server asserts (admin / moderator) trusted.
     """
     # For dev purposes, we can use a static auth server with AUTH_SERVER_STATIC
     # which can be specified in local_settings.py
     if hasattr(settings, "AUTH_SERVER_STATIC") and settings.AUTH_SERVER_STATIC:
         return settings.AUTH_SERVER_STATIC
-    base_url = f"{request.base_url.scheme}://{request.base_url.netloc}"
-    # remove folksonomy prefix and add AUTH prefix
-    base_url = base_url.replace(
-        settings.FOLKSONOMY_PREFIX or "", settings.AUTH_PREFIX or ""
-    )
-    return base_url
+    return settings.AUTH_SERVER
 
 
 @router.post("/auth", response_model=TokenResponse, tags=["Authentication"])
 async def authentication(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    request: Request,
     response: Response,
 ):
     """
@@ -65,8 +61,7 @@ async def authentication(
     user_id = form_data.username
     password = form_data.password
     token = user_id + "__U" + str(uuid.uuid4())
-    auth_url = _get_auth_server(request) + "/cgi/auth.pl"
-    print(auth_url)
+    auth_url = _get_auth_server() + "/cgi/auth.pl"
     auth_data = {"user_id": user_id, "password": password, "body": "1"}
     async with (
         aiohttp.ClientSession() as http_session,
@@ -95,20 +90,20 @@ async def authentication(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer", "x-auth-url": auth_url},
+            headers={"WWW-Authenticate": "Bearer"},
         )
     elif status_code == 404:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid auth server: 404",
-            headers={"WWW-Authenticate": "Bearer", "x-auth-url": auth_url},
+            headers={"WWW-Authenticate": "Bearer"},
         )
     raise HTTPException(status_code=500, detail="Server error")
 
 
 @router.post("/auth_by_cookie", response_model=TokenResponse, tags=["Authentication"])
 async def authentication_by_cookie(
-    request: Request, response: Response, session: str | None = Cookie(None)
+    response: Response, session: str | None = Cookie(None)
 ):
     """
     Authentication: provide Open Food Facts session cookie and get a bearer token in return
@@ -127,7 +122,7 @@ async def authentication_by_cookie(
     except (ValueError, IndexError):
         raise HTTPException(status_code=422, detail="Malformed 'session' cookie")
 
-    auth_url = _get_auth_server(request) + "/cgi/auth.pl"
+    auth_url = _get_auth_server() + "/cgi/auth.pl"
     async with (
         aiohttp.ClientSession() as http_session,
         http_session.post(
