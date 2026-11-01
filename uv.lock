@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.10"
 
 [[package]]
@@ -675,7 +675,7 @@ requires-dist = [
 dev = [
     { name = "httpx", specifier = ">=0.28.1,<0.29.0" },
     { name = "pre-commit", specifier = ">=4.6.2,<5.0.0" },
-    { name = "pytest", specifier = ">=8.3.5,<9.0.0" },
+    { name = "pytest", specifier = ">=8.3.5,<10.0.0" },
     { name = "pytest-asyncio", specifier = ">=0.25.3,<0.26.0" },
     { name = "pytest-cov", specifier = ">=6.0.0,<7.0.0" },
 ]
