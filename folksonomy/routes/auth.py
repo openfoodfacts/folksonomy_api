@@ -134,8 +134,11 @@ async def authentication_by_cookie(
             auth_url, cookies={"session": session}, data={"body": "1"}
         ) as resp,
     ):
-        auth_data = await resp.json()
         status_code = resp.status
+        try:
+            auth_data = await resp.json()
+        except (aiohttp.ContentTypeError, ValueError):
+            auth_data = {}
 
     if status_code == 200:
         is_admin, is_moderator, is_user = _extract_user_roles(auth_data)
