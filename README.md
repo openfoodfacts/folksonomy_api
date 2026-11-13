@@ -110,6 +110,8 @@ You can modify these as needed:
 
 Additional settings (such as authentication) can be configured in `local_settings.py`.
 
+> **Upgrading an existing deployment?** `FOLKSONOMY_PREFIX` and `AUTH_PREFIX` are no longer read. If your deployment used them to select a non-default Product Opener instance, set `AUTH_SERVER` in your `.env` to that instance before restarting; otherwise authentication defaults to `https://world.openfoodfacts.org`.
+
 **Note**: The PostgreSQL service uses port `5433` to avoid conflicts with any local PostgreSQL installations.
 
 ## Working with the Database

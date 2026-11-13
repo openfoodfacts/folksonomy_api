@@ -8,10 +8,9 @@ POSTGRES_PASSWORD = ""  # Leave empty if no password exists for user
 POSTGRES_HOST = "127.0.0.1"  # Change if necessary
 POSTGRES_DATABASE = "folksonomy"
 
-# for dev using a local product opener instance you can use this
-# base domain has to be the same (see INSTALL.md)
-# FOLKSONOMY_PREFIX="api.folksonomy.openfoodfacts.localhost:8888"
-# AUTH_PREFIX="world.openfoodfacts.localhost"
+# for dev using a local product opener instance as the authentication
+# server, point AUTH_SERVER to it (see INSTALL.md)
+# AUTH_SERVER="http://world.openfoodfacts.localhost:8888"
 
 # For dev, use this setting if you want to test without installing Product
 # Opener locally, and using an external website as an auth server.
