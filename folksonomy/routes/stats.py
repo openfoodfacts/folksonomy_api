@@ -6,7 +6,11 @@ from fastapi.responses import JSONResponse
 from .. import db
 from ..models import KeyStats, ProductStats, ValueCount
 from ..utils.auth import CurrentUser, check_owner_user
-from ..utils.query import build_property_filter, strip_property_kv
+from ..utils.query import (
+    build_property_filter,
+    build_substring_pattern,
+    strip_property_kv,
+)
 
 router = APIRouter()
 
@@ -66,7 +70,7 @@ async def keys_list(
     """
     check_owner_user(user, owner, allow_anonymous=True)
 
-    search_filter = "AND k ILIKE %s" if q else ""
+    search_filter = "AND k ILIKE %s ESCAPE '\\'" if q else ""
     query = f"""
         SELECT json_agg(j)::json FROM (
             SELECT json_build_object(
@@ -82,7 +86,7 @@ async def keys_list(
         ) AS j;
     """
 
-    query_params = [owner] + ([f"%{q}%"] if q else [])
+    query_params = [owner] + ([build_substring_pattern(q)] if q else [])
 
     cur, timing = await db.db_exec(query, tuple(query_params))
     out = await cur.fetchone()
@@ -129,8 +133,8 @@ async def get_unique_values(
     params = [owner, k]
 
     if q:
-        sql += " AND v ILIKE %s"
-        params.append(f"%{q}%")
+        sql += " AND v ILIKE %s ESCAPE '\\'"
+        params.append(build_substring_pattern(q))
 
     sql += """
             GROUP BY v

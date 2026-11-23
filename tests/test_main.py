@@ -651,6 +651,153 @@ async def test_get_unique_values_with_filter(with_sample, client):
     assert response.json() == [{"v": "red", "product_count": 2}]
 
 
+# samples with LIKE-special characters (% _ \) in keys and values,
+# to check that the q search filters match them literally
+SEARCH_SAMPLES = [
+    {
+        "product": BARCODE_1,
+        "k": "recipe",
+        "v": "100% juice",
+        "owner": "",
+        "version": 1,
+        "editor": "foo",
+        "comment": "",
+    },
+    {
+        "product": BARCODE_2,
+        "k": "recipe",
+        "v": "1000 juice",
+        "owner": "",
+        "version": 1,
+        "editor": "foo",
+        "comment": "",
+    },
+    {
+        "product": BARCODE_1,
+        "k": "color",
+        "v": "green",
+        "owner": "",
+        "version": 1,
+        "editor": "foo",
+        "comment": "",
+    },
+    {
+        "product": BARCODE_2,
+        "k": "color",
+        "v": "red",
+        "owner": "",
+        "version": 1,
+        "editor": "foo",
+        "comment": "",
+    },
+    {
+        "product": BARCODE_3,
+        "k": "color",
+        "v": "re_d",
+        "owner": "",
+        "version": 1,
+        "editor": "foo",
+        "comment": "",
+    },
+    {
+        "product": BARCODE_1,
+        "k": "note_path",
+        "v": "a\\b",
+        "owner": "",
+        "version": 1,
+        "editor": "foo",
+        "comment": "",
+    },
+    {
+        "product": BARCODE_2,
+        "k": "note_path",
+        "v": "ab",
+        "owner": "",
+        "version": 1,
+        "editor": "foo",
+        "comment": "",
+    },
+]
+
+
+@pytest.fixture
+def with_search_sample(event_loop):
+    event_loop.run_until_complete(_with_search_sample())
+
+
+async def _with_search_sample():
+    async with db.transaction():
+        await create_data(SEARCH_SAMPLES)
+
+
+@pytest.mark.asyncio
+async def test_keys_list_search_percent_is_literal(with_search_sample, client):
+    # no key contains a literal '%': an unescaped pattern would return all keys
+    response = client.get("/keys", params={"q": "%"})
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_keys_list_search_underscore_is_literal(with_search_sample, client):
+    # only the note_path key contains a literal '_'
+    response = client.get("/keys", params={"q": "_"})
+    assert response.status_code == 200
+    assert response.json() == [{"k": "note_path", "count": 2, "values": 2}]
+
+
+@pytest.mark.asyncio
+async def test_keys_list_search_substring_unchanged(with_search_sample, client):
+    response = client.get("/keys", params={"q": "rec"})
+    assert response.status_code == 200
+    assert response.json() == [{"k": "recipe", "count": 2, "values": 2}]
+
+
+@pytest.mark.asyncio
+async def test_get_unique_values_search_percent_is_literal(with_search_sample, client):
+    response = client.get("/values/recipe", params={"q": "100%"})
+    assert response.status_code == 200
+    assert response.json() == [{"v": "100% juice", "product_count": 1}]
+
+    response = client.get("/values/recipe", params={"q": "%"})
+    assert response.status_code == 200
+    assert response.json() == [{"v": "100% juice", "product_count": 1}]
+
+
+@pytest.mark.asyncio
+async def test_get_unique_values_search_underscore_is_literal(
+    with_search_sample, client
+):
+    # green and red both contain "re" + one character, only re_d contains "re_"
+    response = client.get("/values/color", params={"q": "re_"})
+    assert response.status_code == 200
+    assert response.json() == [{"v": "re_d", "product_count": 1}]
+
+
+@pytest.mark.asyncio
+async def test_get_unique_values_search_backslash_is_literal(
+    with_search_sample, client
+):
+    response = client.get("/values/note_path", params={"q": "a\\b"})
+    assert response.status_code == 200
+    assert response.json() == [{"v": "a\\b", "product_count": 1}]
+
+    response = client.get("/values/note_path", params={"q": "\\"})
+    assert response.status_code == 200
+    assert response.json() == [{"v": "a\\b", "product_count": 1}]
+
+
+@pytest.mark.asyncio
+async def test_get_unique_values_search_substring_unchanged(with_search_sample, client):
+    response = client.get("/values/recipe", params={"q": "100"})
+    assert response.status_code == 200
+    data = sorted(response.json(), key=lambda d: d["v"])
+    assert data == [
+        {"v": "100% juice", "product_count": 1},
+        {"v": "1000 juice", "product_count": 1},
+    ]
+
+
 @pytest.mark.asyncio
 async def test_get_unique_values_non_existing_key(with_sample, client):
     response = client.get("/values/non_existing_key")
