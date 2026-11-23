@@ -5,6 +5,7 @@
 
 import pytest
 import time
+from unittest.mock import Mock
 
 import aiohttp
 from fastapi.testclient import TestClient
@@ -183,6 +184,26 @@ class DummyResponse:
 
     async def json(self):
         return {}
+
+
+class NonJsonResponse:
+    """Mimics an auth server response carrying a non-JSON body (e.g. an
+    HTML error page): ``json()`` raises as the real aiohttp response does.
+    """
+
+    def __init__(self, status):
+        self.status = status
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args, **kwargs):
+        pass
+
+    async def json(self):
+        raise aiohttp.ContentTypeError(
+            Mock(), Mock(), status=self.status, message="HTML error page"
+        )
 
 
 def dummy_auth(self, auth_url, data=None, cookies=None):
@@ -1122,6 +1143,68 @@ async def test_auth_by_cookie(fake_authentication, monkeypatch, client):
         )
         assert cur.rowcount == 1, (
             f"Well formed cookie and valid authentication credentials should create a token, got {cur.rowcount}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_auth_by_cookie_non_json_auth_server_response(monkeypatch, client):
+    """Issue #384: a non-JSON auth server response (e.g. an HTML error page)
+    must not raise an unhandled parsing exception; the existing status
+    handling must run instead.
+    """
+    # avoid waiting for too long on bad auth
+    monkeypatch.setattr(settings, "FAILED_AUTH_WAIT_TIME", 0.1)
+    # same prefix trick as fake_authentication: TestClient's base URL
+    # http://testserver becomes http://authserver
+    monkeypatch.setattr(settings, "FOLKSONOMY_PREFIX", "test")
+    monkeypatch.setattr(settings, "AUTH_PREFIX", "auth")
+
+    def non_json_auth(status):
+        def _fake(self, auth_url, data=None, cookies=None):
+            assert auth_url == "http://authserver/cgi/auth.pl", (
+                "auth requests must go to the configured auth server"
+            )
+            return NonJsonResponse(status)
+
+        return _fake
+
+    # 403 + HTML body -> 401 (with the brute-force delay), not a 500
+    monkeypatch.setattr(aiohttp.ClientSession, "post", non_json_auth(403))
+    response = client.post(
+        "/auth_by_cookie",
+        headers={"Cookie": "session=user_session&test&user_id&bibifricotin"},
+    )
+    assert response.status_code == 401, (
+        f"non-JSON 403 response should return 401, got {response.status_code} {response.text}"
+    )
+
+    # 404 + HTML body -> the existing controlled 500 path, not an exception
+    monkeypatch.setattr(aiohttp.ClientSession, "post", non_json_auth(404))
+    response = client.post(
+        "/auth_by_cookie",
+        headers={"Cookie": "session=user_session&test&user_id&bibifricotin"},
+    )
+    assert response.status_code == 500, (
+        f"non-JSON 404 response should return 500, got {response.status_code} {response.text}"
+    )
+
+    # 200 + HTML body -> token is created, but with user-only roles:
+    # an unparseable body must not grant elevated roles
+    monkeypatch.setattr(aiohttp.ClientSession, "post", non_json_auth(200))
+    response = client.post(
+        "/auth_by_cookie",
+        headers={"Cookie": "session=user_session&test&user_id&bibifricotin"},
+    )
+    assert response.status_code == 200, (
+        f"non-JSON 200 response should return 200, got {response.status_code} {response.text}"
+    )
+    async with db.transaction():
+        cur, _ = await db.db_exec(
+            """SELECT admin, moderator, "user" FROM auth WHERE user_id = 'bibifricotin'"""
+        )
+        row = await cur.fetchone()
+        assert row == (False, False, True), (
+            f"non-JSON 200 response must create a user-only token, got {row}"
         )
 
 
