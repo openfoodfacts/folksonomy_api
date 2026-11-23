@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout Project
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 1
       - name: Create pgdata Directory
@@ -30,12 +30,12 @@ jobs:
         run: sudo chmod -R 777 /home/runner/work/folksonomy_api/folksonomy_api/data/pg/pgdata
 
       - name: Install Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.11'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v7.6.0
         with:
           version: "0.12.23"
           enable-cache: true
@@ -65,7 +65,7 @@ jobs:
 
       - name: Upload Coverage Reports
         if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
