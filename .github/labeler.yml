@@ -2,22 +2,74 @@ GitHub Actions:
 - changed-files:
   - any-glob-to-any-file: '.github/**/*'
 
-tests:
+ci:
+- changed-files:
+  - any-glob-to-any-file:
+    - '.github/workflows/**/*'
+    - '.pre-commit-config.yaml'
+    - 'codecov.yml'
+    - 'launch_tests.sh'
+
+'🧪 Tests':
 - changed-files:
   - any-glob-to-any-file: 'tests/**/*'
 
 database:
 - changed-files:
-  - any-glob-to-any-file: 'db/**/*'
+  - any-glob-to-any-file:
+    - 'db/**/*'
+    - 'db-migration.py'
+    - 'yoyo.ini'
+    - 'folksonomy/db.py'
 
-api:
+API:
 - changed-files:
-  - any-glob-to-any-file: 'folksonomy/api.py'
+  - any-glob-to-any-file:
+    - 'folksonomy/api.py'
+    - 'folksonomy/routes/**/*'
+    - 'folksonomy/utils/**/*'
+    - 'folksonomy/settings.py'
+    - 'generate_openapi_json.py'
+
+API - Stats:
+- changed-files:
+  - any-glob-to-any-file: 'folksonomy/routes/stats.py'
+
+'🔐 API auth':
+- changed-files:
+  - any-glob-to-any-file:
+    - 'folksonomy/routes/auth.py'
+    - 'folksonomy/utils/auth.py'
 
 models:
 - changed-files:
   - any-glob-to-any-file: 'folksonomy/models.py'
 
-dependancies:
+dependencies:
 - changed-files:
-  - any-glob-to-any-file: 'folksonomy/dependencies.py'
+  - any-glob-to-any-file:
+    - 'pyproject.toml'
+    - 'uv.lock'
+
+'🐍 Python':
+- changed-files:
+  - any-glob-to-any-file: '**/*.py'
+
+'🐋 Docker':
+- changed-files:
+  - any-glob-to-any-file:
+    - 'Dockerfile'
+    - 'docker-compose.yml'
+    - 'docker/**/*'
+    - '.dockerignore'
+    - 'local_settings_docker_example.py'
+
+'📚 Documentation':
+- changed-files:
+  - any-glob-to-any-file: '**/*.md'
+
+infrastructure:
+- changed-files:
+  - any-glob-to-any-file:
+    - 'confs/**/*'
+    - 'start_postgres.sh'
