@@ -19,11 +19,8 @@ POSTGRES_DATABASE = os.getenv("POSTGRES_DATABASE", "folksonomy")
 # AUTHENTICATION CONFIGURATION
 # =====================================================================
 
-# FOLKSONOMY_PREFIX - allows configuration via environment
-FOLKSONOMY_PREFIX = os.getenv("FOLKSONOMY_PREFIX", "api.folksonomy")
-
-# AUTH_PREFIX - allows configuration via environment
-AUTH_PREFIX = os.getenv("AUTH_PREFIX", "world")
+# AUTH_SERVER - the authentication server URL, via environment
+AUTH_SERVER = os.getenv("AUTH_SERVER", "https://world.openfoodfacts.org")
 
 # Optional static authentication server URL
 # Use environment variable, fallback to None if not set

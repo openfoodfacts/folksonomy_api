@@ -12,10 +12,12 @@ POSTGRES_DATABASE = os.environ.get("POSTGRES_DATABASE", "folksonomy")
 POSTGRES_PORT = os.environ.get("POSTGRES_PORT", 5432)
 
 
-# we deduce the URL to which to authenticate from the base url,
-# with some changes in the prefixes, substituing FOLKSONOMY_PREFIX by AUTH_PREFIX
-FOLKSONOMY_PREFIX = os.environ.get("FOLKSONOMY_PREFIX", "api.folksonomy")
-AUTH_PREFIX = os.environ.get("AUTH_PREFIX", "world")
+# The authentication server (a Product Opener instance) against which
+# credentials are checked. It must only ever come from server-side
+# configuration: deriving it from the request (e.g. from the Host header)
+# would let any caller redirect credentials to a server they control and
+# have the roles that server asserts (admin / moderator) trusted.
+AUTH_SERVER = os.environ.get("AUTH_SERVER", "https://world.openfoodfacts.org")
 
 # OpenAPI server configuration
 API_SERVERS = [

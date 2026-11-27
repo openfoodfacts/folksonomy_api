@@ -141,8 +141,7 @@ To deal with CORS and/or `401 Unauthorized` issues when running in a dev environ
 * To allow authentication with the Product Opener cookie, you must tell Folksonomy Engine to use the local Product Opener instance as the authentication server
 
 To do so you can:
-* Edit the `local_settings.py` (copying from `local_settings_example.py`) and uncomment proposed AUTH_PREFIX and FOLKSONOMY_PREFIX entries
-* Use the same host name as Product Opener when launching Folksonomy Engine server
+* Edit the `local_settings.py` (copying from `local_settings_example.py`) and set `AUTH_SERVER` to your local Product Opener instance
 
 This then should work:
 

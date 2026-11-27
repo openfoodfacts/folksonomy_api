@@ -172,8 +172,9 @@ async def _add_auth_tokens():
 
 
 class DummyResponse:
-    def __init__(self, status):
+    def __init__(self, status, payload=None):
         self.status = status
+        self.payload = payload or {}
 
     async def __aenter__(self):
         return self
@@ -182,12 +183,12 @@ class DummyResponse:
         pass
 
     async def json(self):
-        return {}
+        return self.payload
 
 
 def dummy_auth(self, auth_url, data=None, cookies=None):
     assert auth_url == "http://authserver/cgi/auth.pl", (
-        "'test' replaced by 'auth' in URL"
+        "auth requests must go to the configured auth server"
     )
     success = False
     # reject or not based on password, which should always be "test" :-)
@@ -214,9 +215,29 @@ def dummy_auth(self, auth_url, data=None, cookies=None):
 @pytest.fixture
 def fake_authentication(monkeypatch):
     """Fake authentication using dummy_auth"""
-    monkeypatch.setattr(settings, "FOLKSONOMY_PREFIX", "test")
-    monkeypatch.setattr(settings, "AUTH_PREFIX", "auth")
+    monkeypatch.setattr(settings, "AUTH_SERVER", "http://authserver")
     monkeypatch.setattr(aiohttp.ClientSession, "post", dummy_auth)
+
+
+@pytest.fixture
+def recorded_authentication(monkeypatch):
+    """Fake authentication recording every URL the application tries to contact.
+
+    The fake server behaves as an attacker-controlled server (asserting
+    admin and moderator roles for any credentials) if the attacker URL is
+    ever contacted, and as a rejecting server otherwise.
+    """
+    contacted = []
+
+    def recording_auth(self, auth_url, data=None, cookies=None):
+        contacted.append(auth_url)
+        if auth_url.startswith("http://127.0.0.1:8899"):
+            return DummyResponse(200, {"user": {"admin": 1, "moderator": 1}})
+        return DummyResponse(403)
+
+    monkeypatch.setattr(settings, "AUTH_SERVER", "http://authserver")
+    monkeypatch.setattr(aiohttp.ClientSession, "post", recording_auth)
+    return contacted
 
 
 def remove_last_edit(data):
@@ -784,6 +805,81 @@ def test_auth_ok(fake_authentication, client):
     assert "access_token" in response.json()
     access_token = response.json()["access_token"]
     assert access_token.startswith("off__U")
+
+
+async def _auth_entries(user_id):
+    async with db.transaction():
+        cur, _ = await db.db_exec(
+            "SELECT user_id, admin, moderator FROM auth WHERE user_id = %s",
+            (user_id,),
+        )
+        return await cur.fetchall()
+
+
+def test_auth_host_header_cannot_redirect_auth_server(
+    recorded_authentication, monkeypatch, client, event_loop
+):
+    """Regression test: the auth server must not be derived from the Host header.
+
+    With a hostile Host header, an attacker-controlled server would assert
+    admin / moderator roles for any credentials; the application must keep
+    contacting the configured auth server instead.
+    """
+    # avoid waiting for too long on bad auth
+    monkeypatch.setattr(settings, "FAILED_AUTH_WAIT_TIME", 0)
+    response = client.post(
+        "/auth",
+        data={"username": "attacker", "password": "letmein"},
+        headers={"Host": "127.0.0.1:8899"},
+    )
+    assert response.status_code == 401
+    # only the configured auth server was contacted
+    assert recorded_authentication == ["http://authserver/cgi/auth.pl"]
+    # and no auth entry (hence no admin / moderator roles) was created
+    assert event_loop.run_until_complete(_auth_entries("attacker")) == []
+
+
+def test_auth_by_cookie_host_header_cannot_redirect_auth_server(
+    recorded_authentication, monkeypatch, client, event_loop
+):
+    """Same regression test for the cookie based authentication"""
+    # avoid waiting for too long on bad auth
+    monkeypatch.setattr(settings, "FAILED_AUTH_WAIT_TIME", 0)
+    response = client.post(
+        "/auth_by_cookie",
+        headers={
+            "Host": "127.0.0.1:8899",
+            "Cookie": "session=user_session&test&user_id&attacker",
+        },
+    )
+    assert response.status_code == 401
+    # only the configured auth server was contacted
+    assert recorded_authentication == ["http://authserver/cgi/auth.pl"]
+    # and no auth entry (hence no admin / moderator roles) was created
+    assert event_loop.run_until_complete(_auth_entries("attacker")) == []
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "evil.example.com",
+        "api.folksonomy.evil.example.com",
+        "world.evil.example.com",
+    ],
+)
+def test_auth_ignores_host_header(fake_authentication, client, host):
+    """Normal login keeps working, whatever the Host header says.
+
+    dummy_auth asserts that the request still goes to the configured
+    auth server.
+    """
+    response = client.post(
+        "/auth",
+        data={"username": "off", "password": "test"},
+        headers={"Host": host},
+    )
+    assert response.status_code == 200
+    assert response.json()["access_token"].startswith("off__U")
 
 
 @pytest.mark.asyncio
